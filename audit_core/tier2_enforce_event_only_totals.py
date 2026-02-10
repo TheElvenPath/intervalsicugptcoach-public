@@ -18,14 +18,12 @@ def enforce_event_only_totals(df_events, context):
 
     # 🧩 PATCH — Prefer 7-day light slice for totals (never totalize full dataset)
     if report_type in ["weekly", "week", "7d"]:
-        if "df_light_slice" in context and isinstance(context["df_light_slice"], pd.DataFrame):
-            df_source = context["df_light_slice"].copy()
-            source_label = "Tier-0 LIGHT 7d slice (safe totals)"
-            debug(context, "[T2] ✅ Using df_light_slice for total enforcement (full dataset skipped).")
-        else:
-            df_source = df_events if df_events is not None and not df_events.empty else context.get("df_raw_activities")
-            source_label = "⚠️ Missing df_light_slice — fallback to Tier-2 events"
-            debug(context, "[T2 WARN] df_light_slice missing — fallback to df_events/raw_activities.")
+        # 🔒 WEEKLY CANONICAL RULE:
+        # Totals must match the weekly period + events table
+        df_source = df_events.copy()
+        source_label = "Tier-2 WEEKLY events (calendar-aligned)"
+        debug(context, "[T2] ✅ Weekly mode → using df_events for totals (calendar-aligned).")
+
     else:
         # SEASON MODE — MUST use 90d dataset (never df_events)
         if "snapshot_90d_json" in context:
