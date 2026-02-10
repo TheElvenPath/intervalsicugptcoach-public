@@ -643,6 +643,7 @@ def build_semantic_json(context):
         # ---------------------------------------------------------
         # DAILY LOAD
         # ---------------------------------------------------------
+        
         "daily_load": [
             {"date": row["date"], "tss": float(row["icu_training_load"])}
             for _, row in getattr(context.get("df_daily"), "iterrows", lambda: [])()
