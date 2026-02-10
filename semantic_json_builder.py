@@ -1436,11 +1436,11 @@ def build_semantic_json(context):
                 context["locked_totalTss"] = semantic["tss"]
                 context["locked_totalDistance"] = semantic["distance_km"]
 
-            semantic.setdefault("summary", {}).update({
-                "totalHours": semantic["hours"],
-                "totalTss": semantic["tss"],
-                "totalDistance": semantic["distance_km"],
-            })
+                semantic.setdefault("summary", {}).update({
+                    "totalHours": semantic["hours"],
+                    "totalTss": semantic["tss"],
+                    "totalDistance": semantic["distance_km"],
+                })
 
             debug(
                 context,
