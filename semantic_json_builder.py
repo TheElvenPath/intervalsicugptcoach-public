@@ -2535,15 +2535,16 @@ def build_system_prompt_from_header(report_type: str, header: dict) -> str:
         - Display as integer minutes by default.
         - Use one decimal only if duration < 30 minutes and precision is useful.
         - Label column as Duration (min).
-        - In the EVENTS table, session-level signal icons MAY be rendered in 1st Column (Signals) using the following canonical mapping derived ONLY from existing semantic fields:
-        - ⚡ Efficient (optimal efficiency factor)
-        - 🟢 Aerobic (low IF with stable decoupling)
-        - 💥 Anaerobic (heavy W′ engagement)
-        - 🔁 Repeated (repeated W′ depletion pattern)
-        - 📈 Progressive (progressive W′ engagement)
-        - 🧘 Recovery (very low intensity recovery session).
-        - Icons are visual aliases only and must not replace numeric values or reduce table rows.
-
+        - In the EVENTS table, session-level signal icons MAY be rendered in the 1st column (Signals) using the following canonical mapping derived ONLY from existing semantic fields.
+        - Icons represent independent session signals and MAY appear together for a single event.
+        - When multiple icons apply, they MUST be rendered together in the following fixed order (left → right):
+        1) ⚡ Efficient (optimal efficiency factor)
+        2) 🟢 Aerobic (low IF with stable decoupling)
+        3) 💥 Anaerobic (heavy W′ engagement)
+        4) 🔁 Repeated (repeated W′ depletion pattern)
+        5) 📈 Progressive (progressive W′ engagement)
+        6) 🧘 Recovery (very low intensity recovery session)
+        - Icons are visual aliases only and must not replace numeric values, suppress other applicable icons, or reduce table rows.
         PLANNED EVENTS (WEEKLY — NON-NEGOTIABLE):
         - The planned_events section MUST be rendered as a Markdown table.
         - EVERY planned event in the semantic JSON MUST appear as exactly one row.
