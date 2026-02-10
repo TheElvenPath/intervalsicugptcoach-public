@@ -1423,15 +1423,18 @@ def build_semantic_json(context):
 
             semantic["weekly_phases"] = weekly_phases
 
-            # ✅ Store canonical totals
-            semantic["hours"] = round(total_hours, 2)
-            semantic["tss"] = round(total_tss, 0)
-            semantic["distance_km"] = round(total_distance, 2)
+            # --- Build unified weekly phase summary ---
+            semantic["weekly_phases"] = weekly_phases
 
-            # 🔒 Mirror totals into context (so finalizer sees them)
-            context["locked_totalHours"] = semantic["hours"]
-            context["locked_totalTss"] = semantic["tss"]
-            context["locked_totalDistance"] = semantic["distance_km"]
+            # ✅ ONLY set totals for season / summary
+            if semantic["meta"]["report_type"] in ("season", "summary"):
+                semantic["hours"] = round(total_hours, 2)
+                semantic["tss"] = round(total_tss, 0)
+                semantic["distance_km"] = round(total_distance, 2)
+
+                context["locked_totalHours"] = semantic["hours"]
+                context["locked_totalTss"] = semantic["tss"]
+                context["locked_totalDistance"] = semantic["distance_km"]
 
             semantic.setdefault("summary", {}).update({
                 "totalHours": semantic["hours"],
