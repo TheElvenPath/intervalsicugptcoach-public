@@ -5,8 +5,27 @@ from audit_core.errors import AuditHalt
 import sys
 import datetime
 import os
+# ------------------------------------------------------------
+# 🌍 Auto-detect Railway environment
+# ------------------------------------------------------------
 
-# global context placeholder (avoids NameError if context undefined)
+# Railway sets this automatically:
+#   production service  → RAILWAY_ENVIRONMENT=production
+#   staging service     → RAILWAY_ENVIRONMENT=staging
+
+RAILWAY_ENV = (
+    os.getenv("RAILWAY_ENVIRONMENT")
+    or os.getenv("ENVIRONMENT")
+    or ""
+).lower()
+
+# Debug enabled everywhere except explicit production
+IS_DEBUG_ENV = RAILWAY_ENV != "production"
+
+# ------------------------------------------------------------
+# Global state
+# ------------------------------------------------------------
+
 try:
     context
 except NameError:
@@ -15,9 +34,22 @@ except NameError:
 RUN_TIMESTAMP = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
 GLOBAL_LOGFILE = None
 
+# ------------------------------------------------------------
+# 🔎 Debug Logger (Auto-suppressed in Production)
+# ------------------------------------------------------------
+
 def debug(*args):
-    """Unified flush-safe logger that writes both to stderr and a per-run log file."""
+    """
+    Unified flush-safe logger.
+    Auto-disabled in Railway production environment.
+    """
+
     global GLOBAL_LOGFILE
+
+    # 🔒 Suppress debug in production automatically
+    if not IS_DEBUG_ENV:
+        return
+
     try:
         if not args:
             return
@@ -29,38 +61,36 @@ def debug(*args):
             context = None
             msgs = args
 
-        # Get report type (environment override from report.py)
         report_type = os.getenv("REPORT_TYPE", "unknown").lower()
 
-        # Initialize logfile once
+        # Initialize logfile once (staging only)
         if GLOBAL_LOGFILE is None:
             reports_dir = os.path.join(os.getcwd(), "reports")
             os.makedirs(reports_dir, exist_ok=True)
             GLOBAL_LOGFILE = os.path.join(
-                reports_dir, f"debug_{report_type}_{RUN_TIMESTAMP}.log"
+                reports_dir,
+                f"debug_{report_type}_{RUN_TIMESTAMP}.log"
             )
 
-        # Format message
         ts = datetime.datetime.now().strftime("%H:%M:%S")
         msg = " ".join(str(m) for m in msgs)
         msg_out = f"[{ts}] {msg}"
 
-        # Store trace in context if possible
+        # Store trace in context
         if context is not None:
             context.setdefault("debug_trace", []).append(msg_out)
 
-        # Print live
+        # Print to stderr
         sys.stderr.write(msg_out + "\n")
         sys.stderr.flush()
 
-        # Write to log file
+        # Write to file
         with open(GLOBAL_LOGFILE, "a", encoding="utf-8") as f:
             f.write(msg_out + "\n")
 
     except Exception as e:
         sys.stderr.write(f"[debug-failure] {e}\n")
         sys.stderr.flush()
-
 
 
 def validate_dataset_integrity(df: pd.DataFrame) -> bool:
