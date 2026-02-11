@@ -184,6 +184,46 @@ def normalize_prefetched_context(data):
         # --- Update context after expansion ---
         context["df_full"] = df_full
         context["activities_full"] = df_full.to_dict(orient="records")
+
+
+        # 🔒 GUARD: Abort if all rows lack metrics AND are STRAVA API stubs
+        if not df_light.empty:
+
+            # 1️⃣ Check metric availability
+            has_moving_time = "moving_time" in df_light.columns
+            has_metric_rows = (
+                has_moving_time and
+                df_light["moving_time"].fillna(0).gt(0).any()
+            )
+
+            # 2️⃣ Check STRAVA stub note explicitly
+            strava_note_text = "STRAVA activities are not available via the API"
+
+            all_strava_stubs = (
+                "_note" in df_light.columns and
+                df_light["_note"].fillna("").str.contains(strava_note_text, regex=False).all()
+            )
+
+            # 3️⃣ Only abort when BOTH conditions are true
+            if not has_metric_rows and all_strava_stubs:
+
+                debug(
+                    context,
+                    "[GUARD] No metric data — all activities are STRAVA API stubs."
+                )
+
+                from fastapi import HTTPException
+                raise HTTPException(
+                    status_code=422,
+                    detail=(
+                        "Activities exist for this period, but they originate from STRAVA "
+                        "and are not accessible via the Intervals API. "
+                        "No training metrics (time, distance, load) are available "
+                        "to generate a report."
+                        "Connect Garmin/Wahoo/Zwift etc directly or upload FIT files"
+                    ),
+                )
+
         debug(
             context,
             f"[NORM] activities_light={len(df_light)} full={len(df_full)} wellness={len(df_well)} "
@@ -279,7 +319,7 @@ async def run_audit_with_data(request: Request):
                 "message": (
                     "Your Intervals.icu account is connected only via Strava. "
                     "Intervals.icu is not allowed to expose Strava-sourced activities via its API. "
-                    "Connect Garmin/Wahoo directly or upload FIT files."
+                    "Connect Garmin/Wahoo/Zwift etc directly or upload FIT files."
                 ),
                 "athlete_id": athlete.get("id"),
                 "activities_returned": 0
