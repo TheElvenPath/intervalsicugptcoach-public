@@ -913,27 +913,30 @@ def run_tier0_pre_audit(start: str, end: str, context: dict):
     # ------------------------------------------------------------
     # Snapshot export — ALWAYS (Tier-1 invariant)
     # ------------------------------------------------------------
-    if not source_df.empty:
-        context["snapshot_7d_json"] = source_df.to_json(orient="records")
-        debug(
-            context,
-            f"[T0] snapshot_7d_json set ({context.get('report_type')}, {len(source_df)} rows)"
-        )
+    report_type = context.get("report_type", "").lower()
+
+    if report_type == "summary":
+        # 🔒 Summary always uses real 7-day context (df_full)
+        snapshot_df = context.get("df_full", pd.DataFrame()).copy()
+
+    elif not source_df.empty:
+        # Normal weekly/season behavior
+        snapshot_df = source_df.copy()
+
     else:
-        # 🔒 Schema-safe snapshot using df_full structure
+        # Strict modes (weekly/season) fallback → preserve schema only
         if "df_full" in context and isinstance(context["df_full"], pd.DataFrame):
-            fallback_df = context["df_full"].head(0).copy()
+            snapshot_df = context["df_full"].head(0).copy()
         else:
-            # ultimate safety fallback (should never trigger)
-            fallback_df = pd.DataFrame(columns=["id", "type"])
+            snapshot_df = pd.DataFrame(columns=["id", "type"])
 
-        context["snapshot_7d_json"] = fallback_df.to_json(orient="records")
+    context["snapshot_7d_json"] = snapshot_df.to_json(orient="records")
 
-        debug(
-            context,
-            f"[T0] snapshot_7d_json set to schema-safe empty snapshot "
-            f"(columns={list(fallback_df.columns)})"
-        )
+    debug(
+        context,
+        f"[T0] snapshot_7d_json set ({report_type}, {len(snapshot_df)} rows)"
+    )
+
 
     # --- Step 4: Fetch wellness with adaptive chunking + meta-retry ---
     wellness_days = context.get("range", {}).get("wellnessDays", 42)
