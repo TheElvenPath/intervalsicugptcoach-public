@@ -6,7 +6,7 @@ Parses prefetched data into identical Tier-0 format as local Python
 Ensures parity for daily_load, zone distributions, derived metrics, etc.
 """
 import re
-from fastapi import FastAPI, Query, Request
+from fastapi import FastAPI, Query, Request, HTTPException
 from fastapi.responses import JSONResponse
 import os, sys, io, json, math, pandas as pd, numpy as np
 from datetime import datetime, timedelta, date
@@ -221,9 +221,13 @@ def normalize_prefetched_context(data):
 
 
         debug(context, f"[NORM] activities_light={len(df_light)} full={len(df_full)} wellness={len(df_well)} athlete_keys={list(athlete.keys()) if athlete else 'none'}")
+    except HTTPException:
+        # Let FastAPI handle it
+        raise
+
     except Exception as e:
         debug(context, f"[NORM] ❌ Normalization failed: {e}")
-    return context
+        raise
 
 
 # ============================================================
@@ -266,6 +270,12 @@ def run_audit(range: str = Query("weekly"), format: str = Query("markdown")):
             return JSONResponse({"status":"ok","report_type":range,"output_format":"semantic_json",
                 "semantic_graph":sanitize(sg),"compliance":compliance,"logs":logs[:20000]})
         return JSONResponse({"status":"ok","report_type":range,"output_format":"markdown","markdown":markdown,"logs":logs[:20000]})
+    except HTTPException as e:
+        return JSONResponse(
+            status_code=e.status_code,
+            content={"status": "error", "message": e.detail}
+        )
+
     except Exception as e:
         return error_response(e)
 
