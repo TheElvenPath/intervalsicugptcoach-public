@@ -750,23 +750,31 @@ def run_tier1_controller(df_master, wellness, context):
     t1_hours = context.get("tier1_visibleTotals", {}).get("hours", 0)
     t1_tss = context.get("tier1_visibleTotals", {}).get("tss", 0)
 
-    if t1_hours <= 0 or t1_tss <= 0:
-        warn_msg = (
-            "⚠️ Tier-1 detected missing or zero canonical totals.\n"
-            "This often occurs if recent activities have no Training Load (TSS) or HR zone data.\n"
-            "If you're using a smartwatch such as Amazfit that only records HR, "
-            "Intervals.icu may not compute load metrics.\n\n"
-            "👉 Please check:\n"
-            " • At least one activity in the past 7 days has valid TSS or HR-based load\n"
-            " • Your FTP and HR zones are set in Intervals.icu → Athlete → Settings → Zones\n"
-            " • Try ‘Re-analyze’ or ‘Estimate load from HR’ on recent activities\n\n"
-            "Then re-run the report."
-        )
+    report_type = str(context.get("report_type", "")).lower()
 
-        context["tier1_warning"] = warn_msg
-        debug(context, f"[T1-WARN] {warn_msg}")
+    # 🔒 Weekly & Season require valid canonical 7-day totals
+    if report_type in ("weekly", "season", "wellness"):
 
-        raise AuditHalt(warn_msg)
+        if t1_hours <= 0 or t1_tss <= 0:
+            warn_msg = (
+                "⚠️ Tier-1 detected missing or zero canonical totals.\n"
+                "This often occurs if recent activities have no Training Load (TSS) or HR zone data.\n"
+                "If you're using a smartwatch such as Amazfit that only records HR, "
+                "Intervals.icu may not compute load metrics.\n\n"
+                "👉 Please check:\n"
+                " • At least one activity in the past 7 days has valid TSS or HR-based load\n"
+                " • Your FTP and HR zones are set in Intervals.icu → Athlete → Settings → Zones\n"
+                " • Try ‘Re-analyze’ or ‘Estimate load from HR’ on recent activities\n\n"
+                "Then re-run the report."
+            )
+
+            context["tier1_warning"] = warn_msg
+            debug(context, f"[T1-WARN] {warn_msg}")
+
+            raise AuditHalt("🚫 Audit Halt: Missing or Zero Canonical Totals")
+
+    # ✅ Summary does NOT gate on 7-day totals
+
 
     # Continue if totals are valid
     context.pop("dailyTotals", None)
