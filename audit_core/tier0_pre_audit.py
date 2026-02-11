@@ -630,6 +630,23 @@ def run_tier0_pre_audit(start: str, end: str, context: dict):
 
         df_light = pd.DataFrame(payload)
 
+        # ------------------------------------------------------------
+        # 🔒 Strip STRAVA API stub rows (local canonical path)
+        # ------------------------------------------------------------
+        if "_note" in df_light.columns:
+            strava_note_text = "STRAVA activities are not available via the API"
+
+            before = len(df_light)
+
+            df_light = df_light[
+                df_light["_note"].fillna("") != strava_note_text
+            ].copy()
+
+            removed = before - len(df_light)
+
+            if removed > 0:
+                debug(context, f"[T0] Removed {removed} STRAVA stub rows (local canonical)")
+
         if "start_date_local" not in df_light.columns:
             raise AuditHalt("❌ Lightweight fetch missing 'start_date_local'")
 
@@ -707,8 +724,13 @@ def run_tier0_pre_audit(start: str, end: str, context: dict):
     context["df_light_slice"] = df_light_slice.copy()
 
     # ============================================================
-    # 📦 SNAPSHOT + TOTALS (WEEKLY NEEDS THIS)
+    # 📦 SNAPSHOT + TOTALS (WEEKLY / SUMMARY CONTEXT)
     # ============================================================
+
+    # 🔒 Ensure required columns exist (local mode safety)
+    for col in ["moving_time", "distance", "icu_training_load"]:
+        if col not in df_light_slice.columns:
+            df_light_slice[col] = 0
 
     context["snapshot_7d_json"] = df_light_slice.to_json(orient="records")
 
@@ -938,30 +960,16 @@ def run_tier0_pre_audit(start: str, end: str, context: dict):
     # ------------------------------------------------------------
     # Snapshot export — ALWAYS (Tier-1 invariant)
     # ------------------------------------------------------------
-    report_type = context.get("report_type", "").lower()
 
-    if report_type == "summary":
-        # 🔒 Summary always uses real 7-day context (df_full)
-        snapshot_df = context.get("df_full", pd.DataFrame()).copy()
-
-    elif not source_df.empty:
-        # Normal weekly/season behavior
-        snapshot_df = source_df.copy()
-
-    else:
-        # Strict modes (weekly/season) fallback → preserve schema only
-        if "df_full" in context and isinstance(context["df_full"], pd.DataFrame):
-            snapshot_df = context["df_full"].head(0).copy()
-        else:
-            snapshot_df = pd.DataFrame(columns=["id", "type"])
+    # 🔒 Snapshot always comes from resolved source_df
+    snapshot_df = source_df.copy() if isinstance(source_df, pd.DataFrame) else pd.DataFrame()
 
     context["snapshot_7d_json"] = snapshot_df.to_json(orient="records")
 
     debug(
         context,
-        f"[T0] snapshot_7d_json set ({report_type}, {len(snapshot_df)} rows)"
+        f"[T0] snapshot_7d_json set ({context.get('report_type')}, {len(snapshot_df)} rows)"
     )
-
 
     # --- Step 4: Fetch wellness with adaptive chunking + meta-retry ---
     wellness_days = context.get("range", {}).get("wellnessDays", 42)

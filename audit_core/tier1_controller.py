@@ -764,22 +764,9 @@ def run_tier1_controller(df_master, wellness, context):
         )
 
         context["tier1_warning"] = warn_msg
-
-        # Instead of halting, produce a minimal fallback report
-        context["tier1_visibleTotals"] = {"hours": 0, "tss": 0, "km": 0}
-        context["df_events"] = df_master.head(0)  # empty dataframe
-
-        # Use unified debug logger (auto-suppressed in production)
         debug(context, f"[T1-WARN] {warn_msg}")
 
-        # Return gracefully — don't raise AuditHalt
-        return {
-            "status": "warning",
-            "message": "Tier-1 skipped due to incomplete training load data",
-            "details": warn_msg,
-            "semantic_graph": {},
-            "logs": "\n".join(context.get("debug_trace", [])),
-        }
+        raise AuditHalt(warn_msg)
 
     # Continue if totals are valid
     context.pop("dailyTotals", None)
