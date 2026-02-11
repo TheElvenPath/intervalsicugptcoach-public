@@ -267,31 +267,6 @@ def normalize_prefetched_context(data):
 # ============================================================
 def _run_full_audit(range: str, output_format="markdown", prefetch_context=None):
     os.environ["REPORT_TYPE"] = range.lower()
-
-    # 🔎 Always log execution identity (prod + staging)
-    try:
-        athlete = {}
-        if prefetch_context:
-            athlete = (
-                prefetch_context.get("athleteProfile")
-                or prefetch_context.get("athlete")
-                or {}
-            )
-
-        athlete_id = athlete.get("id", "unknown")
-        athlete_name = athlete.get("name", "unknown")
-
-        sys.stderr.write(
-            f"[EXEC] athlete={athlete_name} ({athlete_id}) "
-            f"report_type={range.lower()} "
-            f"env={os.getenv('RAILWAY_ENVIRONMENT_NAME','local')}\n"
-        )
-        sys.stderr.flush()
-
-    except Exception as e:
-        sys.stderr.write(f"[EXEC-LOG-FAIL] {e}\n")
-        sys.stderr.flush()
-
     buffer = io.StringIO()
     with redirect_stdout(buffer):
         if prefetch_context:
