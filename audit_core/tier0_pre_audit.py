@@ -896,13 +896,36 @@ def run_tier0_pre_audit(start: str, end: str, context: dict):
             )
 
         # --- Validate before serializing ---
-        if source_df.empty:
-            raise AuditHalt(f"❌ Tier-0: snapshot source empty before serialization (report_type={report_type})")
-        if "type" not in source_df.columns:
-            raise AuditHalt(
-                f"❌ Tier-0: missing 'type' column in source_df before snapshot_7d_json "
-                f"(columns={list(source_df.columns)})"
-            )
+        report_type = str(report_type).lower().strip()
+
+        requires_snapshot = report_type in ["weekly", "season", "wellness"]
+
+        if requires_snapshot:
+            if source_df.empty:
+                raise AuditHalt(
+                    f"❌ Tier-0: snapshot source empty before serialization "
+                    f"(report_type={report_type})"
+                )
+
+            if "type" not in source_df.columns:
+                raise AuditHalt(
+                    f"❌ Tier-0: missing 'type' column in source_df before snapshot_7d_json "
+                    f"(columns={list(source_df.columns)})"
+                )
+        else:
+            # wellness + summary
+            if source_df.empty:
+                debug(
+                    context,
+                    f"[T0] Snapshot slice empty — allowed for report_type={report_type}"
+                )
+
+            if not source_df.empty and "type" not in source_df.columns:
+                raise AuditHalt(
+                    f"❌ Tier-0: missing 'type' column in source_df "
+                    f"(columns={list(source_df.columns)})"
+                )
+
 
     # --- Serialize for Tier-1 ---
     # --- Fallback handling for season mode ---
