@@ -357,10 +357,12 @@ async def run_audit_with_data(request: Request):
                 "activities_returned": 0
             })
 
-        # ✅ Gracefully handle empty light dataset to prevent AuditHalt
         light = prefetch_context.get("activities_light", [])
-        if not light or len(light) == 0:
-            print(f"[STAGING] ⚠️ No activities found for light dataset ({data.get('start')} → {data.get('end')})")
+        full  = prefetch_context.get("activities_full", [])
+
+        # Abort only if NO activity data at all
+        if (not light or len(light) == 0) and (not full or len(full) == 0):
+            print(f"[STAGING] ⚠️ No activities found for requested range")
             return JSONResponse({
                 "status": "ok",
                 "report_type": report_range,
@@ -369,6 +371,7 @@ async def run_audit_with_data(request: Request):
                 "compliance": {},
                 "message": f"No activities found between {data.get('start')} and {data.get('end')}",
             })
+
 
         # now run the unified audit
         with redirect_stdout(buffer):
