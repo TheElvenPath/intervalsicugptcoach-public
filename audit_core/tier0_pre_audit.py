@@ -862,14 +862,22 @@ def run_tier0_pre_audit(start: str, end: str, context: dict):
             # WEEKLY → use full 7-day detailed dataset
             source_df = df_activities
             debug(context, f"[T0] Weekly mode → using FULL 7-day dataset for snapshot_7d_json ({len(source_df)} rows)")
+
         elif report_type in ["season", "block", "90d"]:
             # SEASON → use lightweight 90-day dataset
             source_df = df_light_slice
             debug(context, f"[T0] Season mode → using LIGHT 90-day dataset for snapshot_7d_json ({len(source_df)} rows)")
+
+        elif report_type == "summary":
+            # SUMMARY → snapshot uses recent 7-day FULL dataset (context window)
+            source_df = df_activities
+            debug(context, f"[T0] Summary mode → using FULL 7-day context dataset ({len(source_df)} rows)")
+
         else:
-            # fallback default
+            # fallback default (should not occur)
             source_df = df_light_slice
             debug(context, f"[T0] Unknown report_type='{report_type}' → defaulting to LIGHT dataset ({len(source_df)} rows)")
+
 
         # ------------------------------------------------------------------
         # 🛡️ Tier-0 Safety Guard — ensure baseline columns exist & numeric
