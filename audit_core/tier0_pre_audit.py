@@ -913,7 +913,7 @@ def run_tier0_pre_audit(start: str, end: str, context: dict):
                     f"(columns={list(source_df.columns)})"
                 )
         else:
-            # wellness + summary
+            # summary
             if source_df.empty:
                 debug(
                     context,

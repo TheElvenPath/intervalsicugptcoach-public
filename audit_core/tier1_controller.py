@@ -671,9 +671,38 @@ def run_tier1_controller(df_master, wellness, context):
     # --- Unified visible totals with mean metrics ----
     t0 = (context.get("tier0_snapshotTotals_7d") or {}).copy()
 
-    # Ensure the 7-day snapshot JSON exists
-    if "snapshot_7d_json" not in context or not context["snapshot_7d_json"]:
-        raise AuditHalt("❌ Tier-1: missing snapshot_7d_json for visible subset mean metrics")
+    report_type = str(context.get("report_type", "")).lower()
+
+    requires_snapshot = report_type in ["weekly", "season", "wellness"]
+
+    if requires_snapshot:
+        if "snapshot_7d_json" not in context or not context["snapshot_7d_json"]:
+            raise AuditHalt(
+                "❌ Tier-1: missing snapshot_7d_json for visible subset mean metrics"
+            )
+
+        snapshot = context["snapshot_7d_json"]
+
+        if isinstance(snapshot, (list, dict)):
+            visible_events = pd.DataFrame(snapshot)
+        elif isinstance(snapshot, str):
+            visible_events = pd.read_json(StringIO(snapshot))
+        else:
+            raise AuditHalt(
+                f"❌ Tier-1: unsupported type for snapshot_7d_json → {type(snapshot)}"
+            )
+
+        if "type" not in visible_events.columns:
+            raise AuditHalt(
+                f"❌ Tier-1: snapshot_7d_json missing required 'type' column "
+                f"(columns={visible_events.columns.tolist()})"
+            )
+    else:
+        # summary → snapshot not required
+        visible_events = pd.DataFrame()
+        context["weeklyEventLogBlock"] = []
+        context["tier1_visibleTotals"] = context.get("tier0_snapshotTotals_7d", {})
+
 
     # --- Safely rehydrate snapshot_7d_json ----
     snapshot = context["snapshot_7d_json"]
