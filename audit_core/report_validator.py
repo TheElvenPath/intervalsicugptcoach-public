@@ -105,8 +105,8 @@ def validate_report_output(context, report, framework_version="Unified_Reporting
             val = val.get("value", np.nan)
             context[m] = val
 
-        sys.stderr.write(f"[VALIDATOR DEBUG] {m} = {val} ({type(val)})\n")
-        sys.stderr.flush()
+#        sys.stderr.write(f"[VALIDATOR DEBUG] {m} = {val} ({type(val)})\n")
+#        sys.stderr.flush()
 
         try:
             valf = float(val)
