@@ -1602,11 +1602,16 @@ def build_semantic_json(context):
     if semantic["meta"]["report_type"] == "weekly":
         df_ev = df_events.copy()
 
-        if {
+        semantic["wbal_summary"] = {}  # default safe
+
+        required_cols = {
             "icu_pm_w_prime",
             "icu_max_wbal_depletion",
             "icu_joules_above_ftp",
-        } <= set(df_ev.columns):
+            "start_date_local",
+        }
+
+        if isinstance(df_ev, pd.DataFrame) and not df_ev.empty and required_cols <= set(df_ev.columns):
 
             df_ev = df_ev[
                 df_ev["icu_pm_w_prime"].notna()
@@ -1615,102 +1620,123 @@ def build_semantic_json(context):
             ]
 
             if not df_ev.empty:
+
                 with np.errstate(divide="ignore", invalid="ignore"):
-                    wbal_pct = df_ev["icu_max_wbal_depletion"] / df_ev["icu_pm_w_prime"]
-                    anaerobic_pct = df_ev["icu_joules_above_ftp"] / df_ev["icu_pm_w_prime"]
+                    wbal_pct = (
+                        df_ev["icu_max_wbal_depletion"] / df_ev["icu_pm_w_prime"]
+                    ).replace([np.inf, -np.inf], np.nan)
 
-            # --- derive per-day engagement ---
-            df_ev["date"] = pd.to_datetime(df_ev["start_date_local"]).dt.date
-            df_ev["depth_pct"] = df_ev["icu_max_wbal_depletion"] / df_ev["icu_pm_w_prime"]
+                    anaerobic_pct = (
+                        df_ev["icu_joules_above_ftp"] / df_ev["icu_pm_w_prime"]
+                    ).replace([np.inf, -np.inf], np.nan)
 
-            daily = (
-                df_ev.groupby("date")
-                .agg({
-                    "depth_pct": "max",
-                    "icu_joules_above_ftp": "sum"
-                })
-                .reset_index()
-            )
+                df_ev["date"] = pd.to_datetime(df_ev["start_date_local"]).dt.date
+                df_ev["depth_pct"] = wbal_pct
 
-            def day_level(depth):
-                if depth < 0.15:
-                    return "low"
-                elif depth < 0.35:
-                    return "moderate"
-                else:
-                    return "high"
-
-            daily["engagement"] = daily["depth_pct"].apply(day_level)
-
-            semantic["wbal_summary"] = {
-                "mean_wbal_depletion_pct": round(float(wbal_pct.mean()), 3),
-                "mean_anaerobic_contrib_pct": round(float(anaerobic_pct.mean()), 3),
-                "sessions_with_wbal_data": int(len(df_ev)),
-                "basis": "per-session mean (W′-capable sessions only)",
-                "window": "weekly",
-
-                # 🔑 NEW
-                "temporal_pattern": {
-                    str(r["date"]): r["engagement"]
-                    for _, r in daily.iterrows()
-                },
-                "dominant_pattern": (
-                    "clustered_weekend"
-                    if daily["engagement"].tail(2).isin(["high"]).any()
-                    else "distributed"
+                daily = (
+                    df_ev.groupby("date")
+                    .agg({
+                        "depth_pct": "max",
+                        "icu_joules_above_ftp": "sum"
+                    })
+                    .reset_index()
                 )
-            }
+
+                def day_level(depth):
+                    if pd.isna(depth):
+                        return "unknown"
+                    elif depth < 0.15:
+                        return "low"
+                    elif depth < 0.35:
+                        return "moderate"
+                    else:
+                        return "high"
+
+                daily["engagement"] = daily["depth_pct"].apply(day_level)
+
+                semantic["wbal_summary"] = {
+                    "mean_wbal_depletion_pct": round(float(wbal_pct.mean()), 3)
+                        if not wbal_pct.dropna().empty else None,
+                    "mean_anaerobic_contrib_pct": round(float(anaerobic_pct.mean()), 3)
+                        if not anaerobic_pct.dropna().empty else None,
+                    "sessions_with_wbal_data": int(len(df_ev)),
+                    "basis": "per-session mean (W′-capable sessions only)",
+                    "window": "weekly",
+                    "temporal_pattern": {
+                        str(r["date"]): r["engagement"]
+                        for _, r in daily.iterrows()
+                    },
+                    "dominant_pattern": (
+                        "clustered_weekend"
+                        if daily["engagement"].tail(2).isin(["high"]).any()
+                        else "distributed"
+                    )
+                }
+
 
     # =========================================================
-    # SEASON / SUMMARY → weekly peak session model (UNCHANGED)
+    # SEASON / SUMMARY → weekly peak session model
     # =========================================================
     elif report_type in ("season", "summary"):
+
+        semantic["wbal_summary"] = {}  # default safe
+
         df = context.get("df_light")
+
+        required_cols = {
+            "start_date_local",
+            "icu_pm_w_prime",
+            "icu_max_wbal_depletion",
+            "icu_joules_above_ftp",
+        }
 
         if (
             isinstance(df, pd.DataFrame)
             and not df.empty
-            and {
-                "start_date_local",
-                "icu_pm_w_prime",
-                "icu_max_wbal_depletion",
-                "icu_joules_above_ftp",
-            } <= set(df.columns)
+            and required_cols <= set(df.columns)
         ):
+
             df = df.copy()
             df["start_date_local"] = pd.to_datetime(df["start_date_local"], errors="coerce")
             df = df.dropna(subset=["start_date_local"])
 
-            # 🔑 FILTER TO WBAL-CAPABLE SESSIONS (this is the missing piece)
             df = df[
                 df["icu_pm_w_prime"].notna()
                 & df["icu_max_wbal_depletion"].notna()
                 & df["icu_joules_above_ftp"].notna()
             ]
 
-            if df.empty:
-                return  # or just skip silently
+            if not df.empty:
 
-            iso = df["start_date_local"].dt.isocalendar()
-            df["year_week"] = iso["year"].astype(str) + "-W" + iso["week"].astype(str)
+                iso = df["start_date_local"].dt.isocalendar()
+                df["year_week"] = (
+                    iso["year"].astype(str) + "-W" + iso["week"].astype(str)
+                )
 
-            with np.errstate(divide="ignore", invalid="ignore"):
-                df["wbal_pct"] = df["icu_max_wbal_depletion"] / df["icu_pm_w_prime"]
-                df["anaerobic_pct"] = df["icu_joules_above_ftp"] / df["icu_pm_w_prime"]
+                with np.errstate(divide="ignore", invalid="ignore"):
+                    df["wbal_pct"] = (
+                        df["icu_max_wbal_depletion"] / df["icu_pm_w_prime"]
+                    ).replace([np.inf, -np.inf], np.nan)
 
-            weekly = (
-                df.sort_values("wbal_pct", ascending=False)
-                .groupby("year_week", as_index=False)
-                .first()
-            )
+                    df["anaerobic_pct"] = (
+                        df["icu_joules_above_ftp"] / df["icu_pm_w_prime"]
+                    ).replace([np.inf, -np.inf], np.nan)
 
-            semantic["wbal_summary"] = {
-                "mean_wbal_depletion_pct": round(float(weekly["wbal_pct"].mean()), 3),
-                "mean_anaerobic_contrib_pct": round(float(weekly["anaerobic_pct"].mean()), 3),
-                "weeks_with_wbal_data": int(len(weekly)),
-                "basis": "weekly peak session",
-                "window": "per-week max over season",
-            }
+                weekly = (
+                    df.sort_values("wbal_pct", ascending=False)
+                    .groupby("year_week", as_index=False)
+                    .first()
+                )
+
+                semantic["wbal_summary"] = {
+                    "mean_wbal_depletion_pct": round(float(weekly["wbal_pct"].mean()), 3)
+                        if not weekly["wbal_pct"].dropna().empty else None,
+                    "mean_anaerobic_contrib_pct": round(float(weekly["anaerobic_pct"].mean()), 3)
+                        if not weekly["anaerobic_pct"].dropna().empty else None,
+                    "weeks_with_wbal_data": int(len(weekly)),
+                    "basis": "weekly peak session",
+                    "window": "per-week max over season",
+                }
 
 
     # =========================================================
@@ -2054,6 +2080,10 @@ def build_semantic_json(context):
 
         report_type = semantic["meta"]["report_type"]
 
+        # -----------------------------------------------------
+        # 1️⃣ Inject Raw Model Metrics (WDRM / ISDM / NDLI)
+        # -----------------------------------------------------
+
         PI_GROUPS = {
             "anaerobic_repeatability": {
                 "framework": "W′ Depletion & Repeatability Model (WDRM)",
@@ -2088,21 +2118,13 @@ def build_semantic_json(context):
 
                 for metric_name, metric_value in metrics.items():
 
-                    thresholds = (
-                        CHEAT_SHEET["thresholds"]
-                        .get(group_meta["cheatsheet_key"], {})
-                        .get(metric_name, {})
-                    )
-
                     block = semantic_block_for_metric(
                         metric_name,
                         metric_value,
                         semantic
                     )
 
-                    # Inject Tier-3 metadata
                     block["framework"] = group_meta["framework"]
-                    #block["thresholds"] = thresholds
                     block["interpretation"] = CHEAT_SHEET["context"].get(
                         group_meta["context_key"]
                     )
@@ -2126,13 +2148,37 @@ def build_semantic_json(context):
             semantic["performance_intelligence"]["chronic"] = wrap_pi_block(chronic, "90d")
             semantic["performance_intelligence"]["acute"] = wrap_pi_block(acute, "7d")
 
+        # -----------------------------------------------------
+        # 2️⃣ Inject Interpretation → Action Layer
+        # -----------------------------------------------------
+
+        training_state = context.get("training_state")
+
+        if training_state:
+
+            semantic["performance_intelligence"]["training_state"] = {
+                "state_label": training_state.get("state_label"),
+                "readiness": training_state.get("readiness"),
+                "adaptation": training_state.get("adaptation"),
+                "recommendation": training_state.get("recommendation"),
+                "next_session": training_state.get("next_session"),
+                "confidence": training_state.get("confidence"),
+                "phase_context": training_state.get("phase_context"),
+            }
+
+            debug(
+                context,
+                f"[SEMANTIC] Injected training_state → "
+                f"{training_state.get('status')} | "
+                f"{training_state.get('next_session_focus')}"
+            )
+
         debug(
             context,
-            f"[SEMANTIC] Injected performance_intelligence (hydrated) → "
+            f"[SEMANTIC] Injected performance_intelligence → "
             f"acute={list(semantic['performance_intelligence'].get('acute', {}).keys())}, "
             f"chronic={list(semantic['performance_intelligence'].get('chronic', {}).keys())}"
         )
-
 
 
     # ---------------------------------------------------------

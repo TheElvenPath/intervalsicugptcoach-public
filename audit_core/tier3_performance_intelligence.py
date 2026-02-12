@@ -41,7 +41,13 @@ def compute_performance_intelligence(context, contract_type="weekly"):
     else:
         result = _compute_weekly(context, df_full)
 
-    debug(context, "[T3] Performance Intelligence complete")
+    # ✅ Make result visible to interpreter
+    context["performance_intelligence"] = result
+
+    # ✅ Now interpret using actual data
+    interpretation = interpret_training_state(context)
+    context["training_state"] = interpretation
+
     return result
 
 
@@ -226,6 +232,96 @@ def _compute_season(context, df_light, df_full):
     return {
         "chronic_state": chronic,
         "acute_overlay": acute_overlay
+    }
+
+
+def interpret_training_state(context):
+    """
+    Synthesizes Tier-3 metrics into athlete-facing decisions.
+
+    Returns:
+        {
+            state_label,
+            readiness,
+            adaptation,
+            recommendation,
+            next_session,
+            confidence
+        }
+    """
+
+    pi = context.get("performance_intelligence", {})
+    future = context.get("future_forecast", {})
+    wellness = context.get("wellness_summary", {})
+    phase = (
+        context.get("current_phase")
+        or context.get("phase_detected")
+        or (context.get("phases", [{}])[-1].get("phase") if context.get("phases") else None)
+    )
+
+
+    # --------------------------------------------------
+    # Pull signals (safe extraction)
+    # --------------------------------------------------
+
+    wdrm = (pi.get("anaerobic_repeatability") or {}).get("mean_depletion_pct_7d")
+    durability = (pi.get("durability") or {}).get("mean_decoupling_7d")
+    neural = (pi.get("neural_density") or {}).get("rolling_joules_above_ftp_7d")
+
+    tsb_class = future.get("fatigue_class")
+    recovery_index = wellness.get("recovery_index")
+
+    # --------------------------------------------------
+    # Decision Framing (no new math — just logic)
+    # --------------------------------------------------
+
+    # --- Am I cooked? ---
+    if tsb_class == "high_risk" or (recovery_index and recovery_index < 0.8):
+        readiness = "You are carrying significant fatigue."
+        state_label = "Overreached"
+        recommendation = "Back off"
+        next_session = "Recovery ride or full rest"
+    elif tsb_class in ("fresh", "transition"):
+        readiness = "You are fresh and well recovered."
+        state_label = "Fresh"
+        recommendation = "Push"
+        next_session = "High-quality intensity session"
+    else:
+        readiness = "You are in a productive training zone."
+        state_label = "Productive"
+        recommendation = "Maintain progression"
+        next_session = "Planned structured session"
+
+    # --- Am I adapting? ---
+    adapting = "Adaptation signals are stable."
+
+    if wdrm and wdrm > 0.6:
+        adapting = "High anaerobic stimulus — adaptation likely but recovery critical."
+    if durability and durability > 6:
+        adapting = "Durability strain rising — aerobic consolidation advised."
+
+    # --- Neural density check ---
+    if neural and neural > 200000:
+        next_session = "Low-intensity aerobic session to absorb load"
+        recommendation = "Absorb before adding intensity"
+
+    # --------------------------------------------------
+    # Confidence
+    # --------------------------------------------------
+
+    confidence = "moderate"
+
+    if tsb_class and recovery_index:
+        confidence = "high"
+
+    return {
+        "state_label": state_label,
+        "readiness": readiness,
+        "adaptation": adapting,
+        "recommendation": recommendation,
+        "next_session": next_session,
+        "confidence": confidence,
+        "phase_context": phase,
     }
 
 

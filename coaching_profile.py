@@ -17,6 +17,39 @@ def get_profile_metrics(context):
 
 # coaching_profile.py
 
+REPORT_CONTRACT = {
+    "weekly": [
+        "meta", "hours", "tss", "distance_km",
+        "metrics", "extended_metrics",
+        "performance_intelligence",
+        "zones", "daily_load", "events", "wbal_summary",
+        "wellness", "phases", "insights", "insight_view", "actions",
+        "planned_events", "planned_summary_by_date",
+        "future_forecast", "future_actions"
+    ],
+
+    "season": [
+        "meta", "hours", "tss", "distance_km",
+        "metrics", "extended_metrics",
+        "adaptation_metrics", "trend_metrics",
+        "performance_intelligence",
+        "phases", "phases_summary",
+        "wbal_summary", "performance_summary",
+        "insights", "actions", "future_forecast", "future_actions"
+    ],
+
+    "summary": [
+        "meta", "hours", "tss", "distance_km",
+        "wellness", "insights",
+        "phases", "phases_summary", "performance_summary"
+    ],
+
+    "wellness": [
+        "meta", "wellness", "insights", "insight_view"
+    ]
+}
+
+
 RENDERER_PROFILES = {
 
     # ==============================================================
@@ -335,41 +368,6 @@ Summary:
 ✅ phases         → macro-level blocks (Base, Build, Peak, etc.)
 ✅ phases_detail  → weekly micro-level metrics (TSS, hours, distance)
 """
-
-
-REPORT_CONTRACT = {
-    "weekly": [
-        "meta", "hours", "tss", "distance_km",
-        "metrics", "extended_metrics",
-        "performance_intelligence",
-        "zones", "daily_load", "events", "wbal_summary",
-        "wellness", "phases", "insights", "insight_view", "actions",
-        "planned_events", "planned_summary_by_date",
-        "future_forecast", "future_actions"
-    ],
-
-    "season": [
-        "meta", "hours", "tss", "distance_km",
-        "metrics", "extended_metrics",
-        "adaptation_metrics", "trend_metrics",
-        "performance_intelligence",
-        "phases", "phases_summary",
-        "wbal_summary", "performance_summary",
-        "insights", "actions", "future_forecast", "future_actions"
-    ],
-
-    "summary": [
-        "meta", "hours", "tss", "distance_km",
-        "wellness", "insights",
-        "phases", "phases_summary", "performance_summary"
-    ],
-
-    "wellness": [
-        "meta", "wellness", "insights", "insight_view"
-    ]
-}
-
-
 
 COACH_PROFILE = {
     "version": "v16.17",
