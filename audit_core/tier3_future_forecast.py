@@ -115,7 +115,7 @@ def run_future_forecast(context, forecast_days="auto"):
     # -----------------------------------------------------------------
     daily_load = (
         df.groupby("date", as_index=True)["icu_training_load"]
-        .sum(numeric_only=True)
+        .sum()
         .astype(float)
         .sort_index()
     )
