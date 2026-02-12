@@ -20,8 +20,6 @@ CHEAT_SHEET["thresholds"] = {
     "ACWR": {"green": (0.8, 1.3), "amber": (0.6, 1.5)},
     "Monotony": {"green": (1.0, 2.0), "amber": (0.8, 2.5)},
     "Strain": {"green": (0, 3000), "amber": (3000, 4000)},
-#    "Polarisation": {"green": (0.75, 0.90), "amber": (0.65, 0.95)},   # Seiler ratio (% displayed)
-#    "PolarisationIndex": {"green": (0.75, 1.00), "amber": (0.60, 0.75)},  # Normalized index (0–1)
     "FatigueTrend": {"green": (-10, 10), "amber": (-20, 20)},  # Updated to percentage scale
     "StressTolerance": {"green": (2.0, 8.0), "amber": (1.0, 10.0)},
     "LIR": {"green": (0.8, 1.2), "amber": (0.6, 1.4), "red": (0.0, 0.6)},
@@ -47,6 +45,19 @@ CHEAT_SHEET["thresholds"] = {
     "HRVBalance": {"green": [1.0, 1.3],"amber": [0.9, 1.0],"red": [0.0, 0.9]},
     "HRVStability": {"green": (0.85, 1.0), "amber": (0.7, 0.85)},
     "HRVTrend": {"green": (0.0, 5.0), "amber": (-2.0, 0.0)},
+    # --- Performance Intelligence ---
+    "mean_depletion_pct_7d": {"green":[0.2,0.45],"amber":[0.45,0.7]},
+    "high_depletion_sessions_7d": {"green":[0,2],"amber":[3,4]},
+    "mean_depletion_pct_90d": {"green":[0.15,0.35],"amber":[0.35,0.55]},
+    "high_depletion_sessions_90d": {"green":[0,6],"amber":[6,10]},
+    "mean_decoupling_7d": {"green":[0,5],"amber":[5,8]},
+    "high_drift_sessions_7d": {"green":[0,2],"amber":[3,4]},
+    "mean_decoupling_90d": {"green":[0,4],"amber":[4,7]},
+    "high_drift_sessions_90d": {"green":[0,10],"amber":[10,20]},
+    "rolling_joules_above_ftp_7d": {"green":[60000,160000],"amber":[160000,250000]},
+    "high_intensity_days_7d": {"green":[2,4],"amber":[4,6]},
+    "high_intensity_sessions_90d": {"green":[8,25],"amber":[25,40]},
+    "mean_training_load_90d": {"green":[40,70],"amber":[70,90]},
     # --- W′ Balance / Anaerobic Load (Weekly) ---
     "WBalDepletion": {
         "green": (0.0, 0.25),
@@ -79,25 +90,21 @@ CHEAT_SHEET["thresholds"] = {
         "green": (0.75, 0.90),
         "amber": (0.65, 0.95),
     },  # Canonical polarised ≥1.0; UI bands are coaching heuristics
-
     # --- Power-only normalized index (Z1 + Z2 proportion) ---
     "PolarisationIndex": {
         "green": (0.75, 1.00),
         "amber": (0.60, 0.75),
     },  # Aerobic bias vs intensity focus (phase-dependent)
-
     # --- Fused HR + Power (sport-specific, normalized) ---
     "Polarisation_fused": {
         "green": (0.80, 1.00),
         "amber": (0.65, 0.80),
     },  # Seiler / Stöggl / Issurin (dominant-sport signal)
-
     # --- Combined HR + Power (multi-sport, normalized) ---
     "Polarisation_combined": {
         "green": (0.78, 1.00),
         "amber": (0.60, 0.78),
     },  # Global descriptor; lower precision than sport-specific
-
     "TSB": {
         "transition": [10, 999],     # Very fresh, low load (fitness declining)
         "fresh": [5, 10],            # Race-ready freshness
@@ -130,7 +137,6 @@ CHEAT_SHEET["thresholds"] = {
     # ================================================================
 
     "PhaseBoundaries": {
-
         # 🧱 BASE → Stable or gently rising CTL; small week-to-week variance
         "Base": {
             "trend_min": -0.05,
@@ -138,7 +144,6 @@ CHEAT_SHEET["thresholds"] = {
             "acwr_max": 1.2,
             "ri_min": 0.75
         },
-
         # 📈 BUILD → Progressive overload; productive fatigue zone
         "Build": {
             "trend_min": 0.10,
@@ -146,7 +151,6 @@ CHEAT_SHEET["thresholds"] = {
             "acwr_max": 1.3,
             "ri_min": 0.65
         },
-
         # 🏁 PEAK → Stabilised high CTL, ATL dropping, RI improving
         "Peak": {
             "trend_min": -0.10,
@@ -154,7 +158,6 @@ CHEAT_SHEET["thresholds"] = {
             "acwr_max": 1.15,
             "ri_min": 0.8
         },
-
         # 📉 TAPER → Rapid ATL drop, load reduced 30–50%
         "Taper": {
             "trend_min": -0.50,
@@ -162,7 +165,6 @@ CHEAT_SHEET["thresholds"] = {
             "acwr_max": 1.1,
             "ri_min": 0.8
         },
-
         # 💤 RECOVERY → Heavy unload / detraining period
         "Recovery": {
             "trend_min": -1.0,
@@ -170,7 +172,6 @@ CHEAT_SHEET["thresholds"] = {
             "acwr_max": 1.0,
             "ri_min": 0.6
         },
-
         # 🧘 DELOAD → Short mid-block unloads; prevents overreach
         "Deload": {
             "trend_min": -0.25,
@@ -178,14 +179,35 @@ CHEAT_SHEET["thresholds"] = {
             "acwr_max": 1.2,
             "ri_min": 0.7
         },
-
         # 🔁 CONTINUOUS LOAD → fallback when variation truly minimal (<5%)
         "Continuous Load": {
             "trend_min": -0.05,
             "trend_max": 0.05
         }
-    }
+    },
 }
+
+CHEAT_SHEET["metric_groups"] = {
+    # --- WDRM ---
+    "mean_depletion_pct_7d": "AnaerobicRepeatability",
+    "max_depletion_pct_7d": "AnaerobicRepeatability",
+    "high_depletion_sessions_7d": "AnaerobicRepeatability",
+    "mean_depletion_pct_90d": "AnaerobicRepeatability",
+    "high_depletion_sessions_90d": "AnaerobicRepeatability",
+    # --- ISDM ---
+    "mean_decoupling_7d": "DurabilityProfile",
+    "max_decoupling_7d": "DurabilityProfile",
+    "high_drift_sessions_7d": "DurabilityProfile",
+    "mean_decoupling_90d": "DurabilityProfile",
+    "high_drift_sessions_90d": "DurabilityProfile",
+    # --- NDLI ---
+    "rolling_joules_above_ftp_7d": "NeuralDensity",
+    "high_intensity_days_7d": "NeuralDensity",
+    "high_intensity_sessions_90d": "NeuralDensity",
+    # --- Alignment ---
+    "delta_ratio": "LoadAlignment",
+}
+
 
 # === Phase-Aware Threshold Adjustments (optional overrides) ===
 CHEAT_SHEET["phase_thresholds"] = {
@@ -234,7 +256,6 @@ CLASSIFICATION_ALIASES = {
     "healthy": "green",
     "normal": "green",
     "low_exposure": "green",
-
     # --- Amber (watch / moderate / caution)
     "amber": "amber",
     "moderate": "amber",
@@ -243,13 +264,17 @@ CLASSIFICATION_ALIASES = {
     "fatigued": "amber",
     "pyramidal": "amber",
     "threshold": "amber",        # Low polarisation; phase-dependent (not inherently bad)
-
     # --- Red (critical / bad)
     "red": "red",
     "poor": "red",
     "overreached": "red",
     "critical": "red",
-    "intensity-focused": "red"
+    "intensity-focused": "red",
+    #--- Performance Intelligence 
+    "spiking": "red",
+    "clustered": "amber",
+    "overreach": "red",
+    "aligned": "green",
 }
 
 # === Context ===
@@ -339,6 +364,23 @@ CHEAT_SHEET["context"] = {
         "Temporal distribution pattern of W′ depletion across the reporting window. "
         "Used to identify clustering (e.g. weekend stacking) versus evenly distributed anaerobic stress."
     ),
+    "AnaerobicRepeatability": (
+        "WDRM (W′ Depletion & Repeatability Metric) quantifies depth and frequency "
+        "of anaerobic reserve depletion across sessions. Higher values reflect repeated "
+        "deep supra-threshold exposure."
+    ),
+    "DurabilityProfile": (
+        "ISDM (Intensity Stability & Durability Metric) reflects decoupling behaviour "
+        "under fatigue. Elevated values indicate cardiovascular drift or durability stress."
+    ),
+    "NeuralDensity": (
+        "NDLI (Neural Density Load Index) captures clustering of high-intensity "
+        "work within short time windows (e.g. 72h). High density increases recovery demand."
+    ),
+    "LoadAlignment": (
+        "Acute vs Chronic alignment compares current 7-day load expression "
+        "against 90-day baseline. Ratios >1.4 suggest overload; <0.8 under-stimulation."
+    ),
 }
 
 CHEAT_SHEET["coaching_links"] = {
@@ -382,15 +424,29 @@ CHEAT_SHEET["coaching_links"] = {
         "High W′ depletion (>45%) indicates repeated deep anaerobic stress. "
         "If clustered, monitor recovery closely; if sustained week-over-week, consider redistributing intensity."
     ),
-
     "AnaerobicContribution": (
         "Very high anaerobic contribution (>90%) means intensity sessions are highly glycolytic. "
         "This is appropriate for race-specific or VO₂ blocks but should not dominate base phases."
     ),
-
     "WBalPattern": (
         "Clustered anaerobic patterns (e.g. weekend stacking) increase short-term fatigue risk "
         "but can be effective when followed by sufficient recovery."
+    ),
+    "AnaerobicRepeatability": (
+        "If WDRM high week-over-week, monitor recovery and avoid stacking "
+        "deep W′ sessions without adequate low-intensity support."
+    ),
+    "DurabilityProfile": (
+        "If durability drift rising, extend aerobic steady work or reduce "
+        "high-intensity density to stabilise cardiovascular efficiency."
+    ),
+    "NeuralDensity": (
+        "If neural density clustered, insert recovery microcycles or "
+        "redistribute intensity to prevent cumulative fatigue."
+    ),
+    "LoadAlignment": (
+        "If acute > chronic (>1.4), reduce intensity density or volume. "
+        "If acute < chronic (<0.8), consider progressive overload."
     ),
 }
 
@@ -402,6 +458,12 @@ CHEAT_SHEET["display_names"] = {
     "WBalDepletion": "W′ Balance Depletion (Weekly Mean)",
     "AnaerobicContribution": "Anaerobic Contribution (W′-engaged)",
     "WBalPattern": "Anaerobic Load Pattern",
+    "anaerobic_repeatability": "Anaerobic Repeatability (WDRM)",
+    "durability_profile": "Durability Profile (ISDM)",
+    "neural_density": "Neural Load Density (NDLI)",
+    "load_alignment": "Acute vs Chronic Load Alignment",
+    "wdrm_7d": "Anaerobic Repeatability (7-day)",
+    "wdrm_90d": "Anaerobic Repeatability (90-day)",
 }
 
 CHEAT_SHEET["advice"] = {
@@ -410,20 +472,17 @@ CHEAT_SHEET["advice"] = {
         "low": "⚠ Durability low ({:.2f}) — extend steady-state endurance or increase time-in-zone.",
         "improving": "✅ Durability improving ({:.2f}) — maintain current long-ride structure."
     },
-
     # --- Load Intensity Ratio (LIR) ---
     "LIR": {
         "high": "⚠ Load intensity too high (LIR={:.2f}) — reduce intensity or monitor recovery.",
         "low": "⚠ Load intensity low (LIR={:.2f}) — add tempo or sweet-spot intervals.",
         "balanced": "✅ Load intensity balanced (LIR={:.2f})."
     },
-
     # --- Endurance Reserve ---
     "EnduranceReserve": {
         "depleted": "⚠ Endurance reserve depleted ({:.2f}) — add recovery or split long sessions.",
         "strong": "✅ Endurance reserve strong ({:.2f})."
     },
-
     # --- Efficiency Drift ---
     "IFDrift": {
         "stable": "✅ IF Drift stable ({:.2%}) — aerobic durability solid.",
@@ -481,13 +540,11 @@ CHEAT_SHEET["advice"] = {
         "moderate": "🟠 Recovery Index moderate ({:.2f}) — monitor fatigue trend.",
         "healthy": "✅ Recovery Index healthy ({:.2f})."
     },
-
     # --- FatigueTrend ---
     "FatigueTrend": {
         "recovery": "⚠ FatigueTrend ({:.2f}%) — Recovery phase detected. Maintain steady training load and prioritize recovery.",
         "increasing": "✅ FatigueTrend ({:.2f}%) — Increasing fatigue trend. Consider adjusting intensity or recovery."
     },
-
     # --- Phase Detection --- (Seasonal Phase Advice)
     "PhaseAdvice": {
         "Base": "🧱 **Base phase detected** — focus on aerobic volume (Z1–Z2 ≥ 70%), maintain ACWR ≤ 1.0.",
@@ -521,7 +578,27 @@ CHEAT_SHEET["advice"] = {
         "no_data": (
             "No lactate data detected — FTP defaults used for zone calibration."
         ),
-    }   
+    },
+    "AnaerobicRepeatability": {
+        "low": "Anaerobic exposure controlled — maintain structure.",
+        "moderate": "Moderate anaerobic load — ensure recovery spacing.",
+        "high": "High W′ depletion — monitor recovery and intensity stacking."
+    },
+    "DurabilityProfile": {
+        "stable": "Durability stable — cardiovascular drift controlled.",
+        "fatigue": "Elevated drift — consider aerobic consolidation.",
+        "severe": "Significant durability stress — reduce load."
+    },
+    "NeuralDensity": {
+        "balanced": "Intensity density well distributed.",
+        "clustered": "High short-term clustering — monitor recovery.",
+        "overloaded": "Neural load accumulation high — reduce intensity density."
+    },
+    "LoadAlignment": {
+        "underload": "Acute below baseline — safe to build.",
+        "aligned": "Acute aligned with chronic baseline.",
+        "overreach": "Acute significantly above baseline — recovery advised."
+    },
 }
 
 # =========================================================
@@ -740,13 +817,11 @@ CHEAT_SHEET["metric_confidence"] = {
     # --- Power-only Seiler Ratio ---
     "Polarisation": {
         "default": "contextual",
-
         "high_confidence_when": {
             "phases": ["Build", "Peak"],
             "min_sessions": 4,
             "min_intensity_sessions": 2
         },
-
         "notes": (
             "Power-based Seiler polarisation is only actionable when "
             "intensity contrast is intentionally prescribed. "
@@ -754,43 +829,35 @@ CHEAT_SHEET["metric_confidence"] = {
             "or durability-focused weeks."
         )
     },
-
     # --- Power-normalised index ---
     "PolarisationIndex": {
         "default": "contextual",
-
         "high_confidence_when": {
             "phases": ["Build", "Peak"],
             "min_sessions": 3
         },
-
         "notes": (
             "Normalised polarisation reflects aerobic bias rather than "
             "intensity contrast. Best used directionally."
         )
     },
-
     # --- Fused HR + Power (dominant sport) ---
     "Polarisation_fused": {
         "default": "contextual",
-
         "high_confidence_when": {
             "phases": ["Build", "Peak"],
             "dominant_sport_required": True,
             "min_sessions": 4
         },
-
         "notes": (
             "Fused polarisation reflects intensity distribution within "
             "the dominant sport. Confidence depends on signal quality, "
             "not volume."
         )
     },
-
     # --- Combined multi-sport ---
     "Polarisation_combined": {
         "default": "informational",
-
         "notes": (
             "Combined polarisation is a global summary metric and "
             "should never trigger corrective actions on its own."
@@ -809,12 +876,49 @@ CHEAT_SHEET["metric_confidence"] = {
         "work is present. Low values during base or recovery are expected."
     ),
     },
-
     "AnaerobicContribution": {
         "default": "contextual",
         "high_confidence_when": {
             "min_intensity_sessions": 2,
         },
+    },
+    "AnaerobicRepeatability": {
+        "default": "contextual",
+        "high_confidence_when": {
+            "min_intensity_sessions": 2,
+            "min_sessions": 4
+        },
+        "notes": (
+            "WDRM requires repeated supra-threshold exposure to be meaningful. "
+            "Low values during base or recovery are expected."
+        )
+    },
+    "DurabilityProfile": {
+        "default": "contextual",
+        "high_confidence_when": {
+            "min_sessions": 3
+        },
+        "notes": (
+            "Durability (ISDM) meaningful when steady-state aerobic work "
+            "exists. Not valid in short, high-intensity-only weeks."
+        )
+    },
+    "NeuralDensity": {
+        "default": "contextual",
+        "high_confidence_when": {
+            "min_intensity_sessions": 2
+        },
+        "notes": (
+            "NDLI reflects clustering of high-intensity sessions. "
+            "Interpret relative to recovery spacing."
+        )
+    },
+    "LoadAlignment": {
+        "default": "informational",
+        "notes": (
+            "Acute vs chronic alignment is directional. "
+            "Should not trigger action in isolation."
+        )
     },
 }
 
@@ -840,7 +944,6 @@ CHEAT_SHEET["primary_messages"] = {
             "intensity contrast and continued Zone 2 focus."
         ),
     },
-
     "overreach_deload": {
         "status": (
             "Training load has exceeded recovery capacity and fatigue "

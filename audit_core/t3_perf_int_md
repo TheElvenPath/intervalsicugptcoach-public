@@ -1,0 +1,109 @@
+"""
+==============================================================
+Tier 3 — Performance Intelligence
+==============================================================
+
+Performance Intelligence introduces structural capability analysis
+on top of Tier-1 (Canonical) and Tier-2 (Derived / Extended Metrics).
+
+This layer does NOT replace load metrics.
+It evaluates how the athlete expresses fitness under stress.
+
+The module exposes three performance contracts:
+
+------------------------------------------------------------------
+1️⃣  WDRM — Anaerobic Repeatability
+------------------------------------------------------------------
+(W′ Depletion & Recovery Model)
+
+Purpose:
+    Measures how aggressively and repeatedly the athlete depletes
+    anaerobic work capacity (W′) within the reporting window.
+
+Core Signals:
+    - icu_max_wbal_depletion
+    - icu_pm_w_prime
+    - icu_joules_above_ftp
+
+Interpretation:
+    • High max_depletion_pct → deep anaerobic efforts
+    • Multiple high_depletion_sessions → repeatability capacity
+    • Total joules above FTP → supra-threshold stress density
+
+Weekly Scope:
+    Acute anaerobic stress behavior (7-day FULL dataset)
+
+Season Scope:
+    Chronic depletion exposure (90-day LIGHT aggregation)
+    + acute overlay (7-day FULL)
+
+This is not sprint power.
+This is repeated supra-threshold resilience.
+
+
+------------------------------------------------------------------
+2️⃣  ISDM — Durability
+------------------------------------------------------------------
+(Intensity Sustainability & Drift Model)
+
+Purpose:
+    Measures how well power output resists cardiac drift and fatigue
+    over longer durations.
+
+Core Signals:
+    - decoupling
+    - moving_time
+    - long session count
+
+Interpretation:
+    • Higher mean_decoupling → aerobic drift present
+    • High_drift_sessions → fatigue exposure
+    • Long_sessions → structural durability load
+
+Weekly Scope:
+    Acute durability state (7-day FULL)
+
+Season Scope:
+    Chronic drift behavior (90-day LIGHT)
+
+
+------------------------------------------------------------------
+3️⃣  NDLI — Neural Density
+------------------------------------------------------------------
+(Neural Load Density Index)
+
+Purpose:
+    Measures clustering of high-intensity stress
+    within the reporting window.
+
+Core Signals:
+    - icu_joules_above_ftp
+    - IF
+    - high intensity session frequency
+
+Interpretation:
+    • High rolling_joules → neural strain accumulation
+    • High_intensity_days → clustering risk
+    • Elevated mean IF → central fatigue pressure
+
+Weekly Scope:
+    Acute neural stress pattern
+
+Season Scope:
+    Chronic intensity distribution
+
+
+------------------------------------------------------------------
+ARCHITECTURAL PRINCIPLES
+------------------------------------------------------------------
+
+• Weekly reports use 7-day FULL dataset (highest fidelity).
+• Season reports use 90-day LIGHT dataset for chronic analysis.
+• Weekly resolution is NEVER degraded to match season scope.
+• Season adds context — it does not replace weekly intelligence.
+• All calculations are deterministic and controller-owned.
+• Semantic builder only exposes the computed output.
+
+Performance Intelligence is capability modelling,
+not just load reporting.
+"""

@@ -31,6 +31,8 @@ from audit_core.tier2_extended_metrics import compute_extended_metrics
 from semantic_json_builder import build_semantic_json
 from athlete_profile import map_icu_athlete_to_profile
 from audit_core.tier2_actions import detect_phases
+from audit_core.tier3_performance_intelligence import compute_performance_intelligence
+
 
 def run_report(
     reportType: str = "weekly",
@@ -710,6 +712,30 @@ def run_report(
             bool(context.get("correlation_metrics")),
         )
     )
+
+    # ============================================================
+    # 🧠 TIER-3: PERFORMANCE INTELLIGENCE
+    # ============================================================
+
+    debug(context, "[T3-PI] Starting Performance Intelligence module…")
+
+    try:
+        performance_intelligence = compute_performance_intelligence(
+            context,
+            contract_type=context.get("report_type", "weekly")
+        )
+
+        context["performance_intelligence"] = performance_intelligence
+
+        debug(
+            context,
+            "[T3-PI] Completed:",
+            f"keys={list(performance_intelligence.keys())}"
+        )
+
+    except Exception as e:
+        debug(context, f"[T3-PI] ❌ Failed: {e}")
+
     # ============================================================
     # 🗓️ TIER-3: CALENDAR & FUTURE FORECAST
     # ============================================================

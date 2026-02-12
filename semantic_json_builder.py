@@ -176,26 +176,32 @@ def convert_to_str(value):
 
 
 def semantic_block_for_metric(name, value, context):
-    """
-    Builds semantic envelope for a single metric.
-    100% data-driven: thresholds, phase overrides, and interpretations
-    are all defined in coaching_cheat_sheet.py.
-    """
     import math
 
     metric_name = str(name).strip()
-    thresholds = CHEAT_SHEET["thresholds"].get(metric_name, {})
-    phase_thresholds = CHEAT_SHEET.get("phase_thresholds", {}).get(metric_name, {})
+
+    # --- Canonical resolution (for context + coaching only) ---
+    canonical_map = CHEAT_SHEET.get("metric_groups", {})
+    canonical_name = canonical_map.get(metric_name, metric_name)
+
+    # --- Thresholds MUST use metric_name ---
+    base_thresholds = CHEAT_SHEET["thresholds"].get(metric_name, {})
+
+    # --- Phase overrides (only if defined per metric) ---
+    phase_overrides = CHEAT_SHEET.get("phase_thresholds", {}).get(metric_name, {})
+
     profile_desc = COACH_PROFILE["markers"].get(metric_name, {})
 
     interpretation = (
-        CHEAT_SHEET["context"].get(metric_name)
+        CHEAT_SHEET["context"].get(canonical_name)
         or profile_desc.get("interpretation")
     )
+
     coaching_link = (
-        CHEAT_SHEET["coaching_links"].get(metric_name)
+        CHEAT_SHEET["coaching_links"].get(canonical_name)
         or profile_desc.get("coaching_implication")
     )
+
     display_name = CHEAT_SHEET.get("display_names", {}).get(metric_name, metric_name)
 
     phase = (
@@ -205,6 +211,7 @@ def semantic_block_for_metric(name, value, context):
     ).lower()
 
     classification = "unknown"
+    active_thresholds = {}
 
     try:
         if value is None or (isinstance(value, (float, int)) and math.isnan(value)):
@@ -212,24 +219,42 @@ def semantic_block_for_metric(name, value, context):
         else:
             v = float(value)
 
-            # Pull the correct thresholds dynamically
-            active_thresholds = (
-                phase_thresholds.get(phase)
-                if metric_name in phase_thresholds and phase in phase_thresholds
-                else thresholds
-            )
-
-            green = active_thresholds.get("green")
-            amber = active_thresholds.get("amber")
-
-            if green and green[0] <= v <= green[1]:
-                classification = "green"
-            elif amber and amber[0] <= v <= amber[1]:
-                classification = "amber"
+            # --- Phase override ---
+            if phase and phase in phase_overrides:
+                active_thresholds = phase_overrides[phase]
+                debug(context, f"[THRESHOLDS][{metric_name}] Using PHASE override", active_thresholds)
             else:
-                classification = "red"
+                active_thresholds = base_thresholds
+                debug(context, f"[THRESHOLDS][{metric_name}] Using BASE thresholds", active_thresholds)
 
-    except Exception:
+            debug(context, f"[THRESHOLDS][{metric_name}] Value", v)
+
+            if not active_thresholds:
+                debug(context, f"[THRESHOLDS][{metric_name}] EMPTY THRESHOLDS")
+                classification = "informational"
+            else:
+                green = active_thresholds.get("green")
+                amber = active_thresholds.get("amber")
+                red = active_thresholds.get("red")
+
+                debug(context, f"[THRESHOLDS][{metric_name}] Bands",
+                      f"green={green}",
+                      f"amber={amber}",
+                      f"red={red}")
+
+                if green and green[0] <= v <= green[1]:
+                    classification = "green"
+                elif amber and amber[0] <= v <= amber[1]:
+                    classification = "amber"
+                elif red and red[0] <= v <= red[1]:
+                    classification = "red"
+                else:
+                    classification = "red"
+
+                debug(context, f"[THRESHOLDS][{metric_name}] Classification → {classification}")
+
+    except Exception as e:
+        debug(context, f"[THRESHOLDS][{metric_name}] ERROR", str(e))
         classification = "unknown"
 
     return {
@@ -238,14 +263,17 @@ def semantic_block_for_metric(name, value, context):
         "value": convert_to_str(value),
         "framework": profile_desc.get("framework") or "Unknown",
         "formula": profile_desc.get("formula"),
-        "thresholds": thresholds,
+        "thresholds": active_thresholds,
         "phase_context": phase,
         "classification": classification,
-        "metric_confidence": resolve_metric_confidence(metric_name, context, CHEAT_SHEET),
+        "metric_confidence": resolve_metric_confidence(canonical_name, context, CHEAT_SHEET),
         "interpretation": interpretation,
         "coaching_implication": coaching_link,
         "related_metrics": profile_desc.get("criteria", {}),
     }
+
+
+
 
 # ---------------------------------------------------------
 # 🔬 Zone semantics helpers (CHEAT_SHEET–driven)
@@ -638,6 +666,10 @@ def build_semantic_json(context):
         "adaptation_metrics": {},
         "trend_metrics": {},
         "correlation_metrics": {},
+        "performance_intelligence": {
+            "acute": {},
+            "chronic": {}
+        },
 
         # ---------------------------------------------------------
         # 🔬 Zones — Power, HR, Pace, Swim + Calibration
@@ -1992,19 +2024,97 @@ def build_semantic_json(context):
     # 🧭 COACHING ACTIONS (Tier-2 guidance)
     # ---------------------------------------------------------
     semantic["actions"] = context.get("actions", [])
-    
+        
     # ---------------------------------------------------------
-    # 🧩 Merge Tier-3 Future Actions (if available)
+    # 🧠 Performance Intelligence (Tier-3)
     # ---------------------------------------------------------
-#    if context.get("actions_future"):
-#        debug(
-#            context,
-#            f"[SEMANTIC] 🔮 Merging {len(context['actions_future'])} future actions into canonical list."
-#        )
-#        semantic.setdefault("actions", [])
-#       semantic["actions"].extend(context["actions_future"])
-#   else:
-#        debug(context, "[SEMANTIC] ⚠️ No actions_future found after Tier-3 injection.")
+
+    pi = context.get("performance_intelligence")
+
+    if isinstance(pi, dict) and pi:
+
+        report_type = semantic["meta"]["report_type"]
+
+        PI_GROUPS = {
+            "anaerobic_repeatability": {
+                "framework": "W′ Depletion & Repeatability Model (WDRM)",
+                "cheatsheet_key": "anaerobic_repeatability",
+                "context_key": "AnaerobicRepeatability",
+                "advice_key": "AnaerobicRepeatability",
+            },
+            "durability": {
+                "framework": "Intensity Stability & Durability Model (ISDM)",
+                "cheatsheet_key": "durability",
+                "context_key": "DurabilityProfile",
+                "advice_key": "DurabilityProfile",
+            },
+            "neural_density": {
+                "framework": "Neural Density Load Index (NDLI)",
+                "cheatsheet_key": "neural_density",
+                "context_key": "NeuralDensity",
+                "advice_key": "NeuralDensity",
+            },
+        }
+
+        def wrap_pi_block(pi_block, window_label):
+            wrapped = {}
+
+            for group_name, metrics in pi_block.items():
+
+                if group_name not in PI_GROUPS:
+                    continue
+
+                group_meta = PI_GROUPS[group_name]
+                wrapped[group_name] = {}
+
+                for metric_name, metric_value in metrics.items():
+
+                    thresholds = (
+                        CHEAT_SHEET["thresholds"]
+                        .get(group_meta["cheatsheet_key"], {})
+                        .get(metric_name, {})
+                    )
+
+                    block = semantic_block_for_metric(
+                        metric_name,
+                        metric_value,
+                        semantic
+                    )
+
+                    # Inject Tier-3 metadata
+                    block["framework"] = group_meta["framework"]
+                    #block["thresholds"] = thresholds
+                    block["interpretation"] = CHEAT_SHEET["context"].get(
+                        group_meta["context_key"]
+                    )
+                    block["coaching_implication"] = CHEAT_SHEET["advice"].get(
+                        group_meta["advice_key"], {}
+                    )
+                    block["context_window"] = window_label
+
+                    wrapped[group_name][metric_name] = block
+
+            return wrapped
+
+        if report_type == "weekly":
+            semantic["performance_intelligence"]["acute"] = wrap_pi_block(pi, "7d")
+            semantic["performance_intelligence"]["chronic"] = {}
+
+        elif report_type in ("season", "summary"):
+            chronic = pi.get("chronic_state", {})
+            acute = pi.get("acute_overlay", {})
+
+            semantic["performance_intelligence"]["chronic"] = wrap_pi_block(chronic, "90d")
+            semantic["performance_intelligence"]["acute"] = wrap_pi_block(acute, "7d")
+
+        debug(
+            context,
+            f"[SEMANTIC] Injected performance_intelligence (hydrated) → "
+            f"acute={list(semantic['performance_intelligence'].get('acute', {}).keys())}, "
+            f"chronic={list(semantic['performance_intelligence'].get('chronic', {}).keys())}"
+        )
+
+
 
     # ---------------------------------------------------------
     # 🧠 INSIGHTS (computed once, after all metrics resolved)

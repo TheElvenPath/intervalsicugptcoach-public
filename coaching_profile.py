@@ -68,7 +68,9 @@ RENDERER_PROFILES = {
             "If semantic.daily_load exists AND semantic.wellness.CTL and semantic.wellness.ATL are present, a second symbolic fatigue-pressure row MAY be rendered using ↑ ↓ — symbols based ONLY on the sign of (ATL − CTL). No magnitude, thresholds, or new calculations are permitted.",
             "All rows in the daily load timeline MUST use a fixed-width column per day to ensure vertical alignment across labels, blocks, symbols, and numeric values.",
             "If session-level signal icons are rendered in the EVENTS table, a single legend line MUST be rendered once per report directly below the EVENTS section header.",
-            "If zone distribution data exists (e.g. zone_dist_power, zone_dist_hr, zone_dist_fused), render zone distribution as fixed-width ASCII proportional bars (one bar per zone), with the exact percentage shown. Bars are presentational only and do not constitute derived metrics."
+            "If zone distribution data exists (e.g. zone_dist_power, zone_dist_hr, zone_dist_fused), render zone distribution as fixed-width ASCII proportional bars (one bar per zone), with the exact percentage shown. Bars are presentational only and do not constitute derived metrics.",
+            "If performance_intelligence exists, render three subsections: Anaerobic Repeatability (WDRM), Durability (ISDM), Neural Density (NDLI). Use provided values only. Do NOT recompute or merge with other metrics.",
+            "If high_dep_sessions > 0 and high_drift_sessions > 0 in the same week, describe this as high neuromuscular + metabolic strain overlap."
         ],
         "allowed_enrichment": [
             "Restate semantic interpretation fields.",
@@ -80,6 +82,7 @@ RENDERER_PROFILES = {
             "daily_load": "full",
             "metrics": "full",
             "extended_metrics": "full",
+            "performance_intelligence": "full",
             "zones": "full",
             "wellness": "full",
             "phases": "forbid",
@@ -89,8 +92,7 @@ RENDERER_PROFILES = {
             "future_actions": "full"
         },
 
-        # NEW
-        "emphasis": {
+            "emphasis": {
             "metrics": "high",
             "actions": "high",
             "events": "medium",
@@ -113,7 +115,8 @@ RENDERER_PROFILES = {
         },
         "interpretation_rules": [
             "Focus on trends, phases, and accumulated load.",
-            "Avoid session-level or daily commentary."
+            "Avoid session-level or daily commentary.",
+            "If performance_intelligence exists, render chronic_state first (90d), then acute_overlay (7d). Emphasise contrast between chronic capacity and acute stress.",
         ],
         "allowed_enrichment": [
             "Restate phase descriptors already present in semantic data."
@@ -125,13 +128,13 @@ RENDERER_PROFILES = {
             "phases": "full",
             "metrics": "full",
             "extended_metrics": "full",
+            "performance_intelligence": "full",
             "zones": "summary",
             "wellness": "summary",
             "actions": "full",
             "future_actions": "full"
         },
 
-        # NEW
         "emphasis": {
             "phases": "high",
             "trend_metrics": "high",
@@ -241,6 +244,7 @@ REPORT_RESOLUTION = {
         "zones": "authoritative",
         "derived_metrics": "full",
         "extended_metrics": "limited",
+        "performance_intelligence": "acute_full_7d",
         "insights": "tactical",
     },
 
@@ -251,6 +255,7 @@ REPORT_RESOLUTION = {
         "zones": "not_available",
         "derived_metrics": "trend_only",
         "extended_metrics": "full",
+        "performance_intelligence": "acute_overlay_plus_chronic_90d",
         "insights": "strategic",
     },
 
@@ -336,6 +341,7 @@ REPORT_CONTRACT = {
     "weekly": [
         "meta", "hours", "tss", "distance_km",
         "metrics", "extended_metrics",
+        "performance_intelligence",
         "zones", "daily_load", "events", "wbal_summary",
         "wellness", "phases", "insights", "insight_view", "actions",
         "planned_events", "planned_summary_by_date",
@@ -346,6 +352,7 @@ REPORT_CONTRACT = {
         "meta", "hours", "tss", "distance_km",
         "metrics", "extended_metrics",
         "adaptation_metrics", "trend_metrics",
+        "performance_intelligence",
         "phases", "phases_summary",
         "wbal_summary", "performance_summary",
         "insights", "actions", "future_forecast", "future_actions"
