@@ -1714,27 +1714,46 @@ def build_semantic_json(context):
 
 
     # =========================================================
-    # GENERAL PERFORMANCE SUMMARIES (unchanged)
+    # GENERAL PERFORMANCE SUMMARIES (weekly = FULL, season = LIGHT)
     # =========================================================
-    df_ev = pd.DataFrame(semantic["events"])
-    if not df_ev.empty:
-        perf_fields = {
-            "IF": "mean_IF",
-            "icu_intensity": "mean_intensity",
-            "icu_efficiency_factor": "mean_efficiency_factor",
-            "decoupling": "mean_decoupling",
-            "icu_power_hr": "mean_power_hr_ratio",
-        }
+
+    report_type = semantic["meta"]["report_type"]
+
+    # --- Dataset selection ---
+    if report_type in ("season", "summary"):
+        df_ev = context.get("df_light")
+    else:
+        df_ev = pd.DataFrame(semantic["events"])
+
+    if isinstance(df_ev, pd.DataFrame) and not df_ev.empty:
+
+        # --- Fields allowed per mode ---
+        if report_type in ("season", "summary"):
+            perf_fields = {
+                "IF": "mean_IF",
+                "decoupling": "mean_decoupling",
+                "icu_pm_w_prime": "mean_w_prime",
+                "icu_joules_above_ftp": "mean_joules_above_ftp",
+            }
+        else:
+            perf_fields = {
+                "IF": "mean_IF",
+                "icu_intensity": "mean_intensity",
+                "icu_efficiency_factor": "mean_efficiency_factor",
+                "decoupling": "mean_decoupling",
+                "icu_power_hr": "mean_power_hr_ratio",
+            }
 
         perf_summary = {}
+
         for in_name, out_name in perf_fields.items():
             if in_name in df_ev.columns:
-                debug(context, f"[SEMANTIC-SUMMARY] Computing mean for {in_name}, dtype={df_ev[in_name].dtype}")
                 try:
                     val_series = pd.to_numeric(df_ev[in_name], errors="coerce")
-                    perf_summary[out_name] = round(float(val_series.mean(skipna=True) or 0), 3)
-                except Exception as e:
-                    debug(context, f"[SEMANTIC-SUMMARY] Skipped {in_name}: {e}")
+                    perf_summary[out_name] = round(
+                        float(val_series.mean(skipna=True) or 0), 3
+                    )
+                except Exception:
                     perf_summary[out_name] = 0
 
         if perf_summary:

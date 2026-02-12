@@ -107,3 +107,310 @@ ARCHITECTURAL PRINCIPLES
 Performance Intelligence is capability modelling,
 not just load reporting.
 """
+
+
+---
+
+# 🧠 V6 DESIGN PRINCIPLES
+
+1. Preserve deterministic URF backbone
+2. Keep compute external (Cloudflare → Railway)
+3. Add progression intelligence
+4. Add durability intelligence
+5. Add neural load intelligence
+6. Enable adaptive prescription (closed loop)
+
+V6 is not “more metrics.”
+V6 is **structural intelligence.**
+
+---
+
+# 🏗 V6 SYSTEM ARCHITECTURE
+
+Current:
+
+```
+User → GPT → Cloudflare → Railway → Semantic Graph → GPT Render
+```
+
+V6:
+
+```
+User → GPT
+        ↓
+Cloudflare (Data Layer)
+        ↓
+Railway Tier-0 (Normalization)
+        ↓
+Railway Tier-1 (Canonical Metrics)
+        ↓
+Railway Tier-2 (Derived Metrics)
+        ↓
+Railway Tier-3 (Progression + Durability + Neural Modeling)
+        ↓
+Decision Engine (Adaptive Layer)
+        ↓
+Semantic Graph v6
+        ↓
+GPT Deterministic Render
+```
+
+---
+
+# 🧩 NEW MODULES IN V6
+
+---
+
+# 1️⃣ Energy System Progression Engine (ESPE)
+
+### Purpose:
+
+Track progression per energy system, not just total load.
+
+### Track 5 Domains:
+
+* Z2 Endurance Volume Quality
+* Tempo / Sweet Spot Density
+* Threshold Power Repeatability
+* VO2max Capacity
+* Anaerobic Repeatability
+
+### Output:
+
+```
+ESPE:
+  endurance_score
+  threshold_score
+  vo2_score
+  anaerobic_score
+  trend_direction
+```
+
+This solves:
+
+> Repeating similar intensity without measurable adaptation.
+
+---
+
+# 2️⃣ W′ Durability & Recovery Model (WDRM)
+
+### Current:
+
+* Max W′ depletion
+* Joules above FTP
+
+### V6 Adds:
+
+* W′ recovery rate between spikes
+* Depletion velocity
+* Repeatability decay curve
+* % recovery before next supra effort
+
+### Output:
+
+```
+WDRM:
+  repeatability_index
+  recovery_efficiency
+  depletion_depth_trend
+  stochastic_durability_score
+```
+
+This identifies:
+
+* CNS stress
+* Race-readiness
+* Anaerobic fatigue accumulation
+
+---
+
+# 3️⃣ Neural Load Density Index (NLDI)
+
+This is new and important.
+
+Current system flags fatigue accumulation.
+But does not quantify *stochastic clustering.*
+
+### V6 tracks:
+
+* Consecutive days with W′ > X%
+* Joules > FTP density over rolling 72h
+* Sessions with high variability index
+* CNS strain clustering
+
+Output:
+
+```
+NLDI:
+  clustering_score
+  neural_strain_flag
+  recovery_priority_level
+```
+
+This would have flagged your recent weekend spike automatically.
+
+---
+
+# 4️⃣ Intra-Session Durability Model (ISDM)
+
+Inspired by WKO.
+
+### Track:
+
+* First 30min vs last 30min power
+* Late-ride 5min best vs early-ride 5min best
+* Power drift independent of HR drift
+
+Output:
+
+```
+ISDM:
+  fatigue_resistance_score
+  late_power_decay
+  durability_trend
+```
+
+Essential for:
+
+* Gran fondo
+* Climbing events
+* Stage racing
+
+---
+
+# 5️⃣ Metabolic Drift Tracking (MDT)
+
+You already have lactate-inferred Z2.
+
+V6 adds:
+
+* LT1 power trend over time
+* FatOx trend slope
+* Carb reliance shift during high load blocks
+
+Output:
+
+```
+MDT:
+  aerobic_efficiency_trend
+  substrate_shift_index
+  metabolic_stability_flag
+```
+
+---
+
+# 6️⃣ Adaptive Decision Engine (ADE)
+
+This is the biggest evolution.
+
+Instead of descriptive coaching, V6 adds rule-based prescription logic.
+
+Example:
+
+IF:
+
+* NLDI high
+* WDRM repeatability decreasing
+* FatigueTrend > 20%
+
+THEN:
+
+* Reduce planned VO2 duration by 15%
+* Convert tempo to endurance
+* Insert OFF day
+
+This keeps deterministic structure.
+No GPT improvisation.
+Rules live in Railway.
+
+---
+
+# 📊 V6 SEMANTIC GRAPH ADDITIONS
+
+Add new block:
+
+```
+adaptive_layer:
+  progression_state
+  neural_state
+  durability_state
+  metabolic_state
+  prescription_adjustment
+```
+
+---
+
+# 🎯 USER EXPERIENCE TIERS
+
+V6 supports dual views:
+
+### Coach Mode (Full URF)
+
+Deep metrics, density charts, W′ modeling.
+
+### Athlete Mode (Decision Dashboard)
+
+* Today readiness
+* Green / Amber / Red
+* What to modify
+* Why
+
+---
+
+# 🧬 STRATEGIC SHIFT
+
+V5 = Tactical Monitoring Engine
+V6 = Adaptive Performance Engine
+
+V5 tells you what happened.
+V6 influences what happens next.
+
+---
+
+# 🚀 PRIORITY IMPLEMENTATION ORDER
+
+If building incrementally:
+
+Phase 1:
+
+* W′ Recovery Modeling
+* Neural Load Density Index
+
+Phase 2:
+
+* Energy System Progression Engine
+
+Phase 3:
+
+* Adaptive Decision Engine
+
+Metabolic Drift Tracking can be layered after.
+
+---
+
+# 🧠 What This Unlocks
+
+For your current training pattern:
+
+* Detect when race-style load is adaptive vs destructive
+* Identify when anaerobic depth increases but repeatability drops
+* Control intensity clustering automatically
+* Transition blocks without overreaching
+
+---
+
+# 🏁 Final Thought
+
+Your current system is analytically elite.
+
+V6 should not add complexity.
+It should add *decision intelligence.*
+
+---
+
+If you'd like, next we can:
+
+* Design the Neural Load Density algorithm mathematically
+* Or draft the exact data schema changes for V6 implementation
+* Or simulate how V6 would have handled your last 10 days differently
+
