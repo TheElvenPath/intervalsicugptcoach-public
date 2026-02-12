@@ -403,14 +403,38 @@ async def run_audit_with_data(request: Request):
         })
 
     except Exception as e:
+        import traceback
+        import sys
+
+        sys.stderr.write("\n🔥 UNHANDLED EXCEPTION IN /run\n")
+        sys.stderr.write(traceback.format_exc())
+        sys.stderr.flush()
+
         return error_response(e, buffer)
+
 
 
 def error_response(e: Exception, buffer=None, status_code:int=500):
     import traceback
-    return JSONResponse(status_code=status_code, content={
-        "status":"error","message":str(e),"exception_type":type(e).__name__,
-        "trace":traceback.format_exc(),"logs":buffer.getvalue()[-20000:] if buffer else None})
+    import sys
+
+    trace = traceback.format_exc()
+
+    # 🔥 FORCE log into Railway
+    sys.stderr.write("\n===== 🚨 UNHANDLED EXCEPTION =====\n")
+    sys.stderr.write(trace + "\n")
+    sys.stderr.flush()
+
+    return JSONResponse(
+        status_code=status_code,
+        content={
+            "status": "error",
+            "message": str(e),
+            "exception_type": type(e).__name__,
+            "trace": trace,
+            "logs": buffer.getvalue()[-20000:] if buffer else None
+        }
+    )
 
 
 @app.get("/semantic")
