@@ -184,10 +184,16 @@ def normalize_prefetched_context(data):
         # 🩺 Ensure baseline columns exist for Tier-0 stability
         # ─────────────────────────────────────────────
         for df_name, df in {"light": df_light, "full": df_full}.items():
-            for col in ["moving_time", "distance", "icu_training_load", "type"]:
+            for col in ["start_date_local", "moving_time", "distance", "icu_training_load", "type"]:
                 if col not in df.columns:
-                    df[col] = 0 if col in ["moving_time", "distance", "icu_training_load"] else ""
+                    if col == "start_date_local":
+                        df[col] = pd.NaT
+                    elif col in ["moving_time", "distance", "icu_training_load"]:
+                        df[col] = 0
+                    else:
+                        df[col] = ""
             debug({}, f"[NORM] ensured baseline columns exist for df_{df_name} ({len(df)} rows)")
+
 
         context["activities_light"] = df_light.to_dict(orient="records")
         context["activities_full"]  = df_full.to_dict(orient="records")
@@ -200,17 +206,28 @@ def normalize_prefetched_context(data):
         context["df_master"] = df_full
         context["df_wellness"] = df_well
 
-        # Build daily summary if missing
-        if not df_full.empty and "icu_training_load" in df_full.columns:
-            df_daily = (df_full.groupby(df_full["start_date_local"].dt.date)["icu_training_load"]
-                        .sum(min_count=1)
-                        .reset_index().rename(columns={"start_date_local": "date"}))
-            df_daily["date"] = pd.to_datetime(df_daily["date"], errors="coerce")
-            context["df_daily"] = df_daily
-            debug(context, f"[NORM] built df_daily {len(df_daily)} days")
+        # Build daily summary if possible
+        if (
+            not df_full.empty and
+            "icu_training_load" in df_full.columns and
+            "start_date_local" in df_full.columns
+        ):
+            try:
+                df_daily = (
+                    df_full.groupby(df_full["start_date_local"].dt.date)["icu_training_load"]
+                    .sum(min_count=1)
+                    .reset_index()
+                    .rename(columns={"start_date_local": "date"})
+                )
+                df_daily["date"] = pd.to_datetime(df_daily["date"], errors="coerce")
+                context["df_daily"] = df_daily
+                debug(context, f"[NORM] built df_daily {len(df_daily)} days")
+            except Exception as e:
+                context["df_daily"] = pd.DataFrame(columns=["date", "icu_training_load"])
+                debug(context, f"[NORM] df_daily build failed: {e}")
         else:
             context["df_daily"] = pd.DataFrame(columns=["date", "icu_training_load"])
-            debug(context, "[NORM] df_daily empty — no full data")
+            debug(context, "[NORM] df_daily empty — missing date or load columns")
 
         # Snapshot 7d totals
         if not df_full.empty:
