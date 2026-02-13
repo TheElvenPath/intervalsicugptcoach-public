@@ -364,28 +364,6 @@ async def run_audit_with_data(request: Request):
             prefetch_context["end"] = end
             print(f"[STAGING] Injected start/end into prefetch_context: {start} → {end}")
 
-        # --- Detect Strava-only account (Intervals UI has data but API returns none) ---
-        light = prefetch_context.get("activities_light", [])
-        athlete = prefetch_context.get("athleteProfile", {})
-
-        has_athlete = isinstance(athlete, dict) and athlete.get("id") is not None
-        no_activities = not light or len(light) == 0
-
-        if has_athlete and no_activities:
-            return JSONResponse({
-                "status": "blocked",
-                "error_type": "STRAVA_API_RESTRICTED",
-                "severity": "hard",
-                "message": (
-                    "Your Intervals.icu account is connected only via Strava. "
-                    "Intervals.icu is not allowed to expose Strava-sourced activities via its API. "
-                    "Connect Garmin/Wahoo/Zwift etc directly or upload FIT files. "
-                    "or see https://forum.intervals.icu/t/import-all-data-from-strava/81068"
-                ),
-                "athlete_id": athlete.get("id"),
-                "activities_returned": 0
-            })
-
         light = prefetch_context.get("activities_light")
         full  = prefetch_context.get("activities_full")
 
