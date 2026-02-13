@@ -166,20 +166,30 @@ def normalize_prefetched_context(data):
                     ),
                 )
 
-        # 🔒 STRAVA STUB FILTER — remove unusable API stub rows
+        # 🔒 STRAVA STUB FILTER — detect and remove unusable API stub rows
+        strava_stub_detected = False
+        strava_note_text = "STRAVA activities are not available via the API"
+
         if not df_light.empty and "_note" in df_light.columns:
 
-            strava_note_text = "STRAVA activities are not available via the API"
+            # --- Detect stubs BEFORE removal ---
+            if df_light["_note"].astype(str).str.contains(
+                "STRAVA activities are not available", case=False
+            ).any():
+                strava_stub_detected = True
 
-            # Remove stubs from LIGHT
+            # Persist flag into context
+            context.setdefault("data_quality_flags", {})
+            context["data_quality_flags"]["strava_stub_detected"] = strava_stub_detected
+
+            # --- Remove stubs from LIGHT ---
             before_light = len(df_light)
             df_light = df_light[
                 df_light["_note"].fillna("") != strava_note_text
             ].copy()
-
             removed_light = before_light - len(df_light)
 
-            # Remove stubs from FULL (if column exists)
+            # --- Remove stubs from FULL (if column exists) ---
             if "_note" in df_full.columns:
                 before_full = len(df_full)
                 df_full = df_full[
@@ -629,4 +639,107 @@ def get_debug(
 
     except Exception as e:
         return error_response(e)
+
+def data_quality_audit(ctx: dict) -> dict:
+    score = 0
+    flags = []
+    datasets = {}
+
+    athlete = ctx.get("athlete", {})
+    light = ctx.get("activities_light", [])
+    full = ctx.get("activities_full", [])
+    wellness = ctx.get("wellness", [])
+
+    dq_flags = ctx.get("data_quality_flags", {})
+    strava_stub_detected = dq_flags.get("strava_stub_detected", False)
+
+    # --------------------------------------------------
+    # Athlete
+    # --------------------------------------------------
+    athlete_valid = bool(athlete.get("id")) and bool(athlete.get("timezone"))
+    if athlete_valid:
+        score += 30
+    else:
+        flags.append("athlete_invalid")
+
+    datasets["athlete"] = {
+        "present": bool(athlete),
+        "valid": athlete_valid,
+        "issues": [] if athlete_valid else ["missing_id_or_timezone"]
+    }
+
+    # --------------------------------------------------
+    # Light activities
+    # --------------------------------------------------
+    light_ok = isinstance(light, list) and len(light) > 0
+    if light_ok:
+        score += 20
+    else:
+        flags.append("light_missing")
+
+    light_issues = []
+    if not light_ok:
+        light_issues.append("no_light_activities")
+    if strava_stub_detected:
+        light_issues.append("strava_stub_detected")
+
+    datasets["light"] = {
+        "present": light_ok,
+        "count": len(light) if isinstance(light, list) else 0,
+        "issues": light_issues
+    }
+
+    # --------------------------------------------------
+    # Full activities
+    # --------------------------------------------------
+    full_ok = isinstance(full, list) and len(full) > 0
+    if full_ok:
+        score += 25
+    else:
+        flags.append("full_missing")
+
+    datasets["full"] = {
+        "present": full_ok,
+        "count": len(full) if isinstance(full, list) else 0,
+        "issues": [] if full_ok else ["no_full_activities"]
+    }
+
+    # --------------------------------------------------
+    # Wellness
+    # --------------------------------------------------
+    wellness_ok = isinstance(wellness, list) and len(wellness) > 0
+    if wellness_ok:
+        score += 25
+    else:
+        flags.append("wellness_missing")
+
+    datasets["wellness"] = {
+        "present": wellness_ok,
+        "count": len(wellness) if isinstance(wellness, list) else 0,
+        "issues": [] if wellness_ok else ["missing_wellness_timeseries"]
+    }
+
+    # --------------------------------------------------
+    # Global flags
+    # --------------------------------------------------
+    if strava_stub_detected:
+        flags.append("strava_stub_detected")
+
+    # --------------------------------------------------
+    # State classification
+    # --------------------------------------------------
+    if score >= 80:
+        state = "ok"
+    elif score >= 50:
+        state = "degraded"
+    else:
+        state = "invalid"
+
+    return {
+        "score": score,
+        "state": state,
+        "datasets": datasets,
+        "flags": flags,
+        "strava_stub_detected": strava_stub_detected
+    }
 
