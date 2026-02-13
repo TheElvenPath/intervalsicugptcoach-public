@@ -312,6 +312,8 @@ def normalize_prefetched_context(data):
         except Exception as e:
             debug(context, f"[NORM] ⚠️ Zone expansion skipped: {e}")
 
+        
+
         # --- Update context after expansion ---
         context["df_full"] = df_full
         context["activities_full"] = df_full.to_dict(orient="records")

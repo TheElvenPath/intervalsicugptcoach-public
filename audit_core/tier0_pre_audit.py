@@ -1252,5 +1252,13 @@ def expand_zones(df, field, prefix):
     z = z.reindex(columns=range(max_len)).fillna(0).astype(float)
     z.columns = [f"{prefix}_z{i+1}" for i in range(max_len)]
 
-    return pd.concat([df.drop(columns=[field]), z], axis=1)
+    base = df.drop(columns=[field])
+
+    # Only add zone columns that do not already exist
+    for col in z.columns:
+        if col not in base.columns:
+            base[col] = z[col]
+
+    return base
+
 
