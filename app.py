@@ -681,7 +681,7 @@ def data_quality_audit(ctx: dict) -> dict:
     # Basic report header
     # --------------------------------------------------
     meta = ctx.get("meta", {})
-    report_type = ctx.get("report_type", "unknown")
+    report_type = ctx.get("report_type", "data_quality")
     period = ctx.get("period") or meta.get("period")
 
     report_header = {
