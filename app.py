@@ -139,12 +139,7 @@ def normalize_prefetched_context(data):
                 "Setup guide:\n"
                 "https://forum.intervals.icu/t/yet-another-ai-chatgpt-coach/117856/141",
                 code="OAUTH_NOT_CONFIGURED",
-                severity="hard",
-                compliance={
-                    "user_action_required": True,
-                    "action": "connect_intervals_account",
-                    "help_url": "https://forum.intervals.icu/t/yet-another-ai-chatgpt-coach/117856/141"
-                }
+                severity="hard"
             )
 
         # 🔒 GUARD: Abort if ALL rows are STRAVA API stubs (exact note match)
