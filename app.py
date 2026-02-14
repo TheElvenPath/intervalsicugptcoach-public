@@ -137,7 +137,7 @@ def normalize_prefetched_context(data):
                 "Your Intervals.icu account is not connected. "
                 "Please authorize the app to access your training data, then try again.\n\n"
                 "Setup guide:\n"
-                "https://forum.intervals.icu/t/yet-another-ai-chatgpt-coach/117856/141",
+                "https://www.cliveking.net/setup.html",
                 code="OAUTH_NOT_CONFIGURED",
                 severity="hard"
             )
