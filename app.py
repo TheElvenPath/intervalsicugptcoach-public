@@ -134,9 +134,17 @@ def normalize_prefetched_context(data):
 
         if "id" not in athlete:
             raise AuditHalt(
-                "Athlete profile missing ID.",
-                code="ATHLETE_ID_MISSING",
-                severity="hard"
+                "Your Intervals.icu account is not connected. "
+                "Please authorize the app to access your training data, then try again.\n\n"
+                "Setup guide:\n"
+                "https://forum.intervals.icu/t/yet-another-ai-chatgpt-coach/117856/141",
+                code="OAUTH_NOT_CONFIGURED",
+                severity="hard",
+                compliance={
+                    "user_action_required": True,
+                    "action": "connect_intervals_account",
+                    "help_url": "https://forum.intervals.icu/t/yet-another-ai-chatgpt-coach/117856/141"
+                }
             )
 
         # 🔒 GUARD: Abort if ALL rows are STRAVA API stubs (exact note match)
