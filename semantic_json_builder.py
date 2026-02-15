@@ -386,177 +386,265 @@ def build_insights(semantic):
         "window": window,
         "basis": "ATL vs CTL",
         "classification": fatigue_block.get("classification"),
+        "confidence": fatigue_block.get("metric_confidence"),
         "thresholds": fatigue_block.get("thresholds"),
         "interpretation": fatigue_block.get("interpretation"),
         "coaching_implication": fatigue_block.get("coaching_implication"),
     }
 
-    # --- Metabolic Drift (FOxI proxy) ---
-    foxi = semantic.get("metrics", {}).get("FOxI", {}).get("value")
-    drift = None
-    if isinstance(foxi, (int, float)):
-        drift = round((70 - foxi) / 70, 3)
-    drift_block = semantic_block_for_metric("FOxI", foxi, semantic)
-    insights["metabolic_drift"] = {
-        "value": drift,
-        "window": window,
-        "basis": "FOxI proxy",
-        "classification": drift_block.get("classification"),
-        "interpretation": drift_block.get("interpretation"),
-        "coaching_implication": drift_block.get("coaching_implication"),
-    }
+    if report_type != "wellness":
 
-    # --- Fitness Phase (ACWR classification) ---
-    acwr_val = semantic.get("metrics", {}).get("ACWR", {}).get("value")
-    acwr_block = semantic_block_for_metric("ACWR", acwr_val, semantic)
-    insights["fitness_phase"] = {
-        "phase": acwr_block.get("classification"),
-        "basis": "ACWR",
-        "window": "rolling",
-        "interpretation": acwr_block.get("interpretation"),
-        "coaching_implication": acwr_block.get("coaching_implication"),
-    }
+        # --- Metabolic (FOxI proxy) ---
+        foxi = semantic.get("metrics", {}).get("FOxI", {}).get("value")
 
-    # ======================================================
-    # 🔬 Adaptation Metrics (Fatigue Resistance, Efficiency)
-    # ======================================================
-    adaptation = semantic.get("adaptation_metrics", {})
+        if isinstance(foxi, (int, float)):
+            foxi_block = semantic_block_for_metric("FOxI", foxi, semantic)
 
-    # --- Fatigue Resistance ---
-    if "Fatigue Resistance" in adaptation:
-        fr_val = adaptation.get("Fatigue Resistance")
-        fr_block = semantic_block_for_metric("FatigueResistance", fr_val, semantic)
-        insights["fatigue_resistance"] = {
-            "value": fr_val,
-            "window": window,
-            "basis": "EndurancePower / ThresholdPower",
-            "classification": fr_block.get("classification"),
-            "interpretation": fr_block.get("interpretation"),
-            "coaching_implication": fr_block.get("coaching_implication"),
-        }
-
-    # --- Efficiency Factor ---
-    if "Efficiency Factor" in adaptation:
-        ef_val = adaptation.get("Efficiency Factor")
-        ef_block = semantic_block_for_metric("EfficiencyFactor", ef_val, semantic)
-        insights["efficiency_factor"] = {
-            "value": ef_val,
-            "window": window,
-            "basis": "Power / HeartRate",
-            "classification": ef_block.get("classification"),
-            "interpretation": ef_block.get("interpretation"),
-            "coaching_implication": ef_block.get("coaching_implication"),
-        }
-
-    # ======================================================
-    # 🌿 WELLNESS INSIGHTS (Coach-Profile & Cheat-Sheet Aligned)
-    # ======================================================
-    if report_type == "wellness":
-        wellness = semantic.get("wellness", {})
-
-        # Ensure TSB available for recovery_index
-        tsb = (
-            wellness.get("tsb")
-            or wellness.get("TSB")
-            or semantic.get("wellness_summary", {}).get("tsb")
-            or 0
-        )
-
-        # --- HRV Advanced Insights ---
-        if wellness.get("hrv_available"):
-            hrv_mean = wellness.get("hrv_mean")
-            hrv_latest = wellness.get("hrv_latest")
-            hrv_series = wellness.get("hrv_series", [])
-
-            # --- HRV Recovery Balance (ratio, not %)
-            if hrv_mean and hrv_latest:
-                hrv_ratio = round(hrv_latest / hrv_mean, 2)
-                hrv_block = semantic_block_for_metric("HRVBalance", hrv_ratio, semantic)
-                insights["hrv_recovery_balance"] = {
-                    "value": hrv_ratio,
-                    "window": "42d",
-                    "basis": "Latest / Mean HRV (ratio)",
-                    "classification": hrv_block.get("classification"),
-                    "interpretation": hrv_block.get("interpretation"),
-                    "coaching_implication": hrv_block.get("coaching_implication"),
+            insights["fat_oxidation_index"] = {
+                "value": foxi,
+                "window": window,
+                "basis": "FOxI",
+                "classification": foxi_block.get("classification"),
+                "interpretation": foxi_block.get("interpretation"),
+                "coaching_implication": foxi_block.get("coaching_implication"),
             }
 
-            # 2️⃣ Stability Index (1 - rolling std / mean)
+        # --- Fitness Phase (ACWR classification) ---
+        acwr_val = semantic.get("metrics", {}).get("ACWR", {}).get("value")
+        acwr_block = semantic_block_for_metric("ACWR", acwr_val, semantic)
+        insights["fitness_phase"] = {
+            "phase": acwr_block.get("classification"),
+            "basis": "ACWR",
+            "window": "rolling",
+            "interpretation": acwr_block.get("interpretation"),
+            "coaching_implication": acwr_block.get("coaching_implication"),
+        }
+
+        # ======================================================
+        # 🔬 Adaptation Metrics (Fatigue Resistance, Efficiency)
+        # ======================================================
+        adaptation = semantic.get("adaptation_metrics", {})
+
+        # --- Fatigue Resistance ---
+        if "Fatigue Resistance" in adaptation:
+            fr_val = adaptation.get("Fatigue Resistance")
+            fr_block = semantic_block_for_metric("FatigueResistance", fr_val, semantic)
+            insights["fatigue_resistance"] = {
+                "value": fr_val,
+                "window": window,
+                "basis": "EndurancePower / ThresholdPower",
+                "classification": fr_block.get("classification"),
+                "interpretation": fr_block.get("interpretation"),
+                "coaching_implication": fr_block.get("coaching_implication"),
+            }
+
+        # --- Efficiency Factor ---
+        if "Efficiency Factor" in adaptation:
+            ef_val = adaptation.get("Efficiency Factor")
+            ef_block = semantic_block_for_metric("EfficiencyFactor", ef_val, semantic)
+            insights["efficiency_factor"] = {
+                "value": ef_val,
+                "window": window,
+                "basis": "Power / HeartRate",
+                "classification": ef_block.get("classification"),
+                "interpretation": ef_block.get("interpretation"),
+                "coaching_implication": ef_block.get("coaching_implication"),
+            }
+
+    if report_type == "wellness":
+
+        wellness = semantic.get("wellness", {})
+
+        # --------------------------------------------------
+        # HRV Insights (only if available)
+        # --------------------------------------------------
+
+        # --------------------------------------------------
+        # Derive Resting HR delta (7d vs 28d)
+        # --------------------------------------------------
+        daily = wellness.get("daily", [])
+
+        if daily:
+            df = pd.DataFrame(daily)
+
+            if "rest_hr" in df.columns:
+                df["rest_hr"] = pd.to_numeric(df["rest_hr"], errors="coerce")
+                df = df.dropna(subset=["rest_hr"])
+
+                if len(df) >= 14:
+                    rhr_7d = df.tail(7)["rest_hr"].mean()
+                    rhr_28d = df.tail(28)["rest_hr"].mean()
+
+                    wellness["resting_hr_delta"] = round(rhr_7d - rhr_28d, 1)
+
+
+        # --------------------------------------------------
+        # Derive Sleep Score average (14d)
+        # --------------------------------------------------
+        if daily:
+            df = pd.DataFrame(daily)
+
+            if "sleepscore" in df.columns:
+                df["sleepscore"] = pd.to_numeric(df["sleepscore"], errors="coerce")
+                df = df.dropna(subset=["sleepscore"])
+
+                if len(df) >= 7:
+                    wellness["sleep_score"] = round(
+                        df.tail(14)["sleepscore"].mean(),
+                        1
+                    )
+
+        if wellness.get("hrv_available"):
+
+            hrv_block = wellness.get("hrv", {})
+
+            hrv_mean = hrv_block.get("mean")
+            hrv_latest = hrv_block.get("latest")
+            hrv_series = wellness.get("hrv_series", [])
+
+
+            samples = (
+                wellness.get("hrv_samples")
+                if wellness.get("hrv_samples") is not None
+                else hrv_block.get("samples", 0)
+            )
+
+
+            # --- HRV Deviation (%)
+            if hrv_mean is not None and hrv_latest is not None:
+
+                hrv_deviation_pct = round(
+                    ((hrv_latest - hrv_mean) / hrv_mean) * 100,
+                    1
+                )
+
+                block = semantic_block_for_metric(
+                    "HRVDeviation",
+                    hrv_deviation_pct,
+                    semantic
+                )
+
+                insights["hrv_deviation_pct"] = {
+                    "value": hrv_deviation_pct,
+                    "window": "42d",
+                    "basis": "((latest - mean) / mean) × 100",
+                    "classification": block.get("classification"),
+                    "interpretation": block.get("interpretation"),
+                    "coaching_implication": block.get("coaching_implication"),
+                }
+
+
+            # --- HRV Stability (14d CV)
             if hrv_series and len(hrv_series) >= 7:
-                import pandas as pd, numpy as np
+
                 df_hrv = pd.DataFrame(hrv_series)
                 df_hrv["hrv"] = pd.to_numeric(df_hrv["hrv"], errors="coerce")
                 recent = df_hrv.tail(14)["hrv"].dropna()
+
                 if len(recent) >= 5:
                     mean_val = recent.mean()
                     std_val = recent.std()
-                    stability = round((1 - (std_val / mean_val)), 3)
-                    stab_block = semantic_block_for_metric("HRVStability", stability, semantic)
+
+                    stability = round(1 - (std_val / mean_val), 3)
+
+                    block = semantic_block_for_metric(
+                        "HRVStability",
+                        stability,
+                        semantic
+                    )
+
                     insights["hrv_stability_index"] = {
                         "value": stability,
                         "window": "14d",
                         "basis": "1 - (std / mean)",
-                        "classification": stab_block.get("classification"),
-                        "interpretation": stab_block.get("interpretation"),
-                        "coaching_implication": stab_block.get("coaching_implication"),
+                        "classification": block.get("classification"),
+                        "interpretation": block.get("interpretation"),
+                        "coaching_implication": block.get("coaching_implication"),
                     }
 
-            # 3️⃣ Trend (slope of last 7 days)
-            if hrv_series and len(hrv_series) >= 7:
-                import numpy as np
-                vals = [h.get("hrv") for h in hrv_series[-7:] if h.get("hrv")]
-                if len(vals) == 7:
-                    x = np.arange(7)
-                    slope = round(np.polyfit(x, vals, 1)[0], 2)
-                    trend_block = semantic_block_for_metric("HRVTrend", slope, semantic)
-                    insights["hrv_trend_7d"] = {
-                        "value": slope,
-                        "window": "7d",
-                        "basis": "HRV slope (ms/day)",
-                        "classification": trend_block.get("classification"),
-                        "interpretation": trend_block.get("interpretation"),
-                        "coaching_implication": trend_block.get("coaching_implication"),
-                    }
+            # --- Autonomic Status (simplified)
+            if hrv_mean is not None and hrv_latest is not None:
 
-        # --- Resting HR Trend ---
-        if "resting_hr_delta" in wellness:
-            delta_rhr = round(wellness["resting_hr_delta"], 1)
-            rhr_block = semantic_block_for_metric("RestingHR", delta_rhr, semantic)
-            insights["resting_hr_trend"] = {
-                "value": delta_rhr,
-                "window": "7d vs 28d",
-                "basis": "Δ Resting HR",
-                "classification": rhr_block.get("classification"),
-                "interpretation": rhr_block.get("interpretation"),
-                "coaching_implication": rhr_block.get("coaching_implication"),
-            }
+                ratio = round(hrv_latest / hrv_mean, 3)
+
+                if ratio >= 0.97:
+                    state = "stable"
+                elif 0.92 <= ratio < 0.97:
+                    state = "slightly_suppressed"
+                else:
+                    state = "suppressed"
+
+                block = semantic_block_for_metric(
+                    "AutonomicStatus",
+                    ratio,
+                    semantic
+                )
+
+                insights["autonomic_status"] = {
+                    "value": ratio,
+                    "window": "42d",
+                    "basis": "HRV relative to 42-day mean",
+                    "classification": block.get("classification"),
+                    "interpretation": block.get("interpretation"),
+                    "coaching_implication": block.get("coaching_implication"),
+                    "confidence": block.get("metric_confidence"),
+                }
 
 
-        # --- Sleep Quality ---
-        if "sleep_score" in wellness:
-            sleep_val = wellness.get("sleep_score")
-            sleep_block = semantic_block_for_metric("SleepQuality", sleep_val, semantic)
-            insights["sleep_quality"] = {
-                "value": sleep_val,
-                "window": "14d",
-                "basis": "Average Sleep Score",
-                "classification": sleep_block.get("classification"),
-                "interpretation": sleep_block.get("interpretation"),
-                "coaching_implication": sleep_block.get("coaching_implication"),
-            }
 
-        # --- Recovery Index (HRV × TSB composite)
-        if hrv_mean and hrv_latest and tsb is not None:
-            rec_index = round((hrv_latest / hrv_mean) * (1 + (tsb / 100)), 2)
-            rec_block = semantic_block_for_metric("RecoveryIndex", rec_index, semantic)
-            insights["recovery_index"] = {
-                "value": rec_index,
-                "window": "42d",
-                "basis": "HRV × TSB composite",
-                "classification": rec_block.get("classification"),
-                "interpretation": rec_block.get("interpretation"),
-                "coaching_implication": rec_block.get("coaching_implication"),
-            }   
+            # --------------------------------------------------
+            # Resting HR Delta (supports nested wellness structure)
+            # --------------------------------------------------
+
+            delta_rhr = wellness.get("resting_hr_delta")
+
+            if delta_rhr is None:
+                delta_rhr = wellness.get("cardiac", {}).get("resting_hr_delta")
+
+            if delta_rhr is not None:
+
+                delta_rhr = round(float(delta_rhr), 1)
+
+                rhr_block = semantic_block_for_metric(
+                    "RestingHRDelta",
+                    delta_rhr,
+                    semantic
+                )
+
+                insights["resting_hr_delta"] = {
+                    "value": delta_rhr,
+                    "window": "7d vs 28d",
+                    "basis": "Δ Resting HR",
+                    "classification": rhr_block.get("classification"),
+                    "interpretation": rhr_block.get("interpretation"),
+                    "coaching_implication": rhr_block.get("coaching_implication"),
+                }
+
+
+            # --------------------------------------------------
+            # Sleep (supports nested wellness structure)
+            # --------------------------------------------------
+            sleep_val = (
+                wellness.get("sleep_score")
+                or wellness.get("sleep", {}).get("average_score")
+            )
+
+            if sleep_val is not None:
+
+                sleep_block = semantic_block_for_metric(
+                    "SleepQuality",
+                    sleep_val,
+                    semantic
+                )
+
+                insights["sleep_quality"] = {
+                    "value": sleep_val,
+                    "window": "14d",
+                    "basis": "Average Sleep Score",
+                    "classification": sleep_block.get("classification"),
+                    "interpretation": sleep_block.get("interpretation"),
+                    "coaching_implication": sleep_block.get("coaching_implication"),
+                }
 
 
     return insights
@@ -1954,7 +2042,7 @@ def build_semantic_json(context):
     # 🧠 Metabolic & Recovery Metrics (cheat-sheet aligned)
     # ------------------------------------------------------------------
     try:
-        metric_keys = ["FOxI", "MES", "RecoveryIndex", "StressTolerance"]
+        metric_keys = ["FOxI", "MES", "StressTolerance"]
 
         semantic.setdefault("metrics", {})
 
@@ -2003,7 +2091,6 @@ def build_semantic_json(context):
         "MES": "7d",
         "CUR": "7d",
         "GR": "7d",
-        "RecoveryIndex": "7d",
         "StressTolerance": "7d",
         "ZQI": "7d",
 
@@ -2032,7 +2119,7 @@ def build_semantic_json(context):
     # ---------------------------------------------------------
     secondary_keys = [
         "FatOxEfficiency", "FOxI", "CUR", "GR", "MES",
-        "StressTolerance", "RecoveryIndex", "ZQI", "Polarisation"
+        "StressTolerance", "ZQI", "Polarisation"
     ]
 
     for k in secondary_keys:
@@ -2208,6 +2295,7 @@ def build_semantic_json(context):
                 "source": wellness.get("hrv_source"),
             }
 
+
         # -----------------------------------------------------
         # 3️⃣ Sleep + Cardiac
         # -----------------------------------------------------
@@ -2225,7 +2313,6 @@ def build_semantic_json(context):
         # 4️⃣ Recovery Markers (from canonical metrics layer)
         # -----------------------------------------------------
         recovery_metric_keys = [
-            "RecoveryIndex",
             "StressTolerance",
             "Monotony",
             "Strain",
@@ -2263,6 +2350,8 @@ def build_semantic_json(context):
     # ---------------------------------------------------------
     # 🧠 INSIGHTS (computed once, after all metrics resolved)
     # ---------------------------------------------------------
+    semantic["insights"] = build_insights(semantic)
+
     # ✅ pass weekly phase detail (not macro) to insight view
     full_phases_for_view = (
         semantic.get("weekly_phases")

@@ -39,6 +39,11 @@ CHEAT_SHEET["thresholds"] = {
     # === Wellness Metrics ===
     "HRV": {"green": (60, 90), "amber": (40, 60)},  # ms
     "RestingHR": {"green": (40, 55), "amber": (56, 65)},  # bpm
+    "RestingHRDelta": {
+        "green": (-2, 2),
+        "amber": (2, 5),
+        "red": (5, 50)
+    },
     "SleepQuality": {"green": (80, 100), "amber": (65, 80)},  # score out of 100
     "RecoveryIndex": {"green": [0.9, 1.3],"amber": [0.8, 0.9],"red": [0.0, 0.8]},
     # --- HRV family ---
@@ -69,6 +74,19 @@ CHEAT_SHEET["thresholds"] = {
         "amber": (0.70, 0.90),
         "red": (0.90, 1.0),
     },
+    # ---HRV ---
+    "HRVDeviation": {
+        "green": (-5, 15),
+        "amber": (-15, -5),
+        "red": (-100, -15),
+        "high_spike": (15, 40)
+    },
+    "AutonomicStatus": {
+        "green": (0.97, 1.20),
+        "amber": (0.92, 0.97),
+        "red": (0.00, 0.92)
+    },
+
     # ================== POLARISATION THRESHOLDS ==================
     # IMPORTANT SEMANTIC NOTE:
     # - "Polarisation" (power-based) follows the Seiler ratio definition:
@@ -292,7 +310,6 @@ CHEAT_SHEET["context"] = {
     "CUR": "Carbohydrate Utilisation Ratio; 30-80 balanced metabolic use.",
     "GR": "Glucose Ratio; >2 indicates excess glycolytic bias.",
     "MES": "Metabolic Efficiency Score; >20 is good endurance economy.",
-    "RecoveryIndex": "0.6–1.0 means recovered; <0.5 = heavy fatigue.",
     "ACWR_Risk": "Used internally for stability check.",
     "StressTolerance": "2–8 indicates sustainable training strain capacity.",
     "Durability": "Durability index — ratio of power/HR stability under fatigue; >0.9 indicates good endurance robustness.",
@@ -381,6 +398,17 @@ CHEAT_SHEET["context"] = {
         "Acute vs Chronic alignment compares current 7-day load expression "
         "against 90-day baseline. Ratios >1.4 suggest overload; <0.8 under-stimulation."
     ),
+    "HRVDeviation": (
+        "Percentage deviation of latest HRV from 42-day mean. "
+        "Positive values suggest improved autonomic readiness; "
+        "negative values suggest suppression."
+    ),
+    "AutonomicStatus": (
+        "Ratio of latest HRV to 42-day mean. "
+        "Values near 1.0 indicate stable autonomic balance. "
+        "Suppression below 0.92 may indicate fatigue."
+    ),
+    "RestingHRDelta": "Resting heart rate trend — elevated HR indicates fatigue or stress.",
 }
 
 CHEAT_SHEET["coaching_links"] = {
@@ -448,6 +476,19 @@ CHEAT_SHEET["coaching_links"] = {
         "If acute > chronic (>1.4), reduce intensity density or volume. "
         "If acute < chronic (<0.8), consider progressive overload."
     ),
+    "HRVStability": (
+        "If HRV stability drops below 0.85, recovery variability is increasing. "
+        "Ensure consistent sleep and reduce high-intensity density."
+    ),
+    "AutonomicStatus": (
+        "If autonomic ratio drops below 0.92, reduce intensity density. "
+        "Stable or elevated values support normal training."
+    ),
+    "HRVDeviation": (
+        "If HRV deviation is negative beyond -10%, reduce intensity "
+        "and prioritise sleep. Positive deviation suggests readiness."
+),
+
 }
 
 CHEAT_SHEET["display_names"] = {
@@ -919,6 +960,25 @@ CHEAT_SHEET["metric_confidence"] = {
             "Acute vs chronic alignment is directional. "
             "Should not trigger action in isolation."
         )
+    },
+    "HRVDeviation": {
+        "default": "high",
+        "high_confidence_when": {"min_samples": 7},
+    },
+
+    "HRVStability": {
+        "default": "high",
+        "high_confidence_when": {"min_samples": 10},
+    },
+
+    "RestingHRTrend": {
+        "default": "moderate",
+        "high_confidence_when": {"min_samples": 7},
+    },
+
+    "SleepQuality": {
+        "default": "moderate",
+        "high_confidence_when": {"min_samples": 7},
     },
 }
 
