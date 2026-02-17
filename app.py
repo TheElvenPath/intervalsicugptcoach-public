@@ -451,8 +451,16 @@ async def run_audit_with_data(request: Request):
         # --- EARLY HEADER INJECTION (pre-run safety) ---
         athlete_profile = prefetch_context.get("athleteProfile", {})
 
-        resolved_start = start or prefetch_context.get("start")
-        resolved_end   = end   or prefetch_context.get("end")
+        period = prefetch_context.get("period", {})
+
+        resolved_start = start or prefetch_context.get("start") or period.get("start")
+        resolved_end   = end   or prefetch_context.get("end")   or period.get("end")
+
+        date_range = (
+            f"{resolved_start} → {resolved_end}"
+            if resolved_start and resolved_end
+            else "unknown"
+        )
 
         prefetch_context["report_header"] = {
             "athlete": athlete_profile.get("name", "Unknown Athlete"),
