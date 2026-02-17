@@ -324,6 +324,22 @@ def compute_derived_metrics(df_events, context):
     else:
         debug(context, "[T2-HRV] No wellness dataframe in context — skipping HRV normalisation.")
 
+    # ---------------------------------------------------------
+    # 🩵 HRV value extraction only (no classification here)
+    # ---------------------------------------------------------
+    hrv_val = None
+
+    try:
+        if df_well is not None and "hrv" in df_well.columns:
+            series = pd.to_numeric(df_well["hrv"], errors="coerce").dropna()
+            if not series.empty:
+                hrv_val = float(series.iloc[-1])  # latest HRV
+    except Exception as e:
+        debug(context, f"[T2-HRV] Failed to extract HRV value: {e}")
+
+    context["HRV"] = hrv_val
+    debug(context, f"[T2-HRV] HRV extracted → {hrv_val}")
+
     # --- ✅ 2. Build daily load time series ---
     # FIX: convert millis → proper datetime
     df_events["start_date_local"] = pd.to_datetime(
@@ -915,6 +931,7 @@ def compute_derived_metrics(df_events, context):
     # --- ✅ 10. Classification (via COACH_PROFILE markers) ---
     # Apply classification to all metrics that have criteria
     to_classify = {
+        "HRV": hrv_val,
         "ACWR": acwr,
         "Monotony": monotony,
         "Strain": strain,

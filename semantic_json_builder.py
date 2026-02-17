@@ -488,7 +488,7 @@ def build_insights(semantic):
                 df["sleepscore"] = pd.to_numeric(df["sleepscore"], errors="coerce")
                 df = df.dropna(subset=["sleepscore"])
 
-                if len(df) >= 7:
+                if len(df) >= 14:
                     wellness["sleep_score"] = round(
                         df.tail(14)["sleepscore"].mean(),
                         1
@@ -510,13 +510,14 @@ def build_insights(semantic):
             )
 
 
-            # --- HRV Deviation (%)
-            if hrv_mean is not None and hrv_latest is not None:
+            # --- HRV Deviation (authoritative Tier-2 value)
+            hrv_deviation_pct = (
+                semantic.get("wellness", {}).get("HRVDeviation")
+                or semantic.get("wellness", {}).get("hrv_deviation")
+            )
 
-                hrv_deviation_pct = round(
-                    ((hrv_latest - hrv_mean) / hrv_mean) * 100,
-                    1
-                )
+
+            if hrv_deviation_pct is not None:
 
                 block = semantic_block_for_metric(
                     "HRVDeviation",
@@ -562,17 +563,10 @@ def build_insights(semantic):
                         "coaching_implication": block.get("coaching_implication"),
                     }
 
-            # --- Autonomic Status (simplified)
+            # --- Autonomic Status (threshold-driven)
             if hrv_mean is not None and hrv_latest is not None:
 
                 ratio = round(hrv_latest / hrv_mean, 3)
-
-                if ratio >= 0.97:
-                    state = "stable"
-                elif 0.92 <= ratio < 0.97:
-                    state = "slightly_suppressed"
-                else:
-                    state = "suppressed"
 
                 block = semantic_block_for_metric(
                     "AutonomicStatus",
@@ -589,7 +583,6 @@ def build_insights(semantic):
                     "coaching_implication": block.get("coaching_implication"),
                     "confidence": block.get("metric_confidence"),
                 }
-
 
 
             # --------------------------------------------------

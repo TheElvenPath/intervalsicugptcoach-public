@@ -36,20 +36,45 @@ CHEAT_SHEET["thresholds"] = {
     "Lactate": {"lt1_mmol": 2.0,"lt2_mmol": 4.0,"corr_threshold": 0.6},
     "FatigueResistance": {"green": (0.9, 1.1), "amber": (0.8, 1.2)},  # ratio of long vs short power
     "EfficiencyFactor": {"green": (1.8, 2.2), "amber": (1.5, 2.5)},   # Power-to-HR ratio
+    "LoadVariabilityIndex": {"green": [0.7, 1.0],"amber": [0.4, 0.69],"red": [0.0, 0.39]}, #replaced RI for now
     # === Wellness Metrics ===
-    "HRV": {"green": (60, 90), "amber": (40, 60)},  # ms
-    "RestingHR": {"green": (40, 55), "amber": (56, 65)},  # bpm
+    "HRV": {
+        "green": (60, 200),
+        "amber": (40, 60),
+        "red": (0, 40)
+    },
+    "RestingHR": {
+        "green": (40, 55),
+        "amber": (56, 65),
+        "red": (65, 200)
+    },
     "RestingHRDelta": {
         "green": (-2, 2),
         "amber": (2, 5),
         "red": (5, 50)
     },
-    "SleepQuality": {"green": (80, 100), "amber": (65, 80)},  # score out of 100
-    "LoadVariabilityIndex": {"green": [0.7, 1.0],"amber": [0.4, 0.69],"red": [0.0, 0.39]},
+    "SleepQuality": {
+        "green": (80, 100),
+        "amber": (65, 80),
+        "red": (0, 65)
+    },
+
     # --- HRV family ---
-    "HRVBalance": {"green": [1.0, 1.3],"amber": [0.9, 1.0],"red": [0.0, 0.9]},
-    "HRVStability": {"green": (0.85, 1.0), "amber": (0.7, 0.85)},
-    "HRVTrend": {"green": (0.0, 5.0), "amber": (-2.0, 0.0)},
+    "HRVBalance": {
+        "green": (1.0, 1.3),
+        "amber": (0.9, 1.0),
+        "red": (0.0, 0.9)
+    },
+    "HRVStability": {
+        "green": (0.85, 1.0),
+        "amber": (0.7, 0.85),
+        "red": (0.0, 0.7)
+    },
+    "HRVTrend": {
+        "green": (0.0, 5.0),
+        "amber": (-2.0, 0.0),
+        "red": (-100.0, -2.0)
+    },
     # --- Performance Intelligence ---
     "mean_depletion_pct_7d": {"green":[0.2,0.45],"amber":[0.45,0.7]},
     "high_depletion_sessions_7d": {"green":[0,2],"amber":[3,4]},
@@ -82,7 +107,7 @@ CHEAT_SHEET["thresholds"] = {
         "high_spike": (15, 40)
     },
     "AutonomicStatus": {
-        "green": (0.97, 1.20),
+        "green": (0.97, 1.30),
         "amber": (0.92, 0.97),
         "red": (0.00, 0.92)
     },
