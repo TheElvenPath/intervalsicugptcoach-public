@@ -480,13 +480,27 @@ async def run_audit_with_data(request: Request):
             else "unknown"
         )
 
+        # -----------------------------------------------------
+        # 🏷️ PRIMARY SPORT LABEL (semantic)
+        # -----------------------------------------------------
+        athlete_profile = prefetch_context.get("athleteProfile", {})
+        sport_settings = athlete_profile.get("sportSettings", [])
+
+        primary_label = "unknown"
+
+        if sport_settings:
+            first_group = sport_settings[0]
+            types = first_group.get("types", [])
+            if types:
+                primary_label = types[0].lower()
+
         prefetch_context["report_header"] = {
             "athlete": athlete_profile.get("name", "Unknown Athlete"),
-            "discipline": athlete_profile.get("discipline", "cycling"),
+            "primary_sport": primary_label,
             "report_type": report_range,
             "framework": "Unified_Reporting_Framework_v5.1",
             "timezone": athlete_profile.get("timezone", "Europe/Zurich"),
-            "date_range": f"{resolved_start} → {resolved_end}" if resolved_start and resolved_end else "not_passed",
+            "date_range": date_range,
         }
 
         sys.stderr.write(
