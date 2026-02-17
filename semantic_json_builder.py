@@ -1272,7 +1272,62 @@ def build_semantic_json(context):
     # ---------------------------------------------------------
     athlete = context.get("athlete_raw") or context.get("athlete") or {}
     sports = athlete.get("sportSettings", []) or []
-    primary_sport = sports[0] if sports else {}
+    primary_sport = {}
+
+    sport_groups = CHEAT_SHEET.get("sport_groups", {})
+
+    def match_group(types):
+        types = set(types or [])
+        for group, group_types in sport_groups.items():
+            if types & set(group_types):
+                return group
+        return None
+
+    if sports:
+        # 1) Prefer cycling group
+        for s in sports:
+            if match_group(s.get("types")) == "Ride":
+                primary_sport = s
+                break
+
+        # 2) Otherwise first matched sport group
+        if not primary_sport:
+            for s in sports:
+                if match_group(s.get("types")):
+                    primary_sport = s
+                    break
+
+        # 3) Fallback to original behaviour
+        if not primary_sport:
+            primary_sport = sports[0]
+
+
+    # -----------------------------------------------------
+    # 🏷️ PRIMARY SPORT LABEL (semantic)
+    # -----------------------------------------------------
+    primary_label = match_group(primary_sport.get("types")) or "Ride"
+    primary_label = primary_label.lower()
+
+    # -----------------------------------------------------
+    # 🏁 DOMINANT SPORT (LOAD-BASED, PERIOD CONTEXT)
+    # -----------------------------------------------------
+    load_by_group = {}
+
+    if isinstance(df_ref, pd.DataFrame) and not df_ref.empty:
+        for _, row in df_ref.iterrows():
+            activity_type = row.get("type")
+            if not activity_type:
+                continue
+            g = match_group([activity_type])
+            if not g:
+                continue
+            load = row.get("icu_training_load", 0) or 0
+            load_by_group[g] = load_by_group.get(g, 0) + load
+
+    if load_by_group:
+        dominant_sport_label = max(load_by_group, key=load_by_group.get).lower()
+    else:
+        dominant_sport_label = primary_label
 
     # -----------------------------------------------------
     # ⚙️ PROFILE (CORE PERFORMANCE MARKERS)
@@ -1341,7 +1396,8 @@ def build_semantic_json(context):
             "lthr": lthr,
             "resting_hr": athlete.get("icu_resting_hr"),
             "max_hr": max_hr,
-            "primary_sport": ",".join(primary_sport.get("types", [])) if isinstance(primary_sport, dict) else None,
+            "primary_sport": primary_label,
+            "dominant_sport": dominant_sport_label,
             # --- Extended physiological fields from custom_field_values
             "vo2max_garmin": vo2max_garmin,
             "lactate_mmol_l": lactate_mmol_l,
