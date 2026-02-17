@@ -447,8 +447,7 @@ async def run_audit_with_data(request: Request):
         if start and end:
             prefetch_context["start"] = start
             prefetch_context["end"] = end
-            print(f"[STAGING] Injected start/end into prefetch_context: {start} → {end}")
-
+            
         # --- EARLY HEADER INJECTION (pre-run safety) ---
         athlete_profile = prefetch_context.get("athleteProfile", {})
 
