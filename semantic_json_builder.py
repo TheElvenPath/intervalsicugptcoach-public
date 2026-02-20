@@ -1280,11 +1280,10 @@ def build_semantic_json(context):
 
 
     # ---------------------------------------------------------
-    # 🔗 ATHLETE: identity + profile + context (UNIVERSAL)
+    # 🔗 ATHLETE: identity + multi-sport profiles + context
     # ---------------------------------------------------------
     athlete = context.get("athlete_raw") or context.get("athlete") or {}
     sports = athlete.get("sportSettings", []) or []
-    primary_sport = {}
 
     sport_groups = CHEAT_SHEET.get("sport_groups", {})
 
@@ -1295,33 +1294,8 @@ def build_semantic_json(context):
                 return group
         return None
 
-    if sports:
-        # 1) Prefer cycling group
-        for s in sports:
-            if match_group(s.get("types")) == "Ride":
-                primary_sport = s
-                break
-
-        # 2) Otherwise first matched sport group
-        if not primary_sport:
-            for s in sports:
-                if match_group(s.get("types")):
-                    primary_sport = s
-                    break
-
-        # 3) Fallback to original behaviour
-        if not primary_sport:
-            primary_sport = sports[0]
-
-
     # -----------------------------------------------------
-    # 🏷️ PRIMARY SPORT LABEL (semantic)
-    # -----------------------------------------------------
-    primary_label = match_group(primary_sport.get("types")) or "Ride"
-    primary_label = primary_label.lower()
-
-    # -----------------------------------------------------
-    # 🏁 DOMINANT SPORT (LOAD-BASED, PERIOD CONTEXT)
+    # 🏁 DOMINANT SPORT (LOAD-BASED)
     # -----------------------------------------------------
     load_by_group = {}
 
@@ -1336,42 +1310,74 @@ def build_semantic_json(context):
             load = row.get("icu_training_load", 0) or 0
             load_by_group[g] = load_by_group.get(g, 0) + load
 
-    if load_by_group:
-        dominant_sport_label = max(load_by_group, key=load_by_group.get).lower()
+    dominant_sport_label = (
+        max(load_by_group, key=load_by_group.get).lower()
+        if load_by_group else None
+    )
+
+    # -----------------------------------------------------
+    # ⚙️ BUILD ALL SPORT PROFILES
+    # -----------------------------------------------------
+    sport_profiles = {}
+
+    for s in sports:
+        group = match_group(s.get("types"))
+        if not group:
+            continue
+
+        key = group.lower()
+        mmp_model = s.get("mmp_model", {}) or {}
+        custom_fields = s.get("custom_field_values", {}) or {}
+
+        sport_profiles[key] = {
+            "ftp": s.get("ftp"),
+            "eftp": mmp_model.get("ftp"),
+            "w_prime": s.get("w_prime"),
+            "p_max": s.get("p_max"),
+            "lthr": s.get("lthr"),
+            "max_hr": s.get("max_hr"),
+            "threshold_pace": s.get("threshold_pace"),
+            "pace_units": s.get("pace_units"),
+            "power_zones": s.get("power_zones"),
+            "hr_zones": s.get("hr_zones"),
+            "pace_zones": s.get("pace_zones"),
+            "vo2max_garmin": custom_fields.get("VO2MaxGarmin"),
+            "lactate_mmol_l": custom_fields.get("HrtLndLt1"),
+            "lactate_power": custom_fields.get("HrtLndLt1p"),
+        }
+
+    # -----------------------------------------------------
+    # 🧭 Resolve active (dominant) profile
+    # -----------------------------------------------------
+    if dominant_sport_label and dominant_sport_label in sport_profiles:
+        active_profile_key = dominant_sport_label
+    elif sport_profiles:
+        active_profile_key = list(sport_profiles.keys())[0]
     else:
-        dominant_sport_label = primary_label
+        active_profile_key = None
+
+    active_profile = sport_profiles.get(active_profile_key, {})
 
     # -----------------------------------------------------
-    # ⚙️ PROFILE (CORE PERFORMANCE MARKERS)
+    # 🌍 GLOBAL physiology (non sport-specific)
     # -----------------------------------------------------
-    ftp = None
-    eftp = None
-    lthr = None
+    global_profile = {
+        "resting_hr": athlete.get("icu_resting_hr"),
+        "weight": athlete.get("icu_weight"),
+        "height": athlete.get("height"),
+        "sex": athlete.get("sex"),
+    }
 
-    if isinstance(primary_sport, dict):
-        ftp = primary_sport.get("ftp")
-        mmp_model = primary_sport.get("mmp_model", {}) or {}
-        eftp = mmp_model.get("ftp")
-        lthr = primary_sport.get("lthr")
+    # Extract commonly used values for backward compatibility
+    ftp = active_profile.get("ftp")
+    eftp = active_profile.get("eftp")
+    lthr = active_profile.get("lthr")
+    max_hr = active_profile.get("max_hr")
 
-    # Fallbacks
-    ftp = ftp or athlete.get("icu_ftp")
-    eftp = eftp or ftp
-    lthr = lthr or athlete.get("icu_threshold_hr")
+    vo2max_garmin = active_profile.get("vo2max_garmin")
+    lactate_mmol_l = active_profile.get("lactate_mmol_l")
+    lactate_power = active_profile.get("lactate_power")
 
-    # --- Resolve max HR from primary sport if not on root
-    max_hr = athlete.get("max_hr")
-    if not max_hr and isinstance(primary_sport, dict):
-        max_hr = primary_sport.get("max_hr")
-
-    # --- Custom physiological fields (now pulled from sportSettings)
-    custom_fields = {}
-    if isinstance(primary_sport, dict):
-        custom_fields = primary_sport.get("custom_field_values", {}) or {}
-
-    vo2max_garmin = custom_fields.get("VO2MaxGarmin")
-    lactate_mmol_l = custom_fields.get("HrtLndLt1")
-    lactate_power = custom_fields.get("HrtLndLt1p")
 
     # -----------------------------------------------------
     # BUILD SEMANTIC BLOCK
@@ -1397,25 +1403,34 @@ def build_semantic_json(context):
         # ⚙️ PROFILE (CORE PERFORMANCE MARKERS)
         # -----------------------------------------------------
         "profile": {
+            # Active sport profile (backward compatible)
             "ftp": ftp,
             "eftp": eftp,
             "ftp_kg": (
                 round((ftp or 0) / athlete.get("icu_weight", 1), 2)
                 if ftp and athlete.get("icu_weight") else None
             ),
-            "weight": athlete.get("icu_weight"),
-            "height": athlete.get("height"),
             "lthr": lthr,
-            "resting_hr": athlete.get("icu_resting_hr"),
             "max_hr": max_hr,
-            "primary_sport": primary_label,
+            "threshold_pace": active_profile.get("threshold_pace"),
+            "pace_units": active_profile.get("pace_units"),
+
+            # Sport context
+            "primary_sport": active_profile_key,
             "dominant_sport": dominant_sport_label,
-            # --- Extended physiological fields from custom_field_values
+
+            # Extended fields
             "vo2max_garmin": vo2max_garmin,
             "lactate_mmol_l": lactate_mmol_l,
             "lactate_power": lactate_power,
-            "custom_metrics": custom_fields if custom_fields else None,
         },
+
+        # NEW: expose all sport profiles
+        "profiles": sport_profiles,
+
+        # NEW: expose global physiology
+        "global": global_profile,
+
     
         # -----------------------------------------------------
         # 🧠 CONTEXT (FOR CHATGPT INTENT ANALYSIS)
