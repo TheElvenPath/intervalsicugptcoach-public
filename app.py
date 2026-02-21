@@ -124,7 +124,7 @@ def normalize_prefetched_context(data):
         athlete = data.get("athlete") or {}
         calendar = data.get("calendar", {})
 
-        debug(context, f"[RAW FULL SAMPLE] {str(data.get('activities_full', [{}])[0])[:500]}")
+        debug(context, f"[RAW FULL SAMPLE] {str(data.get('activities_full', [{}])[0])[:2000]}")
 
         # 🔒 CONTRACT INVARIANT — athlete must have an id
         if not isinstance(athlete, dict):
