@@ -8,7 +8,7 @@ Supports dual execution modes:
 - **Local Python Execution** — identical logic via `report.py → run_report()`, no cloud dependencies.
 
 ---
-## 🧭 About [https://www.cliveking.net/]
+## 🧭 About [https://www.cliveking.net/] -> [https://www.montis.icu/]
 
 The **Montis.icu GPT Coach** transforms athlete data into reproducible, validated insights.  
 It operates as an autonomous audit and analytics layer built on the **Unified Reporting Framework v5.1**, ensuring integrity, transparency, and traceability for endurance coaching decisions.  
