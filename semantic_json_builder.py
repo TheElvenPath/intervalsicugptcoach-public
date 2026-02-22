@@ -849,14 +849,14 @@ def build_semantic_json(context):
                     sport: rename_z8_to_ss(dist)
                     for sport, dist in context["zone_dist_fused"].items()
                 },
-                "dominant_sport": context.get("polarisation_sport", "Unknown"),
+                #"dominant_sport": context.get("polarisation_sport", "Unknown"),
                 "basis": "Sport-specific fusion of power and HR zones (power preferred, HR fallback)",
             }
             debug(context, f"[SEMANTIC] Injected fused zones → sports={list(context['zone_dist_fused'].keys())}")
         else:
             semantic["zones"]["fused"] = {
                 "per_sport": {},
-                "dominant_sport": None,
+                #"dominant_sport": None,
                 "basis": "unavailable",
             }
     except Exception as e:
@@ -948,7 +948,7 @@ def build_semantic_json(context):
             polarisation_variants["fused"] = build_variant(
                 "Polarisation_fused",
                 pi_fused,
-                f"Fused HR+Power (dominant sport: {context.get('polarisation_sport', 'Unknown')})",
+                f"Fused HR+Power",
                 "zones.fused",
             )
             debug(context, f"[SEMANTIC] Polarisation_fused={pi_fused}")
@@ -2294,6 +2294,12 @@ def build_semantic_json(context):
                 "cheatsheet_key": "anaerobic_repeatability",
                 "context_key": "AnaerobicRepeatability",
                 "advice_key": "AnaerobicRepeatability",
+            },
+            "model_diagnostics": {
+                "framework": "Skiba Critical Power",
+                "cheatsheet_key": "model_diagnostics",
+                "context_key": "ModelDiagnostics",
+                "advice_key": "ModelDiagnostics",
             },
             "durability": {
                 "framework": "Intensity Stability & Durability Model (ISDM)",

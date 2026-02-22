@@ -84,8 +84,16 @@ CHEAT_SHEET["thresholds"] = {
     "high_drift_sessions_7d": {"green":[0,2],"amber":[3,4]},
     "mean_decoupling_90d": {"green":[0,4],"amber":[4,7]},
     "high_drift_sessions_90d": {"green":[0,10],"amber":[10,20]},
-    "rolling_joules_above_ftp_7d": {"green":[60000,160000],"amber":[160000,250000]},
-    "high_intensity_days_7d": {"green":[2,4],"amber":[4,6]},
+    "rolling_joules_above_ftp_7d": {
+        "green": (0,160000),
+        "amber": (160000,250000),
+        "red": (250000,1000000),
+    },
+    "high_intensity_days_7d": {
+        "green": [0,2],
+        "amber": [3,4],
+        "red": [5,7]
+    },
     "high_intensity_sessions_90d": {"green":[8,25],"amber":[25,40]},
     "mean_training_load_90d": {"green":[40,70],"amber":[70,90]},
     # --- W′ Balance / Anaerobic Load (Weekly) ---
@@ -99,6 +107,16 @@ CHEAT_SHEET["thresholds"] = {
         "amber": (0.70, 0.90),
         "red": (0.90, 1.0),
     },
+    "w_prime_divergence_7d": {
+        "green": [0.0, 0.2],
+        "amber": [0.2, 0.5],
+        "red": [0.5, 1.0]
+    },
+    "w_prime_divergence_90d": {
+        "green": [0.0, 0.2],
+        "amber": [0.2, 0.5],
+        "red": [0.5, 1.0]
+    },
     # ---HRV ---
     "HRVDeviation": {
         "green": (-5, 15),
@@ -111,7 +129,6 @@ CHEAT_SHEET["thresholds"] = {
         "amber": (0.92, 0.97),
         "red": (0.00, 0.92)
     },
-
     # ================== POLARISATION THRESHOLDS ==================
     # IMPORTANT SEMANTIC NOTE:
     # - "Polarisation" (power-based) follows the Seiler ratio definition:
@@ -385,7 +402,7 @@ CHEAT_SHEET["context"] = {
         "⚙️ *Power-only metric; dependent on accurate FTP calibration.*"
     ),
     "Polarisation_fused": (
-        "Dominant-sport Polarisation Index derived from fused HR+Power data. "
+        "Sport-specific Polarisation derived from fused HR+Power data. "
         "Represents how the athlete distributes intensity within the dominant discipline. "
         "Dominance reflects the sport providing the clearest and most internally consistent "
         "intensity (zone) signal — not the sport with the greatest volume, duration, or load. "
@@ -443,6 +460,16 @@ CHEAT_SHEET["context"] = {
         "Suppression below 0.92 may indicate fatigue."
     ),
     "RestingHRDelta": "Resting heart rate trend — elevated HR indicates fatigue or stress.",
+    "w_prime_divergence_7d": (
+        "Relative difference between rolling CP-derived W′ (performance model) "
+        "and athlete profile W′ setting. Measures coherence between model-estimated "
+        "anaerobic capacity and configured profile capacity."
+    ),
+    "w_prime_divergence_90d": (
+        "Relative difference between rolling CP-derived W′ (performance model) "
+        "and athlete profile W′ setting. Measures coherence between model-estimated "
+        "anaerobic capacity and configured profile capacity."
+    ),
 }
 
 CHEAT_SHEET["coaching_links"] = {
@@ -522,9 +549,18 @@ CHEAT_SHEET["coaching_links"] = {
     ),
     "HRVDeviation": (
         "If HRV deviation is negative beyond -10%, reduce intensity "
-        "and prioritise sleep. Positive deviation suggests readiness."
-),
-
+        "and prioritise sleep. Positive deviation suggests readiness.",
+    ),
+    "w_prime_divergence_7d": {
+        "green": "Model windows aligned — W′ setting reflects current power curve.",
+        "amber": "Mild divergence — monitor CP curve stability or review W′ setting.",
+        "red": "Large mismatch between rolling CP W′ and athlete profile W′ — depletion metrics may be distorted. Review W′ calibration."
+    },
+    "w_prime_divergence_90d": {
+        "green": "Model windows aligned — W′ setting reflects current power curve.",
+        "amber": "Mild divergence — monitor CP curve stability or review W′ setting.",
+        "red": "Large mismatch between rolling CP W′ and athlete profile W′ — depletion metrics may be distorted. Review W′ calibration."
+    },
 }
 
 CHEAT_SHEET["display_names"] = {
@@ -541,6 +577,8 @@ CHEAT_SHEET["display_names"] = {
     "load_alignment": "Acute vs Chronic Load Alignment",
     "wdrm_7d": "Anaerobic Repeatability (7-day)",
     "wdrm_90d": "Anaerobic Repeatability (90-day)",
+    "w_prime_divergence_7d": "W′ Model Coherence (7-day)",
+    "w_prime_divergence_90d": "W′ Model Coherence (90-day)",
 }
 
 CHEAT_SHEET["advice"] = {
@@ -1015,6 +1053,18 @@ CHEAT_SHEET["metric_confidence"] = {
     "SleepQuality": {
         "default": "moderate",
         "high_confidence_when": {"min_samples": 7},
+    },
+    "w_prime_divergence_7d": {
+        "default": "informational",
+        "notes": (
+            "Model coherence diagnostic only. Does not directly indicate fatigue or performance change.",
+        )
+    },
+    "w_prime_divergence_90d": {
+        "default": "informational",
+        "notes": (
+            "Model coherence diagnostic only. Does not directly indicate fatigue or performance change."
+        )
     },
 }
 

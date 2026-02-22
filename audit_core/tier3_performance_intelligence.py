@@ -63,7 +63,7 @@ def _compute_weekly(context, df_full):
 
     debug(context, f"[T3] Weekly FULL rows: {len(df_full)}")
 
-    w_prime = pd.to_numeric(df_full.get("icu_pm_w_prime"), errors="coerce")
+    w_prime = pd.to_numeric(df_full.get("icu_w_prime"), errors="coerce")
     depletion = pd.to_numeric(df_full.get("icu_max_wbal_depletion"), errors="coerce")
     joules = pd.to_numeric(df_full.get("icu_joules_above_ftp"), errors="coerce")
     decoupling = pd.to_numeric(df_full.get("decoupling"), errors="coerce")
@@ -74,12 +74,34 @@ def _compute_weekly(context, df_full):
     if w_prime is not None and depletion is not None:
         depletion_pct = (depletion / w_prime.replace(0, pd.NA)).clip(upper=1.5)
 
+    # ---------------------------------------------
+    # Divergence check (rolling vs athlete W′)
+    # ---------------------------------------------
+
+    rolling_w_prime = pd.to_numeric(df_full.get("icu_pm_w_prime"), errors="coerce")
+    athlete_w_prime = pd.to_numeric(df_full.get("icu_w_prime"), errors="coerce")
+
+    divergence = None
+
+    if rolling_w_prime is not None and athlete_w_prime is not None:
+        valid_mask = athlete_w_prime.replace(0, pd.NA).notna()
+        if valid_mask.any():
+            divergence_series = (
+                (rolling_w_prime - athlete_w_prime)
+                / athlete_w_prime.replace(0, pd.NA)
+            )
+            divergence = float(divergence_series.mean())
+            debug(context, "[T3][W′] Rolling vs Athlete divergence", f"{divergence:.3f}")
+
     weekly_result = {
         "anaerobic_repeatability": {
             "max_depletion_pct_7d": _safe_max(depletion_pct),
             "mean_depletion_pct_7d": _safe_mean(depletion_pct),
             "high_depletion_sessions_7d": _safe_count(depletion_pct, 0.7),
             "total_joules_above_ftp_7d": _safe_sum(joules),
+        },
+        "model_diagnostics": {
+            "w_prime_divergence_7d": divergence,
         },
         "durability": {
             "mean_decoupling_7d": _safe_mean(decoupling),
@@ -137,7 +159,7 @@ def _compute_season(context, df_light, df_full):
 
     # -------- Chronic 90d State --------
 
-    w_prime = pd.to_numeric(df_light.get("icu_pm_w_prime"), errors="coerce")
+    w_prime = pd.to_numeric(df_light.get("icu_w_prime"), errors="coerce")
     depletion = pd.to_numeric(df_light.get("icu_max_wbal_depletion"), errors="coerce")
     joules = pd.to_numeric(df_light.get("icu_joules_above_ftp"), errors="coerce")
     decoupling = pd.to_numeric(df_light.get("decoupling"), errors="coerce")
@@ -148,12 +170,26 @@ def _compute_season(context, df_light, df_full):
     if w_prime is not None and depletion is not None:
         depletion_pct = (depletion / w_prime.replace(0, pd.NA)).clip(upper=1.5)
 
+    if rolling_w_prime is not None and athlete_w_prime is not None:
+        valid_mask = athlete_w_prime.replace(0, pd.NA).notna()
+        if valid_mask.any():
+            divergence_series = (
+                (rolling_w_prime - athlete_w_prime)
+                / athlete_w_prime.replace(0, pd.NA)
+            )
+            divergence = float(divergence_series.mean())
+            debug(context, "[T3][SEASON][W′] Divergence", f"{divergence:.3f}")
+
+
     chronic = {
         "anaerobic_repeatability": {
             "mean_depletion_pct_90d": _safe_mean(depletion_pct),
             "max_depletion_pct_90d": _safe_max(depletion_pct),
             "high_depletion_sessions_90d": _safe_count(depletion_pct, 0.7),
             "total_joules_above_ftp_90d": _safe_sum(joules),
+        },
+        "model_diagnostics": {
+            "w_prime_divergence_90d": divergence,
         },
         "durability": {
             "mean_decoupling_90d": _safe_mean(decoupling),
