@@ -946,7 +946,8 @@ def load_demo_response(report_range: str, reason: str):
         "NO_ACTIVITIES_RANGE": "No activities found in requested period",
         "FULL_DATA_UNAVAILABLE": "Detailed activity data unavailable",
         "FULL_FETCH_FAILED": "Failed to retrieve detailed activity data",
-        "LIGHT_ONLY_CONTEXT": "Only summary activity data available"
+        "LIGHT_ONLY_CONTEXT": "Only summary activity data available",
+        "STRAVA_API_RESTRICTED": "Strava API access restricted"
     }
 
     readable_reason = REASON_MAP.get(reason, "Demo fallback")
@@ -968,6 +969,8 @@ DEMO MODE NOTICE:
     meta["renderer_instructions"] = existing_instructions + demo_append
     meta["demo"] = True
     meta["demo_reason"] = readable_reason
+    meta["demo_code"] = reason
+    meta["demo_mode"] = "fallback"
 
     safe_payload = {
         "status": "demo",
