@@ -954,7 +954,7 @@ def load_demo_response(report_range: str, reason: str):
     meta = demo_sg.setdefault("meta", {})
 
     # Append to renderer_instructions (do NOT overwrite)
-    existing_instructions = meta.get("renderer_instructions", "")
+    existing_instructions = str(meta.get("renderer_instructions", ""))
 
     demo_append = f"""
 
@@ -974,7 +974,7 @@ DEMO MODE NOTICE:
         "report_type": report_range,
         "report_header": meta.get("report_header"),
         "output_format": "semantic_json",
-        "semantic_graph": demo_sg,
+        "semantic_graph": sanitize(demo_sg),
         "compliance": {},
         "logs": ""
     })
