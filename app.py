@@ -139,7 +139,7 @@ def normalize_prefetched_context(data):
                 "Your Intervals.icu account is not connected. "
                 "Please authorize the app to access your training data, then try again.\n\n"
                 "Setup guide:\n"
-                "https://www.cliveking.net/setup.html",
+                "https://www.montis.icu/setup.html",
                 code="OAUTH_NOT_CONFIGURED",
                 severity="hard"
             )
@@ -948,6 +948,11 @@ def data_quality_audit(ctx: dict) -> dict:
     }
 
 def load_demo_response(report_range: str, reason: str):
+
+    sys.stderr.write("\n🧪 DEMO RESPONSE GENERATED\n")
+    sys.stderr.write(f"Report: {report_range}\n")
+    sys.stderr.write(f"Reason code: {reason}\n")
+    sys.stderr.flush()
 
     demo_sg = copy.deepcopy(DEMO_WEEKLY)
 
