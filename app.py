@@ -394,7 +394,13 @@ def root():
 
 
 @app.get("/run")
-def run_audit(range: str = Query("weekly"), format: str = Query("markdown")):
+def run_audit(
+    range: str = Query("weekly"),
+    format: str = Query("markdown"),
+    demo: bool = Query(False)
+):
+    if demo:
+        return load_demo_response(range, reason="MANUAL_DEMO")
     try:
         report, compliance, logs, context, sg, markdown = _run_full_audit(range=range, output_format=format)
         if format in ("json", "semantic"):
@@ -412,8 +418,13 @@ def run_audit(range: str = Query("weekly"), format: str = Query("markdown")):
 
 
 @app.post("/run")
-async def run_audit_with_data(request: Request):
+async def run_audit_with_data(
+    request: Request,
+    demo: bool = Query(False)
+):
     buffer = io.StringIO()
+    if demo:
+        return load_demo_response("weekly", reason="MANUAL_DEMO")
     try:
         raw = await request.body()
         if not raw:
@@ -945,7 +956,8 @@ def load_demo_response(report_range: str, reason: str):
         "FULL_DATA_UNAVAILABLE": "Detailed activity data unavailable",
         "FULL_FETCH_FAILED": "Failed to retrieve detailed activity data",
         "LIGHT_ONLY_CONTEXT": "Only summary activity data available",
-        "STRAVA_API_RESTRICTED": "Strava API access restricted"
+        "STRAVA_API_RESTRICTED": "Strava API access restricted",
+        "MANUAL_DEMO": "Manual demo mode enabled"
     }
 
     readable_reason = REASON_MAP.get(reason, "Demo fallback")
