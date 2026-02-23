@@ -955,17 +955,17 @@ def load_demo_response(report_range: str, reason: str):
         demo_sg["meta"]["report_type"] = report_range
 
     REASON_MAP = {
-        "OAUTH_NOT_CONFIGURED": "Account not connected",
-        "ATHLETE_PROFILE_INVALID": "Invalid athlete profile",
-        "NO_ACTIVITIES_RANGE": "No activities found in requested period",
-        "FULL_DATA_UNAVAILABLE": "Detailed activity data unavailable",
-        "FULL_FETCH_FAILED": "Failed to retrieve detailed activity data",
-        "LIGHT_ONLY_CONTEXT": "Only summary activity data available",
-        "STRAVA_API_RESTRICTED": "Strava API access restricted",
-        "MANUAL_DEMO": "Manual demo mode enabled"
+        "OAUTH_NOT_CONFIGURED": "Account not connected." + " See www.montis.net/setup.html",
+        "ATHLETE_PROFILE_INVALID": "Invalid athlete profile."  + " See www.montis.net/setup.html",
+        "NO_ACTIVITIES_RANGE": "No activities found in requested period." + " See www.montis.net/setup.html",
+        "FULL_DATA_UNAVAILABLE": "Detailed activity data unavailable."  + " See www.montis.net/setup.html",
+        "FULL_FETCH_FAILED": "Failed to retrieve detailed activity data."  + " See www.montis.net/setup.html",
+        "LIGHT_ONLY_CONTEXT": "Only summary activity data available."  + " See www.montis.net/setup.html",
+        "STRAVA_API_RESTRICTED": "Strava API access restricted."  + " See www.montis.net/setup.html",
+        "MANUAL_DEMO": "Manual demo mode enabled." + " See www.montis.net/setup.html"
     }
 
-    readable_reason = REASON_MAP.get(reason, "Demo fallback")
+    readable_reason = REASON_MAP.get(reason, "Demo fallback, See www.montis.net/setup.html")
 
     # ✅ Canonical location — root of semantic_graph
     existing = demo_sg.get("renderer_instructions", "")
