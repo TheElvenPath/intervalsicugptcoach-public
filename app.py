@@ -933,13 +933,11 @@ def data_quality_audit(ctx: dict) -> dict:
 
 def load_demo_response(report_range: str, reason: str):
 
-    # Prevent cross-request mutation
     demo_sg = copy.deepcopy(DEMO_WEEKLY)
 
     if report_range != "weekly":
         demo_sg["meta"]["report_type"] = report_range
 
-    # Safe reason mapping (never expose raw exception text)
     REASON_MAP = {
         "OAUTH_NOT_CONFIGURED": "Account not connected",
         "ATHLETE_PROFILE_INVALID": "Invalid athlete profile",
@@ -952,12 +950,10 @@ def load_demo_response(report_range: str, reason: str):
 
     readable_reason = REASON_MAP.get(reason, "Demo fallback")
 
-    meta = demo_sg.setdefault("meta", {})
+    # ✅ Canonical location — root of semantic_graph
+    existing = demo_sg.get("renderer_instructions", "")
 
-    # Append to renderer_instructions (do NOT overwrite)
-    existing_instructions = str(meta.get("renderer_instructions", ""))
-
-    demo_append = f"""
+    demo_block = f"""
 
 DEMO MODE NOTICE:
 - This is a demonstration report.
@@ -966,7 +962,11 @@ DEMO MODE NOTICE:
 - Render normally using the provided semantic data.
 """
 
-    meta["renderer_instructions"] = existing_instructions + demo_append
+    if "DEMO MODE NOTICE" not in existing:
+        demo_sg["renderer_instructions"] = existing.rstrip() + demo_block
+
+    # Flags stay in meta
+    meta = demo_sg.setdefault("meta", {})
     meta["demo"] = True
     meta["demo_reason"] = readable_reason
     meta["demo_code"] = reason
@@ -982,9 +982,10 @@ DEMO MODE NOTICE:
         "logs": ""
     }
 
-    # 🔒 Force UTF-8 safe serialization
     safe_json = json.loads(
-        json.dumps(safe_payload, ensure_ascii=False).encode("utf-8", "ignore").decode("utf-8")
+        json.dumps(safe_payload, ensure_ascii=False)
+        .encode("utf-8", "ignore")
+        .decode("utf-8")
     )
 
     return JSONResponse(safe_json)
