@@ -84,6 +84,7 @@ PREFETCH MODE (REMOTE)
 | `--strava-test 3`    | `test=strava3` | Activities present but missing key metrics | Degraded data quality state, report continues with warnings                |
 | `--strava-test 4`    | `test=strava4` | Partial wellness or athlete metadata       | Degraded data quality score, report still generated                        |
 | `--strava-test 5`    | `test=strava5` | Mixed valid + stub activities              | Report runs, data quality flagged with `strava_stub_detected`              |
+| `--strava-test demo`    | `test=demo` | Demo report                                | Demo Report runs`              |
 
 
   DATA QUALITY REPORT
@@ -186,11 +187,13 @@ def fetch_remote_report(report_type, fmt="semantic", staging=False, owner=None, 
         # Accept: stub, 1–5
         if strava_test == "stub":
             params.append("test=strava-stub")
+        elif strava_test == "demo":
+            params.append("test=demo")
         elif strava_test in ["1", "2", "3", "4", "5"]:
             params.append(f"test=strava{strava_test}")
         else:
             raise ValueError(
-                "Invalid --strava-test value. Use: stub, 1,2,3,4,5"
+                "Invalid --strava-test value. Use: stub, demo, 1,2,3,4,5"
             )
 
 
@@ -486,7 +489,7 @@ def main():
     parser.add_argument(
         "--strava-test",
         type=str,
-        choices=["stub", "1", "2", "3", "4", "5"],
+        choices=["stub", "demo", "1", "2", "3", "4", "5"],
         help=(
             "Simulate Strava-only scenarios:\n"
             "  stub → all activities are STRAVA API stubs (hard stop)\n"
@@ -495,6 +498,7 @@ def main():
             "  3    → activities present but missing key metrics\n"
             "  4    → partial wellness or athlete metadata\n"
             "  5    → mixed valid + stub activities (degraded state)"
+            "  demo → demo"
         )
     )
 

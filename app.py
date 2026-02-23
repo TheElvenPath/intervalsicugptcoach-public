@@ -551,6 +551,11 @@ async def run_audit_with_data(
 
         # Abort only if NO activity data at all
         if light_empty and full_empty:
+            if demo:
+                return load_demo_response(
+                    report_range,
+                    reason="MANUAL_DEMO"
+                )
             return load_demo_response(
                 report_range,
                 reason="NO_ACTIVITIES_RANGE"
