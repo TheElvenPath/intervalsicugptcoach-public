@@ -149,11 +149,12 @@ CHEAT_SHEET["thresholds"] = {
     "Polarisation": {
         # Seiler Ratio = (Low + High) / Mid
         # 1.0 ≈ canonical polarised
-        "polarised":           (0.85, 1.10),   # canonical polarised
-        "pyramidal":           (0.65, 0.85),   # threshold-leaning
-        "high_polarised":      (1.10, 1.25),   # strong contrast but stable
-        "excessive_midzone":   (0.00, 0.65),   # too much Z3/Z4
-        "extreme_polarised":   (1.25, 9.99)    # too little mid-zone
+        # Colour bands reflect structural coaching heuristics
+
+        "red":   (0.00, 0.65),   # excessive mid-zone dominance (threshold-heavy)
+        "amber": (0.65, 0.85),   # pyramidal / threshold-leaning
+        "green": (0.85, 1.15),   # canonical polarised (balanced contrast)
+        # implicit red if >1.15 (extreme polarisation)
     },
     # --- Power-only normalized index (Z1 + Z2 proportion) ---
     "PolarisationIndex": {
