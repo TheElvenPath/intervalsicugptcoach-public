@@ -648,8 +648,8 @@ COACH_PROFILE = {
             "criteria": {
                 "z2_dominant": "< 0.65",
                 "mixed": "0.65–0.84",
-                "polarised": "0.85–1.15",
-                "high_contrast": "> 1.15"
+                "polarised": "0.85–1.25",
+                "high_contrast": "> 1.25"
             },
             "interpretation": (
                 "Seiler Polarisation Ratio showing the balance of low- and high-intensity "
@@ -724,8 +724,8 @@ COACH_PROFILE = {
             "framework": "Seiler / Stöggl / Issurin (multi-sport combined)",
             "formula": "Normalized global intensity-domain distribution",
             "criteria": {
-                "polarised": "≥ 0.80",
-                "pyramidal": "0.65–0.79",
+                "polarised": "≥ 0.78",
+                "pyramidal": "0.65–0.77",
                 "threshold_dominant": "< 0.65"
             },
             "interpretation": (
@@ -734,7 +734,7 @@ COACH_PROFILE = {
                 "not primary sport or training volume."
             ),
             "coaching_implication": (
-                "Maintain ≥0.8 global balance for healthy load variation. "
+                "Maintain ≥0.78 global balance for healthy load variation. "
                 "If <0.65 → add Z1 endurance days or rest."
             ),
             "confidence_model": "contextual",

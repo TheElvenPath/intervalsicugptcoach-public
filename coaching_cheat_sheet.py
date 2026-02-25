@@ -153,8 +153,8 @@ CHEAT_SHEET["thresholds"] = {
 
         "red":   (0.00, 0.65),   # excessive mid-zone dominance (threshold-heavy)
         "amber": (0.65, 0.85),   # pyramidal / threshold-leaning
-        "green": (0.85, 1.15),   # canonical polarised (balanced contrast)
-        # implicit red if >1.15 (extreme polarisation)
+        "green": (0.85, 1.25),   # canonical polarised (balanced contrast)
+        # implicit red if >1.25 (extreme polarisation)
     },
     # --- Power-only normalized index (Z1 + Z2 proportion) ---
     "PolarisationIndex": {
@@ -163,12 +163,12 @@ CHEAT_SHEET["thresholds"] = {
     },  # Aerobic bias vs intensity focus (phase-dependent)
     # --- Fused HR + Power (sport-specific, normalized) ---
     "Polarisation_fused": {
-        "green": (0.80, 1.01),
+        "green": (0.80, 1.25),
         "amber": (0.65, 0.80),
     },  # Seiler / Stöggl / Issurin (dominant-sport signal)
     # --- Combined HR + Power (multi-sport, normalized) ---
     "Polarisation_combined": {
-        "green": (0.78, 1.01),
+        "green": (0.78, 1.25),
         "amber": (0.60, 0.78),
     },  # Global descriptor; lower precision than sport-specific
     "TSB": {
@@ -326,7 +326,7 @@ CHEAT_SHEET["polarisation_models"] = {
         },
         {
             "label": "polarised",
-            "range": (0.85, 1.15),
+            "range": (0.85, 1.25),
             "description": (
                 "Balanced polarised structure. "
                 "Clear low- and high-intensity contrast relative to moderate work. "
@@ -335,7 +335,7 @@ CHEAT_SHEET["polarisation_models"] = {
         },
         {
             "label": "high_contrast",
-            "range": (1.15, 9.99),
+            "range": (1.25, 9.99),
             "description": (
                 "High-contrast polarisation. "
                 "Very low Z2 exposure with strong separation between easy and hard work. "
@@ -439,8 +439,8 @@ CHEAT_SHEET["context"] = {
         "Power-based Seiler Polarisation Ratio (Z1 + Z3) / (2 × Z2), showing the balance "
         "between low- and high-intensity work relative to moderate (Z2) training. "
         "<0.65 = Z2-dominant distribution, 0.65–0.84 = mixed intensity distribution, "
-        "0.85–1.15 = balanced polarised structure (classic 80/20), "
-        ">1.15 = high-contrast polarisation with minimal Z2 exposure. "
+        "0.85–1.25 = balanced polarised structure (classic 80/20), "
+        ">1.25 = high-contrast polarisation with minimal Z2 exposure. "
         "⚙️ *Power-only metric — HR ignored.* Use primarily during power-measured cycling phases."
     ),
     "PolarisationIndex": (
