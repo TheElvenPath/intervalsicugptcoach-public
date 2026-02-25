@@ -249,7 +249,11 @@ def semantic_block_for_metric(name, value, context):
                 elif red and red[0] <= v <= red[1]:
                     classification = "red"
                 else:
-                    classification = "red"
+                    # handle upper overflow above green band
+                    if green and v > green[1]:
+                        classification = "amber"
+                    else:
+                        classification = "red"
 
                 debug(context, f"[THRESHOLDS][{metric_name}] Classification → {classification}")
 

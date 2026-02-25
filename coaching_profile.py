@@ -646,28 +646,31 @@ COACH_PROFILE = {
             "framework": "Seiler 80/20 Model (Ratio)",
             "formula": "(Z1 + Z3) / (2 × Z2)",
             "criteria": {
-                "polarised": "≥ 1.0",
-                "mixed": "0.7–0.99",
-                "z2_base": "0.35–0.69",
-                "threshold": "< 0.35"
+                "z2_dominant": "< 0.65",
+                "mixed": "0.65–0.84",
+                "polarised": "0.85–1.15",
+                "high_contrast": "> 1.15"
             },
             "interpretation": (
                 "Seiler Polarisation Ratio showing the balance of low- and high-intensity "
                 "training (Z1 + Z3) relative to moderate-intensity work (Z2). "
-                "≥1.0 = polarised (80/20), 0.7–0.99 = mixed, 0.35–0.69 = Z2-base dominant "
-                "(normal in aerobic foundation), <0.35 = true threshold-heavy pattern. "
+                "<0.65 = Z2-dominant distribution (aerobic or threshold-heavy structure), "
+                "0.65–0.84 = mixed intensity distribution, "
+                "0.85–1.15 = balanced polarised structure (classic 80/20), "
+                ">1.15 = high-contrast polarisation with minimal Z2 exposure. "
                 "Dominance reflects intensity distribution characteristics, not training volume."
             ),
             "coaching_implication": (
-                "If Polarisation <0.7 and current block = Base, interpret as Z2-base dominant "
-                "(✅ aerobic focus). If in Build or Peak, reduce mid-zone load and increase Z1 "
-                "and Z3 contrast. Maintain ≥1.0 for fully polarised 80/20 structure in race phases."
+                "If Polarisation <0.65 in Base, interpret as aerobic/Z2-dominant (acceptable). "
+                "If <0.65 in Build or Peak, reduce mid-zone accumulation. "
+                "0.85–1.15 reflects structurally balanced 80/20. "
+                ">1.15 indicates strong contrast; ensure fatigue and recovery are monitored."
             ),
             "confidence_model": "contextual",
             "confidence_note": (
-                "Evaluated at weekly level. Actionable primarily in Build and Peak phases; "
+                "Evaluated at weekly level. Most actionable during Build and Peak phases; "
                 "descriptive during Base and Recovery blocks."
-            ),
+            )
         },
         "PolarisationIndex": {
             "framework": "Z1+Z2 Normalized Index",

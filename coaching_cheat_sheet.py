@@ -305,9 +305,44 @@ CHEAT_SHEET["polarisation_models"] = {
         {"label": "threshold", "range": (0.00, 0.65), "description": "Threshold-heavy distribution — higher anaerobic load"},
     ],
     "Polarisation": [
-        {"label": "polarised", "range": (1.00, 9.99), "description": "Classic Seiler ratio (Z1+Z3)/(2×Z2) ≥1 — clear 80/20 split"},
-        {"label": "pyramidal", "range": (0.70, 1.00), "description": "Moderate-intensity dominant — typical base adaptation phase"},
-        {"label": "threshold", "range": (0.00, 0.70), "description": "Z2-heavy structure — use intentionally for aerobic foundation"},
+        {
+            "label": "threshold",
+            "range": (0.00, 0.65),
+            "description": (
+                "Z2-dominant or threshold-leaning structure. "
+                "Moderate-intensity work outweighs low/high contrast. "
+                "Appropriate during aerobic foundation or durability blocks, "
+                "but excessive persistence may limit intensity contrast."
+            )
+        },
+        {
+            "label": "pyramidal",
+            "range": (0.65, 0.85),
+            "description": (
+                "Mixed intensity distribution. "
+                "Moderate-intensity still prominent, but low/high contrast emerging. "
+                "Typical of transitional or early build phases."
+            )
+        },
+        {
+            "label": "polarised",
+            "range": (0.85, 1.15),
+            "description": (
+                "Balanced polarised structure. "
+                "Clear low- and high-intensity contrast relative to moderate work. "
+                "Reflects classic Seiler 80/20 intensity architecture at the weekly level."
+            )
+        },
+        {
+            "label": "high_contrast",
+            "range": (1.15, 9.99),
+            "description": (
+                "High-contrast polarisation. "
+                "Very low Z2 exposure with strong separation between easy and hard work. "
+                "Can be effective during peak or race-specific phases, "
+                "but requires adequate recovery monitoring."
+            )
+        },
     ],
 }
 
@@ -349,7 +384,7 @@ CLASSIFICATION_ALIASES = {
     "overreached": "red",
     "critical": "red",
     "excessive_midzone": "red",      # <0.65 persistent
-    "extreme_polarised": "red",      # >1.25 persistent
+    "extreme_polarised": "amber",      # >1.25 persistent
     "spiking": "red",
     "overreach": "red",
 }
@@ -403,7 +438,9 @@ CHEAT_SHEET["context"] = {
     "Polarisation": (
         "Power-based Seiler Polarisation Ratio (Z1 + Z3) / (2 × Z2), showing the balance "
         "between low- and high-intensity work relative to moderate (Z2) training. "
-        "≥1.0 = polarised (80/20), 0.7–0.99 = mixed, <0.7 = Z2-dominant. "
+        "<0.65 = Z2-dominant distribution, 0.65–0.84 = mixed intensity distribution, "
+        "0.85–1.15 = balanced polarised structure (classic 80/20), "
+        ">1.15 = high-contrast polarisation with minimal Z2 exposure. "
         "⚙️ *Power-only metric — HR ignored.* Use primarily during power-measured cycling phases."
     ),
     "PolarisationIndex": (
@@ -502,9 +539,9 @@ CHEAT_SHEET["coaching_links"] = {
     },
     # --- Polarisation Variants Coaching Links ---
     "Polarisation": (
-        "If Polarisation <0.7 during base, this reflects aerobic Z2 dominance (✅ normal). "
+        "If Polarisation <0.65 during base, this reflects aerobic Z2 dominance (✅ normal). "
         "If in Build/Peak, reduce Z2 time and increase Z1/Z3 contrast. "
-        "Maintain ≥1.0 for ideal 80/20 balance in power-measured disciplines."
+        "Maintain ≥0.85 for ideal 80/20 balance in power-measured disciplines."
     ),
     "PolarisationIndex": (
         "If PolarisationIndex <0.60 during base, increase Z1 time to reinforce aerobic bias. "
