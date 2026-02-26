@@ -488,8 +488,9 @@ COACH_PROFILE = {
             "framework": "Banister Load Ratio",
             "formula": "EWMA(Acute) / EWMA(Chronic)",
             "criteria": {
-                "productive": "0.8–1.3",
                 "recovery": "<0.8",
+                "productive": "0.8–1.3",
+                "aggressive": "1.31–1.5",
                 "overload": ">1.5"
             },
         },
@@ -514,11 +515,11 @@ COACH_PROFILE = {
         },
         "FatigueTrend": {
             "framework": "Banister EWMA Delta",
-            "formula": "(Mean_7d - Mean_28d) / Mean_28d",
+            "formula": "(Mean_7d - Mean_28d) / Mean_28d × 100",
             "criteria": {
-                "balanced": "-0.2–+0.2",
-                "accumulating": ">+0.2",
-                "recovering": "<-0.2"
+                "balanced": "-20–20",
+                "accumulating": ">20",
+                "recovering": "<-20"
             },
         },
         "StressTolerance": {
@@ -597,8 +598,9 @@ COACH_PROFILE = {
             "framework": "San Millán 2020",
             "formula": "Derived from IF × 0.9",
             "criteria": {
-                "optimal": "0.6–0.8",
-                "low": "<0.5"
+                "optimal": "0.60–0.80",
+                "moderate": "0.50–0.59",
+                "low": "<0.50"
             },
         },
                 "FOxI": {
@@ -615,9 +617,10 @@ COACH_PROFILE = {
             "framework": "Internal Derived Metric",
             "formula": "100 - FOxI",
             "criteria": {
-                "optimal": "20–60",
-                "high": ">80",
-                "low": "<20"
+                "balanced": "30–70",
+                "moderate": "20–29 or 71–80",
+                "low_carb_bias": "<20",
+                "high_carb_bias": ">80"
             },
             "placement": "Training Quality section"
         },
@@ -646,11 +649,11 @@ COACH_PROFILE = {
             "framework": "Seiler Intensity Distribution",
             "formula": "Z3+ time (%) from 3-zone collapsed model",
             "criteria": {
+                "low": "<5",
                 "optimal": "5–15",
-                "moderate": "15–25",
-                "low": "<5"
+                "high": "15–25",
+                "excessive": ">25"
             },
-            "placement": "Training Quality section",
         },
         "DurabilityIndex": {
             "framework": "Sandbakk Durability",

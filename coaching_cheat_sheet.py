@@ -396,6 +396,7 @@ CLASSIFICATION_ALIASES = {
     "polarised": "green",            # canonical ≥1.0
     "aligned": "green",
     "high_contrast": "green",
+    "low": "green",
 
     # --- Amber (watch / moderate / caution)
     "amber": "amber",
@@ -568,7 +569,13 @@ CHEAT_SHEET["coaching_links"] = {
     "ACWR": "If ACWR > 1.5, reduce intensity and focus on recovery to avoid overload. If ACWR < 0.8, gradually increase training load with controlled progression to build endurance.",
     "Monotony": "If Monotony > 2.5, introduce more variation in training or implement a deload week to reduce repetitive stress.",
     "Strain": "If Strain > 3000, monitor for signs of overreach and consider more rest or deloading. If Strain > 3500, consider reducing volume or intensity temporarily.",
-    "FatigueTrend": "If FatigueTrend is negative (e.g., below -0.2), this indicates a recovering state. Continue with controlled training load and focus on recovery to ensure sustained progress. Avoid aggressive increases in load.",
+    "FatigueTrend": (
+        "If FatigueTrend drops below -10%, recovery is dominating and training load "
+        "is decreasing relative to the 28-day baseline. Maintain controlled progression "
+        "and avoid aggressive load increases. "
+        "If FatigueTrend rises above +10%, fatigue is accumulating — consider adjusting "
+        "intensity density or inserting additional recovery to prevent overload."
+    ),
     "FatOxEfficiency": "If FatOxEfficiency is low (<0.6), focus on improving aerobic base with longer, low-intensity efforts.",
     "ZQI": "If ZQI > 20%, review pacing strategy; excessive high-intensity time could indicate erratic pacing or overtraining. Aim for 5-15% ZQI for balanced training.",
     "FOxI": "If FOxI is increasing, continue to prioritize low-intensity work to enhance fat metabolism. If it decreases, consider increasing your Zone 2 training duration.",
