@@ -174,9 +174,9 @@ def convert_to_str(value):
         return value.isoformat()
     return value
 
-
 def semantic_block_for_metric(name, value, context):
     import math
+    import copy
 
     metric_name = str(name).strip()
 
@@ -184,13 +184,18 @@ def semantic_block_for_metric(name, value, context):
     canonical_map = CHEAT_SHEET.get("metric_groups", {})
     canonical_name = canonical_map.get(metric_name, metric_name)
 
-    # --- Thresholds MUST use metric_name ---
-    base_thresholds = CHEAT_SHEET["thresholds"].get(metric_name, {})
+    # --- SAFE COPIES (critical to prevent circular refs) ---
+    base_thresholds = copy.deepcopy(
+        CHEAT_SHEET["thresholds"].get(metric_name, {})
+    )
 
-    # --- Phase overrides (only if defined per metric) ---
-    phase_overrides = CHEAT_SHEET.get("phase_thresholds", {}).get(metric_name, {})
+    phase_overrides = copy.deepcopy(
+        CHEAT_SHEET.get("phase_thresholds", {}).get(metric_name, {})
+    )
 
-    profile_desc = COACH_PROFILE["markers"].get(metric_name, {})
+    profile_desc = copy.deepcopy(
+        COACH_PROFILE["markers"].get(metric_name, {})
+    )
 
     interpretation = (
         CHEAT_SHEET["context"].get(canonical_name)
@@ -214,23 +219,26 @@ def semantic_block_for_metric(name, value, context):
     active_thresholds = {}
 
     try:
-        if value is None or (isinstance(value, (float, int)) and math.isnan(value)):
+        if value is None or (
+            isinstance(value, (float, int)) and math.isnan(value)
+        ):
             classification = "undefined"
         else:
             v = float(value)
 
             # --- Phase override ---
             if phase and phase in phase_overrides:
-                active_thresholds = phase_overrides[phase]
+                active_thresholds = copy.deepcopy(
+                    phase_overrides.get(phase, {})
+                )
                 debug(context, f"[THRESHOLDS][{metric_name}] Using PHASE override", active_thresholds)
             else:
-                active_thresholds = base_thresholds
+                active_thresholds = copy.deepcopy(base_thresholds)
                 debug(context, f"[THRESHOLDS][{metric_name}] Using BASE thresholds", active_thresholds)
 
             debug(context, f"[THRESHOLDS][{metric_name}] Value", v)
 
             if not active_thresholds:
-                debug(context, f"[THRESHOLDS][{metric_name}] EMPTY THRESHOLDS")
                 classification = "informational"
             else:
                 green = active_thresholds.get("green")
@@ -248,7 +256,7 @@ def semantic_block_for_metric(name, value, context):
                     classification = "red"
 
                 elif high_contrast and high_contrast[0] <= v <= high_contrast[1]:
-                    classification = "green"   # positive structural state
+                    classification = "green"
 
                 else:
                     classification = "red"
@@ -265,16 +273,16 @@ def semantic_block_for_metric(name, value, context):
         "value": convert_to_str(value),
         "framework": profile_desc.get("framework") or "Unknown",
         "formula": profile_desc.get("formula"),
-        "thresholds": active_thresholds,
+        "thresholds": active_thresholds,  # safe detached copy
         "phase_context": phase,
         "classification": classification,
-        "metric_confidence": resolve_metric_confidence(canonical_name, context, CHEAT_SHEET),
+        "metric_confidence": resolve_metric_confidence(
+            canonical_name, context, CHEAT_SHEET
+        ),
         "interpretation": interpretation,
         "coaching_implication": coaching_link,
         "related_metrics": profile_desc.get("criteria", {}),
     }
-
-
 
 
 # ---------------------------------------------------------
