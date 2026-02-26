@@ -44,7 +44,7 @@ CHEAT_SHEET["thresholds"] = {
     "Lactate": {"lt1_mmol": 2.0,"lt2_mmol": 4.0,"corr_threshold": 0.6},
     "FatigueResistance": {"green": (0.9, 1.1), "amber": (0.8, 1.2)},  # ratio of long vs short power
     "EfficiencyFactor": {"green": (1.8, 2.2), "amber": (1.5, 2.5)},   # Power-to-HR ratio
-    "LoadVariabilityIndex": {"green": [0.7, 1.0],"amber": [0.4, 0.69],"red": [0.0, 0.39]}, #replaced RI for now
+    "LoadVariabilityIndex": {"green": (0.7, 1.0),"amber": (0.4, 0.69),"red": (0.0, 0.39)}, #replaced RI for now
     # === Wellness Metrics ===
     "HRV": {
         "green": (60, 200),
@@ -84,26 +84,26 @@ CHEAT_SHEET["thresholds"] = {
         "red": (-100.0, -2.0)
     },
     # --- Performance Intelligence ---
-    "mean_depletion_pct_7d": {"green":[0.2,0.45],"amber":[0.45,0.7]},
-    "high_depletion_sessions_7d": {"green":[0,2],"amber":[3,4]},
-    "mean_depletion_pct_90d": {"green":[0.15,0.35],"amber":[0.35,0.55]},
-    "high_depletion_sessions_90d": {"green":[0,6],"amber":[6,10]},
-    "mean_decoupling_7d": {"green":[0,5],"amber":[5,8]},
-    "high_drift_sessions_7d": {"green":[0,2],"amber":[3,4]},
-    "mean_decoupling_90d": {"green":[0,4],"amber":[4,7]},
-    "high_drift_sessions_90d": {"green":[0,10],"amber":[10,20]},
+    "mean_depletion_pct_7d": {"green":(0.2,0.45),"amber":(0.45,0.7)},
+    "high_depletion_sessions_7d": {"green":(0,2),"amber":(3,4)},
+    "mean_depletion_pct_90d": {"green":(0.15,0.35),"amber":(0.35,0.55)},
+    "high_depletion_sessions_90d": {"green":(0,6),"amber":(6,10)},
+    "mean_decoupling_7d": {"green":(0,5),"amber":(5,8)},
+    "high_drift_sessions_7d": {"green":(0,2),"amber":(3,4)},
+    "mean_decoupling_90d": {"green":(0,4),"amber":(4,7)},
+    "high_drift_sessions_90d": {"green":(0,10),"amber":(10,20)},
     "rolling_joules_above_ftp_7d": {
         "green": (0,160000),
         "amber": (160000,250000),
         "red": (250000,1000000),
     },
     "high_intensity_days_7d": {
-        "green": [0,2],
-        "amber": [3,4],
-        "red": [5,7]
+        "green": (0,2),
+        "amber": (3,4),
+        "red": (5,7)
     },
-    "high_intensity_sessions_90d": {"green":[8,25],"amber":[25,40]},
-    "mean_training_load_90d": {"green":[40,70],"amber":[70,90]},
+    "high_intensity_sessions_90d": {"green":(8,25),"amber":(25,40)},
+    "mean_training_load_90d": {"green":(40,70),"amber":(70,90)},
     # --- W′ Balance / Anaerobic Load (Weekly) ---
     "WBalDepletion": {
         "green": (0.0, 0.25),
@@ -116,14 +116,14 @@ CHEAT_SHEET["thresholds"] = {
         "red": (0.90, 1.0),
     },
     "w_prime_divergence_7d": {
-        "green": [0.0, 0.2],
-        "amber": [0.2, 0.5],
-        "red": [0.5, 1.0]
+        "green": (0.0, 0.2),
+        "amber": (0.2, 0.5),
+        "red": (0.5, 1.0)
     },
     "w_prime_divergence_90d": {
-        "green": [0.0, 0.2],
-        "amber": [0.2, 0.5],
-        "red": [0.5, 1.0]
+        "green": (0.0, 0.2),
+        "amber": (0.2, 0.5),
+        "red": (0.5, 1.0)
     },
     # ---HRV ---
     "HRVDeviation": {
