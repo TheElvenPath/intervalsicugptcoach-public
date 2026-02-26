@@ -531,15 +531,6 @@ COACH_PROFILE = {
                 "aggressive": "1.2–1.4",
                 "overreach_risk": ">1.4"
             },
-            "interpretation": (
-                "Weekly load relative to chronic adaptive capacity (CTL). "
-                "1.0 indicates weekly load equals fitness baseline. "
-                "Values above 1.2 reflect overload relative to fitness."
-            ),
-            "coaching_implication": (
-                "Maintain 0.8–1.2 for sustainable progression. "
-                "Use >1.2 strategically in Build/Peak with recovery support."
-            )
         },
         "FatigueResistance": {
             "framework": "Durability / Endurance Resilience Model",
@@ -549,13 +540,6 @@ COACH_PROFILE = {
                 "stable": "0.9–1.0",
                 "high": ">1.0"
             },
-            "interpretation": (
-                "Ratio of endurance to threshold power. "
-                "High values indicate preserved performance over long durations."
-            ),
-            "coaching_implication": (
-                "If below 0.9, increase steady endurance work; maintain 0.95–1.0 for optimal durability."
-            ),
         },
         "EfficiencyFactor": {
             "framework": "Aerobic Efficiency Index",
@@ -566,14 +550,6 @@ COACH_PROFILE = {
                 "optimal": "1.8–2.2",
                 "high": ">2.2"
             },
-            "interpretation": (
-                "Power-to-HR ratio indicating aerobic conditioning. "
-                "Higher EF suggests improved aerobic efficiency and cardiac economy."
-            ),
-            "coaching_implication": (
-                "If EF decreases, focus on aerobic base and recovery. "
-                "Stable or rising EF = strong aerobic fitness trend."
-            ),
         },
         "LoadVariabilityIndex": {
             "framework": "Foster Load Variability (Inverse Monotony)",
@@ -603,7 +579,7 @@ COACH_PROFILE = {
                 "low": "<0.50"
             },
         },
-                "FOxI": {
+        "FOxI": {
             "framework": "Internal Derived Metric",
             "formula": "FatOxEfficiency × 100",
             "criteria": {
@@ -669,22 +645,6 @@ COACH_PROFILE = {
                 "polarised": "0.85–1.25",
                 "high_contrast": "> 1.25"
             },
-            "interpretation": (
-                "Seiler-style contrast ratio derived after collapsing 7-zone power "
-                "distribution into the 3-zone physiological model "
-                "(Z1 = below LT1, Z2 = LT1–LT2, Z3+ = above LT2). "
-                "Represents intensity contrast, not aerobic volume."
-            ),
-            "coaching_implication": (
-                "If <0.65 in Build/Peak, excessive mid-zone accumulation. "
-                "0.85–1.25 reflects structurally balanced 80/20. "
-                ">1.25 indicates high contrast; ensure recovery capacity matches intensity density."
-            ),
-            "confidence_model": "contextual",
-            "confidence_note": (
-                "Most actionable during Build and Peak. "
-                "Descriptive during Base and Recovery."
-            )
         },
         "PolarisationIndex": {
             "framework": "Treff 2019 Polarization-Index",
@@ -694,22 +654,6 @@ COACH_PROFILE = {
                 "pyramidal": "1.5–1.99",
                 "polarised": "≥ 2.0"
             },
-            "interpretation": (
-                "Treff Polarization-Index computed after collapsing power zones "
-                "to the 3-zone Seiler physiological model and renormalising. "
-                "Provides a mathematically discriminative classification of "
-                "polarised vs non-polarised intensity distribution."
-            ),
-            "coaching_implication": (
-                "<1.5 indicates threshold-dominant structure. "
-                "1.5–2.0 reflects pyramidal distribution. "
-                "≥2.0 represents canonical polarised training."
-            ),
-            "confidence_model": "contextual",
-            "confidence_note": (
-                "Requires ≥4 sessions and ≥2 high-intensity sessions "
-                "for structural reliability."
-            ),
         },
         "Polarisation_fused": {
             "framework": "Seiler / Stöggl / Issurin (HR+Power fused)",
@@ -719,20 +663,6 @@ COACH_PROFILE = {
                 "pyramidal": "0.65–0.79",
                 "threshold_dominant": "< 0.65"
             },
-            "interpretation": (
-                "Derived per sport from HR+Power fusion. Reflects dominant-sport load separation. "
-                "Dominant sport is defined by clarity of zone-distribution signal (HR or power), "
-                "not by total duration, distance, or training load."
-            ),
-            "coaching_implication": (
-                "If <0.7 in Base → aerobic focus (✅). "
-                "If <0.7 in Build/Peak → excessive mid-zone; rebalance toward Z1/Z3 contrast."
-            ),
-            "confidence_model": "contextual",
-            "confidence_note": (
-                "Valid when one sport clearly dominates intensity signalling. "
-                "Less reliable with evenly mixed multi-sport weeks."
-            ),
         },
         "Polarisation_combined": {
             "framework": "Seiler / Stöggl / Issurin (multi-sport combined)",
@@ -742,19 +672,6 @@ COACH_PROFILE = {
                 "pyramidal": "0.65–0.77",
                 "threshold_dominant": "< 0.65"
             },
-            "interpretation": (
-                "Weighted mean of sport-specific fused indices. Represents overall cross-sport "
-                "intensity distribution. Dominance reflects intensity signal weighting, "
-                "not primary sport or training volume."
-            ),
-            "coaching_implication": (
-                "Maintain ≥0.78 global balance for healthy load variation. "
-                "If <0.65 → add Z1 endurance days or rest."
-            ),
-            "confidence_model": "contextual",
-            "confidence_note": (
-                "High-level weekly descriptor only. Not intended for session-level judgement."
-            ),
         },
         "TRIMP": {
             "framework": "Banister Load Model",
