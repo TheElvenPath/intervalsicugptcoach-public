@@ -618,7 +618,8 @@ COACH_PROFILE = {
             "formula": "100 - FOxI",
             "criteria": {
                 "balanced": "30–70",
-                "moderate": "20–29 or 71–80",
+                "moderate_low": "20–29",
+                "moderate_high": "71–80",
                 "low_carb_bias": "<20",
                 "high_carb_bias": ">80"
             },
