@@ -22,7 +22,7 @@ DEMO_WEEKLY = {
     "generated_at": {
       "local": "2026-02-23T00:15:28+01:00"
     },
-    "timezone": "Europe/Paris",
+    "timezone": "Europe/Par",
     "athlete": {
       "identity": {
         "id": "1234567",

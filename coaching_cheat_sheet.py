@@ -184,9 +184,8 @@ CHEAT_SHEET["thresholds"] = {
     # --- Combined HR + Power (multi-sport, normalized) ---
     "Polarisation_combined": {
         "red": (0.00, 0.59),
-        "green": (0.78, 1.25),
+        "green": (0.78, 3.00),
         "amber": (0.60, 0.78),
-        "high_contrast": (1.25, 3.00)
     },  # Global descriptor; lower precision than sport-specific
     "TSB": {
         "transition": [10, 999],     # Very fresh, low load (fitness declining)
@@ -436,7 +435,7 @@ CHEAT_SHEET["context"] = {
     "ZQI": "Zone Quality Index (%) 5-15 high-intensity time is normal <3% too easy, >20% too intense or erratic pacing.",
     "FatOxEfficiency": "0.4–0.8 means balanced fat oxidation; lower = carb dependence.",
     "FOxI": "FatOx index %; higher values mean more efficient aerobic base.",
-    "CUR": "Carbohydrate Utilisation Ratio; 30-80 balanced metabolic use.",
+    "CUR": "Carbohydrate Utilisation Ratio; 30–70 indicates balanced metabolic use.",
     "GR": "Glucose Ratio; >2 indicates excess glycolytic bias.",
     "MES": "Metabolic Efficiency Score; >20 is good endurance economy.",
     "ACWR_Risk": "Used internally for stability check.",
