@@ -235,7 +235,6 @@ def semantic_block_for_metric(name, value, context):
                 green = active_thresholds.get("green")
                 amber = active_thresholds.get("amber")
                 red = active_thresholds.get("red")
-                high_contrast = active_thresholds.get("high_contrast")
 
                 if green and green[0] <= v <= green[1]:
                     classification = "green"
@@ -245,9 +244,6 @@ def semantic_block_for_metric(name, value, context):
 
                 elif red and red[0] <= v <= red[1]:
                     classification = "red"
-
-                elif high_contrast and high_contrast[0] <= v <= high_contrast[1]:
-                    classification = "green"   # positive structural state
 
                 else:
                     classification = "red"

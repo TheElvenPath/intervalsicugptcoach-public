@@ -160,9 +160,8 @@ CHEAT_SHEET["thresholds"] = {
         # 0.65–0.85 → pyramidal
         "amber": (0.65, 0.85),
         # 0.85–1.25 → classical polarised (balanced 80/20)
-        "green": (0.85, 1.25),
+        "green": (0.85, 3.00),
         # >1.25 → high-contrast polarised (very low Z2 exposure)
-        "high_contrast": (1.25, 3.00)
     },
     # --- Power-only Treff Polarization-Index (2019) ---
     "PolarisationIndex": {
@@ -177,9 +176,9 @@ CHEAT_SHEET["thresholds"] = {
     # --- Fused HR + Power (sport-specific, normalized) ---
     "Polarisation_fused": {
         "red": (0.00, 0.64),
-        "green": (0.80, 1.25),
+        "green": (0.80, 3.00),
         "amber": (0.65, 0.80),
-        "high_contrast": (1.25, 3.00)
+
     },  # Seiler / Stöggl / Issurin (dominant-sport signal)
     # --- Combined HR + Power (multi-sport, normalized) ---
     "Polarisation_combined": {
