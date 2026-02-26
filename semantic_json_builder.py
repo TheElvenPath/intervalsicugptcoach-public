@@ -184,8 +184,9 @@ def semantic_block_for_metric(name, value, context):
     canonical_name = canonical_map.get(metric_name, metric_name)
 
     # --- Thresholds MUST use metric_name ---
-    base_thresholds = CHEAT_SHEET["thresholds"].get(metric_name, {})
-
+    base_thresholds = copy.deepcopy(
+        CHEAT_SHEET["thresholds"].get(metric_name, {})
+    )
     # --- Phase overrides (only if defined per metric) ---
     phase_overrides = CHEAT_SHEET.get("phase_thresholds", {}).get(metric_name, {})
 
@@ -220,7 +221,7 @@ def semantic_block_for_metric(name, value, context):
 
             # --- Phase override ---
             if phase and phase in phase_overrides:
-                active_thresholds = phase_overrides[phase]
+                active_thresholds = copy.deepcopy(phase_overrides[phase])
                 debug(context, f"[THRESHOLDS][{metric_name}] Using PHASE override", active_thresholds)
             else:
                 active_thresholds = base_thresholds
