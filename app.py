@@ -436,6 +436,30 @@ async def run_audit_with_data(
         # ✅ NEW — capture start/end from the worker payload
         start = data.get("start")
         end = data.get("end")
+        # ---------------------------------------------------------
+        # 🚫 Future Start-Date Safeguard
+        # ---------------------------------------------------------
+        try:
+            if start:
+                dt_start = pd.to_datetime(start).date()
+                today = datetime.utcnow().date()
+
+                if dt_start > today:
+                    return JSONResponse(
+                        status_code=400,
+                        content={
+                            "status": "error",
+                            "error_type": "FUTURE_DATE_INVALID",
+                            "severity": "hard",
+                            "message": "Cannot generate a report for a future start date.",
+                            "report_type": report_range,
+                            "semantic_graph": {},
+                            "compliance": {},
+                            "logs": ""
+                        }
+                    )
+        except Exception:
+            pass
 
         # normalize prefetched JSON into pandas-friendly context
         try:
@@ -494,7 +518,7 @@ async def run_audit_with_data(
                 end = dt_end.strftime("%Y-%m-%d")
             except Exception:
                 pass
-
+        # else sumary start and end 
         if start:
             prefetch_context["start"] = start
 
