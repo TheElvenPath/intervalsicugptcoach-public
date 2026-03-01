@@ -3177,7 +3177,7 @@ def build_system_prompt_from_header(report_type: str, header: dict) -> str:
         4) 🔁 Repeated (repeated W′ depletion pattern)
         5) 📈 Progressive (progressive W′ engagement)
         6) 🧘 Recovery (very low intensity recovery session)
-        7) ❤️ Heart_rate_recovery_60s (Heart Rate Recovery after 60s)
+        7) ❤️ Heart_rate_recovery_60s (Heart Rate Recovery within 60s)
         - Icons are visual aliases only and must not replace numeric values, suppress other applicable icons, or reduce table rows.
         PLANNED EVENTS (WEEKLY — NON-NEGOTIABLE):
         - The planned_events section MUST be rendered as a Markdown table.
