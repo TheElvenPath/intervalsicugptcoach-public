@@ -2504,7 +2504,7 @@ def build_semantic_json(context):
 
         try:
             # -------------------------------------------------
-            # 1️⃣ Authoritative ISO week
+            # 1️⃣ ISO week
             # -------------------------------------------------
             weekly_phases = semantic.get("weekly_phases", [])
             if not weekly_phases:
@@ -2519,9 +2519,10 @@ def build_semantic_json(context):
             sunday = monday + pd.Timedelta(days=6)
 
             # -------------------------------------------------
-            # 2️⃣ Completed TSS (actual ISO week)
+            # 2️⃣ Completed TSS (ISO week)
             # -------------------------------------------------
             df_actual = context.get("_df_scope_full")
+            week_df = pd.DataFrame()
 
             if isinstance(df_actual, pd.DataFrame) and not df_actual.empty:
                 df_actual = df_actual.copy()
@@ -2544,42 +2545,45 @@ def build_semantic_json(context):
                 microcycle_context["completed_tss"] = round(completed, 1)
 
             # -------------------------------------------------
-            # 3️⃣ Weekly Target (Hybrid Logic)
+            # 3️⃣ Weekly Target (Calendar + Reconstruction)
             # -------------------------------------------------
-            planned_summary = semantic.get("planned_summary_by_date", {})
+            planned_summary = semantic.get("planned_summary_by_date", {}) or {}
             weekly_target = 0.0
-            planned_dates_with_entries = set()
+            planned_dates = set()
 
-            # 3A — sum all planned loads still present
+            # 3A — calendar intent
             for offset in range(7):
                 d = (monday + pd.Timedelta(days=offset)).date().isoformat()
                 summary = planned_summary.get(d)
-
                 if summary:
                     weekly_target += float(summary.get("total_load", 0) or 0)
-                    planned_dates_with_entries.add(d)
+                    planned_dates.add(d)
 
-            # 3B — reconstruct only if planned entry disappeared
-            if isinstance(df_actual, pd.DataFrame) and not df_actual.empty:
-                for _, row in week_df.iterrows():
-                    activity_date = row["date_only"].isoformat()
+            # 3B — reconstruct for completed workouts not in calendar
+            for _, row in week_df.iterrows():
+                activity_date = row["date_only"].isoformat()
 
-                    if activity_date not in planned_dates_with_entries:
+                if activity_date in planned_dates:
+                    continue
 
-                        actual = float(row.get("icu_training_load", 0) or 0)
-                        compliance = row.get("compliance")
+                actual = float(row.get("icu_training_load", 0) or 0)
+                compliance = row.get("compliance")
 
-                        try:
-                            compliance_val = float(compliance)
-                        except Exception:
-                            compliance_val = None
+                try:
+                    compliance_val = float(compliance)
+                except Exception:
+                    compliance_val = None
 
-                        if compliance_val and compliance_val > 0:
-                            planned_equivalent = actual / (compliance_val / 100.0)
-                        else:
-                            planned_equivalent = actual
+                if compliance_val is not None and compliance_val > 0:
+                    planned_equivalent = actual / (compliance_val / 100.0)
+                else:
+                    planned_equivalent = actual
 
-                        weekly_target += planned_equivalent
+                weekly_target += planned_equivalent
+
+            # fallback: truly no plan context
+            if weekly_target == 0.0 and microcycle_context["completed_tss"] > 0:
+                weekly_target = microcycle_context["completed_tss"]
 
             weekly_target = round(weekly_target, 1)
             microcycle_context["weekly_target_tss"] = weekly_target
@@ -2592,7 +2596,6 @@ def build_semantic_json(context):
             for offset in range(7):
                 d = (monday + pd.Timedelta(days=offset)).date().isoformat()
                 summary = planned_summary.get(d)
-
                 if summary:
                     planned_remaining += float(summary.get("total_load", 0) or 0)
 
@@ -2600,9 +2603,9 @@ def build_semantic_json(context):
             microcycle_context["planned_remaining_tss"] = planned_remaining
 
             # -------------------------------------------------
-            # 5️⃣ Projection + Delta (FIXED)
+            # 5️⃣ Delta (ALWAYS computed)
             # -------------------------------------------------
-            completed_val = microcycle_context.get("completed_tss", 0.0)
+            completed_val = microcycle_context["completed_tss"]
             projected_total = completed_val + planned_remaining
             delta = projected_total - weekly_target
 
@@ -2610,7 +2613,7 @@ def build_semantic_json(context):
             microcycle_context["delta_to_target"] = round(delta, 1)
 
         except Exception as e:
-            debug(context, f"[MICROCYCLE] ❌ Detection failed: {type(e).__name__}: {e}")
+            debug(context, f"[MICROCYCLE] ❌ {type(e).__name__}: {e}")
 
         semantic["microcycle_context"] = microcycle_context
         debug(context, f"[MICROCYCLE] {microcycle_context}")

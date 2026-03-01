@@ -1343,13 +1343,25 @@ def run_tier1_controller(df_master, wellness, context):
     ready_map = {1: "very poor", 2: "poor", 3: "fair", 4: "good", 5: "excellent"}
 
     for col, cmap in {
-        "rpe": rpe_map, "feel": feel_map,
-        "fatigue": label_map, "stress": label_map, "soreness": label_map,
-        "mood": mood_map, "motivation": motiv_map,
-        "hydration": hydr_map, "readiness": ready_map,
+        "rpe": rpe_map,
+        "feel": feel_map,
+        "fatigue": label_map,
+        "stress": label_map,
+        "soreness": label_map,
+        "mood": mood_map,
+        "motivation": motiv_map,
+        "hydration": hydr_map,
+        "readiness": ready_map,
     }.items():
-        if col in daily_summary.columns:
-            daily_summary[f"{col}_label"] = daily_summary[col].map(cmap).fillna(daily_summary[col])
+
+        if (
+            isinstance(daily_summary, pd.DataFrame)
+            and col in daily_summary.columns
+            and isinstance(cmap, dict)
+        ):
+            daily_summary[f"{col}_label"] = daily_summary[col].apply(
+                lambda x: cmap.get(x, x)
+            )
 
     # --- Step 8: Finalize ---
     context["auditPartial"] = True
