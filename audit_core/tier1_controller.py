@@ -1360,63 +1360,6 @@ def run_tier1_controller(df_master, wellness, context):
         debug(context, f"[T1-DEBUG] daily_summary columns → {list(daily_summary.columns)}")
 
 
-    # ------------------------------------------------------------
-    # --- Step 7: Qualitative label translation ----
-    # ------------------------------------------------------------
-
-    rpe_map = {1: "very easy", 2: "easy", 3: "moderate", 4: "somewhat hard",
-            5: "hard", 6: "very hard", 7: "maximal", 8: "maximal+",
-            9: "extreme", 10: "all out"}
-
-    feel_map = {1: "very bad", 2: "bad", 3: "neutral", 4: "good", 5: "very good"}
-
-    label_map = {1: "very low", 2: "low", 3: "moderate", 4: "high", 5: "very high"}
-
-    mood_map = {1: "very bad", 2: "bad", 3: "neutral", 4: "good", 5: "very good"}
-
-    motiv_map = {1: "none", 2: "low", 3: "moderate", 4: "good", 5: "excellent"}
-
-    hydr_map = {1: "overhydrated", 2: "slightly high", 3: "optimal",
-                4: "slightly low", 5: "dehydrated"}
-
-    ready_map = {1: "very poor", 2: "poor", 3: "fair",
-                4: "good", 5: "excellent"}
-
-
-    for col, cmap in {
-        "rpe": rpe_map,
-        "feel": feel_map,
-        "fatigue": label_map,
-        "stress": label_map,
-        "soreness": label_map,
-        "mood": mood_map,
-        "motivation": motiv_map,
-        "hydration": hydr_map,
-        "readiness": ready_map,
-    }.items():
-
-        if col in daily_summary.columns and isinstance(cmap, dict):
-
-            try:
-                series_obj = daily_summary[col]
-
-                # If duplicate columns previously caused DataFrame return
-                if isinstance(series_obj, pd.DataFrame):
-                    debug(context, f"[T1-DEBUG] {col} returned DataFrame — selecting first column")
-                    series_obj = series_obj.iloc[:, 0]
-
-                # Ensure scalar mapping only
-                cleaned = series_obj.apply(
-                    lambda v: v.iloc[0] if isinstance(v, pd.Series)
-                    else v[0] if isinstance(v, list)
-                    else next(iter(v.values()), None) if isinstance(v, dict)
-                    else v
-                )
-
-                daily_summary[f"{col}_label"] = cleaned.map(cmap)
-
-            except Exception as e:
-                debug(context, f"⚠ Label mapping failed for {col}: {e}")
 
     # --- Step 8: Finalize ---
     context["auditPartial"] = True
