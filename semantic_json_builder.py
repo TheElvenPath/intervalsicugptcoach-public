@@ -1523,7 +1523,7 @@ def build_semantic_json(context):
             "icu_max_wbal_depletion", "icu_joules_above_ftp",
             "total_elevation_gain", "calories", "VO2MaxGarmin",
             "source", "core_temp_mean", "core_temp_max",
-            "core_temp_drift_per_hour", "device_name"
+            "core_temp_drift_per_hour", "device_name", "compliance"
         ]
 
         available_fields = [f for f in core_fields if f in df_events.columns]
@@ -2488,100 +2488,130 @@ def build_semantic_json(context):
         semantic["options"] = context["render_options"]
 
     # ---------------------------------------------------------
-    # 🗓️ Microcycle Intent Detection (Plan-Aware Weekly Context)
+    # 🗓️ Microcycle Execution Model (ISO Phase-Aligned)
     # ---------------------------------------------------------
     if semantic["meta"].get("report_type") == "weekly":
 
         microcycle_context = {
-            "planned_total_tss": 0.0,
-            "completed_tss": 0.0,
-            "remaining_tss": 0.0,
-            "planned_intensity_days": 0,
             "week_iso": None,
+            "weekly_target_tss": 0.0,
+            "completed_tss": 0.0,
+            "planned_remaining_tss": 0.0,
+            "projected_total_tss": 0.0,
+            "delta_to_target": 0.0,
         }
 
         try:
             # -------------------------------------------------
-            # 1️⃣ Use canonical ISO week from weekly_phases
+            # 1️⃣ Authoritative ISO week
             # -------------------------------------------------
             weekly_phases = semantic.get("weekly_phases", [])
-
             if not weekly_phases:
                 semantic["microcycle_context"] = microcycle_context
                 return semantic
 
-            week_label = weekly_phases[-1]["week"]  # authoritative week
+            week_label = weekly_phases[-1]["week"]
             microcycle_context["week_iso"] = week_label
 
+            year, week = week_label.split("-W")
+            monday = pd.Timestamp.fromisocalendar(int(year), int(week), 1)
+            sunday = monday + pd.Timedelta(days=6)
+
             # -------------------------------------------------
-            # 2️⃣ Completed TSS (actual)
+            # 2️⃣ Completed TSS (actual ISO week)
             # -------------------------------------------------
             df_actual = context.get("_df_scope_full")
 
             if isinstance(df_actual, pd.DataFrame) and not df_actual.empty:
                 df_actual = df_actual.copy()
-                df_actual["start_date_local"] = pd.to_datetime(
+                df_actual["date_only"] = pd.to_datetime(
                     df_actual["start_date_local"], errors="coerce"
+                ).dt.date
+
+                week_df = df_actual[
+                    (df_actual["date_only"] >= monday.date()) &
+                    (df_actual["date_only"] <= sunday.date())
+                ]
+
+                completed = float(
+                    pd.to_numeric(
+                        week_df.get("icu_training_load", 0),
+                        errors="coerce"
+                    ).fillna(0).sum()
                 )
 
-                iso = df_actual["start_date_local"].dt.isocalendar()
-                df_actual["year_week"] = (
-                    iso["year"].astype(str) + "-W" + iso["week"].astype(str)
-                )
-
-                week_df = df_actual[df_actual["year_week"] == week_label]
-
-                microcycle_context["completed_tss"] = round(
-                    float(
-                        pd.to_numeric(
-                            week_df.get("icu_training_load", 0),
-                            errors="coerce"
-                        ).fillna(0).sum()
-                    ),
-                    1
-                )
+                microcycle_context["completed_tss"] = round(completed, 1)
 
             # -------------------------------------------------
-            # 3️⃣ Planned TSS (Full ISO week Mon–Sun)
+            # 3️⃣ Weekly Target (Hybrid Logic)
             # -------------------------------------------------
             planned_summary = semantic.get("planned_summary_by_date", {})
+            weekly_target = 0.0
+            planned_dates_with_entries = set()
 
-            planned_total = 0.0
-            intensity_days = 0
-
-            # Derive Monday from ISO week label
-            year, week = week_label.split("-W")
-            monday = pd.Timestamp.fromisocalendar(int(year), int(week), 1)
-            sunday = monday + pd.Timedelta(days=6)
-
+            # 3A — sum all planned loads still present
             for offset in range(7):
-                day_date = (monday + pd.Timedelta(days=offset)).date()
-                day_str = day_date.isoformat()
-
-                summary = planned_summary.get(day_str)
+                d = (monday + pd.Timedelta(days=offset)).date().isoformat()
+                summary = planned_summary.get(d)
 
                 if summary:
-                    day_tss = float(summary.get("total_load", 0) or 0)
-                else:
-                    day_tss = 0.0  # explicit default
+                    weekly_target += float(summary.get("total_load", 0) or 0)
+                    planned_dates_with_entries.add(d)
 
-                planned_total += day_tss
+            # 3B — reconstruct only if planned entry disappeared
+            if isinstance(df_actual, pd.DataFrame) and not df_actual.empty:
+                for _, row in week_df.iterrows():
+                    activity_date = row["date_only"].isoformat()
 
-                if day_tss >= 80:
-                    intensity_days += 1
+                    if activity_date not in planned_dates_with_entries:
 
-            microcycle_context["planned_total_tss"] = round(planned_total, 1)
-            microcycle_context["planned_intensity_days"] = intensity_days
-            microcycle_context["remaining_tss"] = round(
-                planned_total - microcycle_context["completed_tss"],
-                1
-            )
+                        actual = float(row.get("icu_training_load", 0) or 0)
+                        compliance = row.get("compliance")
+
+                        try:
+                            compliance_val = float(compliance)
+                        except Exception:
+                            compliance_val = None
+
+                        if compliance_val and compliance_val > 0:
+                            planned_equivalent = actual / (compliance_val / 100.0)
+                        else:
+                            planned_equivalent = actual
+
+                        weekly_target += planned_equivalent
+
+            weekly_target = round(weekly_target, 1)
+            microcycle_context["weekly_target_tss"] = weekly_target
+
+            # -------------------------------------------------
+            # 4️⃣ Planned Remaining
+            # -------------------------------------------------
+            planned_remaining = 0.0
+
+            for offset in range(7):
+                d = (monday + pd.Timedelta(days=offset)).date().isoformat()
+                summary = planned_summary.get(d)
+
+                if summary:
+                    planned_remaining += float(summary.get("total_load", 0) or 0)
+
+            planned_remaining = round(planned_remaining, 1)
+            microcycle_context["planned_remaining_tss"] = planned_remaining
+
+            # -------------------------------------------------
+            # 5️⃣ Projection + Delta (FIXED)
+            # -------------------------------------------------
+            completed_val = microcycle_context.get("completed_tss", 0.0)
+            projected_total = completed_val + planned_remaining
+            delta = projected_total - weekly_target
+
+            microcycle_context["projected_total_tss"] = round(projected_total, 1)
+            microcycle_context["delta_to_target"] = round(delta, 1)
 
         except Exception as e:
-            debug(context, f"[MICROCYCLE] ⚠️ Detection failed: {e}")
+            debug(context, f"[MICROCYCLE] ❌ Detection failed: {type(e).__name__}: {e}")
 
         semantic["microcycle_context"] = microcycle_context
-
         debug(context, f"[MICROCYCLE] {microcycle_context}")
 
     # ---------------------------------------------------------
