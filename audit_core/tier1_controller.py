@@ -795,32 +795,11 @@ def run_tier1_controller(df_master, wellness, context):
     debug(context, f"🧩 Tier-1 variance check passed (Δh={diff_hours:.2f}, ΔTSS={diff_tss:.1f})")
 
     # --- Step 4.5: Normalize and pre-merge wellness with activities ---
+    # --- Step 4.5: Wellness kept separate (no merge into df_master) ---
     if isinstance(wellness, pd.DataFrame) and not wellness.empty:
-        debug(context, "[T1] Normalizing and merging wellness with activity dataset before alignment check.")
-        try:
-            # Normalize merge keys to dates (no timezone)
-            if "start_date_local" in df_master.columns:
-                df_master["merge_date"] = pd.to_datetime(df_master["start_date_local"], errors="coerce").dt.date
-            elif "date" in df_master.columns:
-                df_master["merge_date"] = pd.to_datetime(df_master["date"], errors="coerce").dt.date
-
-            wellness["merge_date"] = pd.to_datetime(wellness["date"], errors="coerce").dt.date
-
-            # Merge wellness data into df_master for enriched downstream analysis
-            df_master = pd.merge(
-                df_master,
-                wellness,
-                on="merge_date",
-                how="left",
-                suffixes=("", "_well"),
-            )
-
-            debug(context, f"[T1] Wellness merged successfully — shape={df_master.shape}")
-        except Exception as e:
-            debug(context, f"[T1-WELLNESS-MERGE-WARN] Failed to merge wellness data: {e}")
+        debug(context, "[T1] Wellness dataset detected — kept separate from activities.")
     else:
-        debug(context, "[T1] No valid wellness data found pre-merge; skipping normalization.")
-
+        debug(context, "[T1] No valid wellness dataset available.")
     # ======================================================================
     # 🌿 WELLNESS METRICS (42-day context enrichment for insights builder)
     # ======================================================================
@@ -917,6 +896,11 @@ def run_tier1_controller(df_master, wellness, context):
         }
 
         df_well.rename(columns={k: v for k, v in rename_map.items() if k in df_well.columns}, inplace=True)
+
+        # 🔎 Remove duplicate columns caused by lowercase + rename collisions
+        if df_well.columns.duplicated().any():
+            debug(context, "[T1] Duplicate columns detected in df_well after normalization — removing")
+            df_well = df_well.loc[:, ~df_well.columns.duplicated()]
 
         # --- Guarantee a valid date column ---
         if "date" not in df_well.columns:
@@ -1330,17 +1314,43 @@ def run_tier1_controller(df_master, wellness, context):
         debug(context, f"⚠ Outlier detection failed: {e}")
         context["outliers"] = []
 
+    # ------------------------------------------------------------
+    # 🔎 Defensive sanity check before qualitative mapping
+    # ------------------------------------------------------------
 
+    if isinstance(daily_summary, pd.DataFrame):
+
+        # 1️⃣ Remove duplicate columns (prevents DataFrame-return bug)
+        if daily_summary.columns.duplicated().any():
+            debug(context, f"[T1-DEBUG] Duplicate columns detected → removing")
+            daily_summary = daily_summary.loc[:, ~daily_summary.columns.duplicated()]
+
+        # 2️⃣ Log structure once (not per column)
+        debug(context, f"[T1-DEBUG] daily_summary columns → {list(daily_summary.columns)}")
+
+
+    # ------------------------------------------------------------
     # --- Step 7: Qualitative label translation ----
+    # ------------------------------------------------------------
+
     rpe_map = {1: "very easy", 2: "easy", 3: "moderate", 4: "somewhat hard",
-               5: "hard", 6: "very hard", 7: "maximal", 8: "maximal+",
-               9: "extreme", 10: "all out"}
+            5: "hard", 6: "very hard", 7: "maximal", 8: "maximal+",
+            9: "extreme", 10: "all out"}
+
     feel_map = {1: "very bad", 2: "bad", 3: "neutral", 4: "good", 5: "very good"}
+
     label_map = {1: "very low", 2: "low", 3: "moderate", 4: "high", 5: "very high"}
+
     mood_map = {1: "very bad", 2: "bad", 3: "neutral", 4: "good", 5: "very good"}
+
     motiv_map = {1: "none", 2: "low", 3: "moderate", 4: "good", 5: "excellent"}
-    hydr_map = {1: "overhydrated", 2: "slightly high", 3: "optimal", 4: "slightly low", 5: "dehydrated"}
-    ready_map = {1: "very poor", 2: "poor", 3: "fair", 4: "good", 5: "excellent"}
+
+    hydr_map = {1: "overhydrated", 2: "slightly high", 3: "optimal",
+                4: "slightly low", 5: "dehydrated"}
+
+    ready_map = {1: "very poor", 2: "poor", 3: "fair",
+                4: "good", 5: "excellent"}
+
 
     for col, cmap in {
         "rpe": rpe_map,
@@ -1354,14 +1364,28 @@ def run_tier1_controller(df_master, wellness, context):
         "readiness": ready_map,
     }.items():
 
-        if (
-            isinstance(daily_summary, pd.DataFrame)
-            and col in daily_summary.columns
-            and isinstance(cmap, dict)
-        ):
-            daily_summary[f"{col}_label"] = daily_summary[col].apply(
-                lambda x: cmap.get(x, x)
-            )
+        if col in daily_summary.columns and isinstance(cmap, dict):
+
+            try:
+                series_obj = daily_summary[col]
+
+                # If duplicate columns previously caused DataFrame return
+                if isinstance(series_obj, pd.DataFrame):
+                    debug(context, f"[T1-DEBUG] {col} returned DataFrame — selecting first column")
+                    series_obj = series_obj.iloc[:, 0]
+
+                # Ensure scalar mapping only
+                cleaned = series_obj.apply(
+                    lambda v: v.iloc[0] if isinstance(v, pd.Series)
+                    else v[0] if isinstance(v, list)
+                    else next(iter(v.values()), None) if isinstance(v, dict)
+                    else v
+                )
+
+                daily_summary[f"{col}_label"] = cleaned.map(cmap)
+
+            except Exception as e:
+                debug(context, f"⚠ Label mapping failed for {col}: {e}")
 
     # --- Step 8: Finalize ---
     context["auditPartial"] = True
