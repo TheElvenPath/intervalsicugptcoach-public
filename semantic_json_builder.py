@@ -2083,11 +2083,10 @@ def build_semantic_json(context):
         semantic["planned_events"] = planned_events
         semantic["planned_summary_by_date"] = planned_summary_by_date
 
-        # ---------------------------------------------------------
         # 🔮 Tier-3 FUTURE FORECAST (only if report window is recent)
-        # ---------------------------------------------------------
 
         semantic["future_forecast"] = {}
+        semantic["future_actions"] = []
 
         try:
             period = semantic.get("meta", {}).get("period", "")
@@ -2096,23 +2095,20 @@ def build_semantic_json(context):
                 report_end = pd.to_datetime(end_str).date()
                 today = datetime.now().date()
 
-                # Only run forecast if report touches current rolling week
                 if report_end >= (today - pd.Timedelta(days=6)):
 
-                    context["calendar"] = calendar_data  # required by Tier-3
+                    context["calendar"] = calendar_data
 
-                    if not context.get("future_forecast"):
-                        from audit_core.tier3_future_forecast import run_future_forecast
-                        forecast_output = run_future_forecast(context)
+                    from audit_core.tier3_future_forecast import run_future_forecast
+                    forecast_output = run_future_forecast(context)
 
-                        if isinstance(forecast_output, dict):
-                            context.update(forecast_output)
-                            semantic["future_forecast"] = forecast_output.get(
-                                "future_forecast", {}
-                            )
-                    else:
-                        semantic["future_forecast"] = context.get(
-                            "future_forecast", {})
+                    if isinstance(forecast_output, dict):
+                        semantic["future_forecast"] = forecast_output.get("future_forecast", {})
+                        semantic["future_actions"] = forecast_output.get("actions_future", [])
+                else:
+                    # 🔥 CRITICAL: clear stale Tier-3 state
+                    context.pop("future_forecast", None)
+                    context.pop("actions_future", None)
 
         except Exception as e:
             debug(context, f"[FORECAST] ⚠️ {e}")
