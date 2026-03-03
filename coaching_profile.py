@@ -138,9 +138,9 @@ RENDERER_PROFILES = {
             "required": True,
             "verdict_rule": "State clearly whether last week’s training load was handled appropriately.",
             "classification_required": [
-                "Handled Appropriately",
-                "Near Capacity",
-                "Exceeded Tolerance"
+                "Productive",
+                "High Strain",
+                "Overreached"
             ],
             "focus": "tactical_alignment",
             "anchor_metrics": [
@@ -199,9 +199,9 @@ RENDERER_PROFILES = {
             "required": True,
             "verdict_rule": "Classify the training block adaptation trajectory.",
             "classification_required": [
-                "Expansion",
-                "Consolidation",
-                "Plateau"
+                "Adaptive Growth",
+                "Adaptive Maintenance",
+                "Adaptive Saturation"
             ],
             "focus": "adaptation_trajectory",
             "anchor_metrics": [
@@ -267,9 +267,9 @@ RENDERER_PROFILES = {
             "required": True,
             "verdict_rule": "State clearly whether current recovery status supports or constrains ongoing training.",
             "classification_required": [
-                "Supported",
-                "Borderline",
-                "Constrained"
+                "Adapting Well",
+                "Adaptation Under Pressure",
+                "Maladaptation Risk"
             ],
             "focus": "recovery_validation",
             "anchor_metrics": [
