@@ -23,7 +23,10 @@ from audit_core.report_controller import run_report
 from audit_core.utils import debug
 from semantic_json_builder import build_semantic_json
 from audit_core.tier0_pre_audit import expand_zones
+import logging
 
+logger = logging.getLogger("app")
+logging.basicConfig(level=logging.INFO)
 
 print("[BOOT] 🚀 Starting Montis.icu GPT Coach Railway API")
 icuoauth = os.getenv("ICU_OAUTH")
@@ -565,35 +568,24 @@ async def run_audit_with_data(
         )
 
         # -----------------------------------------------------
-        # 🏷️ PRIMARY SPORT LABEL (semantic)
+        # 🏷️ INJECT REPORT HEADER
         # -----------------------------------------------------
         athlete_profile = prefetch_context.get("athleteProfile", {})
         sport_settings = athlete_profile.get("sportSettings", [])
 
-        primary_label = "unknown"
-
-        if sport_settings:
-            first_group = sport_settings[0]
-            types = first_group.get("types", [])
-            if types:
-                primary_label = types[0].lower()
-
         prefetch_context["report_header"] = {
             "athlete": athlete_profile.get("name", "Unknown Athlete"),
-            "primary_sport": primary_label,
             "report_type": report_range,
-            "framework": "Unified_Reporting_Framework_v5.1",
             "timezone": athlete_profile.get("timezone", "Europe/Zurich"),
             "date_range": date_range,
         }
 
-        sys.stderr.write(
-            f"[EXEC] report_header injected (pre-run) → {prefetch_context['report_header']} "
-            f"| report_type={report_range} "
-            f"| athlete={prefetch_context['report_header'].get('athlete','unknown')}\n"
+        logger.info(
+            "[EXEC] report_header injected (pre-run) → %s | report_type=%s | athlete=%s",
+            prefetch_context["report_header"],
+            report_range,
+            prefetch_context["report_header"].get("athlete", "unknown")
         )
-        sys.stderr.flush()
-
 
         light = prefetch_context.get("activities_light")
         full  = prefetch_context.get("activities_full")
