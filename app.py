@@ -25,8 +25,13 @@ from semantic_json_builder import build_semantic_json
 from audit_core.tier0_pre_audit import expand_zones
 import logging
 
+logging.basicConfig(
+    level=logging.INFO,
+    stream=sys.stdout,   # 👈 THIS is the key fix
+    format="%(levelname)s:%(name)s:%(message)s"
+)
+
 logger = logging.getLogger("app")
-logging.basicConfig(level=logging.INFO)
 
 print("[BOOT] 🚀 Starting Montis.icu GPT Coach Railway API")
 icuoauth = os.getenv("ICU_OAUTH")
