@@ -588,25 +588,6 @@ async def run_audit_with_data(
             if resolved_start and resolved_end
             else "not_passed"
         )
-        
-        # -----------------------------------------------------
-        # 🏷️ INJECT REPORT HEADER
-        # -----------------------------------------------------
-        athlete_profile = prefetch_context.get("athleteProfile", {})
-
-        prefetch_context["report_header"] = {
-            "athlete": athlete_profile.get("name", "Unknown Athlete"),
-            "report_type": report_range,
-            "timezone": athlete_profile.get("timezone", "Europe/Zurich"),
-            "date_range": date_range,
-        }
-
-        logger.info(
-            "[EXEC] report_header injected (pre-run) → %s | report_type=%s | athlete=%s",
-            prefetch_context["report_header"],
-            report_range,
-            prefetch_context["report_header"].get("athlete", "unknown")
-        )
 
         light = prefetch_context.get("activities_light")
         full  = prefetch_context.get("activities_full")
@@ -656,6 +637,32 @@ async def run_audit_with_data(
 
             raise
 
+        context = report.get("context", {}) if isinstance(report, dict) else {}
+
+        period = context.get("period", {})
+
+        resolved_start = period.get("start")
+        resolved_end   = period.get("end")
+
+        date_range = (
+            f"{resolved_start} → {resolved_end}"
+            if resolved_start and resolved_end
+            else "not_passed"
+        )
+
+        report_header = {
+            "athlete": context.get("athleteProfile", {}).get("name", "Unknown Athlete"),
+            "report_type": report_range,
+            "timezone": context.get("timezone", "Europe/Zurich"),
+            "date_range": date_range,
+        }
+
+        logger.info(
+            "[EXEC] report_header injected (post-run) → %s | report_type=%s | athlete=%s",
+            report_header,
+            report_range,
+            report_header.get("athlete", "unknown")
+        )
 
         logs = buffer.getvalue()
         if fmt in ("json","semantic"):
@@ -663,7 +670,7 @@ async def run_audit_with_data(
             return JSONResponse({
                 "status": "ok",
                 "report_type": report_range,
-                "report_header": prefetch_context.get("report_header") if 'prefetch_context' in locals() else None,
+                "report_header": report_header,
                 "output_format": "semantic_json",
                 "semantic_graph": sanitize(build_semantic_json(context)),
                 "compliance": compliance,
@@ -673,7 +680,7 @@ async def run_audit_with_data(
         return JSONResponse({
             "status": "ok",
             "report_type": report_range,
-            "report_header": prefetch_context.get("report_header") if 'prefetch_context' in locals() else None,
+            "report_header": report_header,
             "output_format": "markdown",
             "markdown": report.get("markdown",""),
             "logs": logs[-20000:],
