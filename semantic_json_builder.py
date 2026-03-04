@@ -3216,11 +3216,14 @@ def build_system_prompt_from_header(report_type: str, header: dict) -> str:
         - The events section MUST NOT be summarised, renamed, grouped, or rewritten.
         - Bullet points, highlights, or narrative descriptions of events are FORBIDDEN.
         - Coaching sentences for events, if enabled, MUST appear AFTER the table.
-        - Convert duration from seconds to minutes at render time.
+        - The EVENTS table MUST use the following column order:
+        Date | Activity | Duration (min) | Distance | TSS | IF | NP | HRR60
+        - The semantic field `duration_seconds` MUST be converted to minutes at render time.
+        - This conversion applies ONLY to duration.
         - Display as integer minutes by default.
         - Use one decimal only if duration < 30 minutes and precision is useful.
         - Label column as Duration (min). Show HRR60 column when values exist.
-        - In the EVENTS table, session-level signal icons MAY be rendered in the 1st column (Signals) using the following canonical mapping derived ONLY from existing semantic fields.
+        - In the EVENTS table, session-level signal icons MAY be rendered within the Activity column as a prefix using the following canonical mapping derived ONLY from existing semantic fields.
         - Icons represent independent session signals and MAY appear together for a single event.
         - When multiple icons apply, they MUST be rendered together in the following fixed order (left → right):
         1) ⚡ Efficient (optimal efficiency factor)
