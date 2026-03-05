@@ -192,8 +192,8 @@ RENDERER_PROFILES = {
             "metrics": "full",
             "extended_metrics": "forbid",
             "performance_intelligence": "full",
-            "energy_system_progression": "full",
-            "physiology": "full",
+            "energy_system_progression": "summary",
+            "physiology": "summary",
             "wellness": "summary",
             "actions": "full",
             "future_actions": "full"
