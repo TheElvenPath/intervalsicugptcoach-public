@@ -267,24 +267,7 @@ def normalize_prefetched_context(data):
                 current = curve_data.get("current", {})
                 previous = curve_data.get("previous", {})
                 regression = curve_data.get("curve_regression", {})
-                model = curve_data.get("models")
-
-                if isinstance(model, dict):
-
-                    models_block = {
-                        "source": "FFT_CURVES",
-                        "cp": safe_float(model.get("cp")),
-                        "w_prime": safe_float(model.get("w_prime")),
-                        "pmax": safe_float(model.get("pmax")),
-                        "ftp": safe_float(model.get("ftp")),
-                    }
-
-                    # if all fields missing, treat as no model
-                    if all(v is None for k, v in models_block.items() if k != "source"):
-                        models_block = None
-
-                else:
-                    models_block = None
+                model = curve_data.get("models", {})
 
                 normalized_curves[sport] = {
 
@@ -299,12 +282,15 @@ def normalize_prefetched_context(data):
                         "r2": safe_float(regression.get("r2")),
                     },
 
-                    "models": models_block,
+                    "models": {
+                        "source": model.get("source", "FFT_CURVES"),
+                        "cp": safe_float(model.get("cp")),
+                        "w_prime": safe_float(model.get("w_prime")),
+                        "pmax": safe_float(model.get("pmax")),
+                        "ftp": safe_float(model.get("ftp")),
+                    },
                 }
 
-                # -----------------------------------------
-                # Anchor sanity checks
-                # -----------------------------------------
                 c = normalized_curves[sport]["current"]
 
                 if c["5m"] is None or c["20m"] is None:
