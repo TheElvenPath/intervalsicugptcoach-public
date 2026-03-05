@@ -31,7 +31,7 @@ REPORT_CONTRACT = {
         "meta", "training_volume",
         "metrics",
         "adaptation_metrics", "trend_metrics",
-        "performance_intelligence", "physiology",
+        "performance_intelligence", "energy_system_progression", "physiology",
         "phases", "phases_summary",
         "wbal_summary", "performance_summary",
         "insights", "actions", "future_forecast", "future_actions"
@@ -158,8 +158,7 @@ RENDERER_PROFILES = {
                 "NDLI",
                 "Durability",
                 "performance_intelligence.training_state"
-                "energy_system_progression."
-
+                "energy_system_progression"
             ],
             "intent_rule": "Assess whether acute load and recovery state align with immediate training intent.",
             "max_sentences": 4
@@ -193,6 +192,7 @@ RENDERER_PROFILES = {
             "metrics": "full",
             "extended_metrics": "forbid",
             "performance_intelligence": "full",
+            "energy_system_progression": "full",
             "physiology": "full",
             "wellness": "summary",
             "actions": "full",
@@ -202,7 +202,8 @@ RENDERER_PROFILES = {
         "emphasis": {
             "phases": "high",
             "trend_metrics": "high",
-            "metrics": "medium"
+            "metrics": "medium",
+            "adaptation": "high"
         },
 
         "framing": {
@@ -223,7 +224,9 @@ RENDERER_PROFILES = {
                 "fatigue_trend",
                 "Efficiency_Factor",
                 "Fatigue_Resistance",
-                "phases"
+                "phases",
+                "performance_intelligence",
+                "energy_system_progression",
             ],
             "intent_rule": "Determine whether the training block reflects expansion, consolidation, or plateau.",
             "max_sentences": 6
@@ -388,6 +391,7 @@ REPORT_RESOLUTION = {
         "derived_metrics": "trend_only",
         "extended_metrics": "none",
         "performance_intelligence": "acute_overlay_plus_chronic_90d",
+        "energy_system_progression": "adaptation",
         "insights": "strategic",
     },
 
