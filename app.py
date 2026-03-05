@@ -673,6 +673,12 @@ async def run_audit_with_data(
                 "end": end
             }
 
+        # ✅ ALSO pass start/end in the legacy top-level keys (run_report consumes these)
+        if start:
+            prefetch_context["start"] = start
+        if end:
+            prefetch_context["end"] = end
+
         # ---------------------------------------------------------
         # 🧾 Header date range
         # ---------------------------------------------------------

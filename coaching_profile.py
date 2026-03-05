@@ -192,7 +192,7 @@ RENDERER_PROFILES = {
             "daily_load": "forbid",
             "weekly_phases": "forbid",
             "phases": "summary",
-            "phases_summary": "full",  
+            "phases_summary": "full",
             "metrics": "summary",
             "extended_metrics": "forbid",
             "performance_intelligence": "full",
