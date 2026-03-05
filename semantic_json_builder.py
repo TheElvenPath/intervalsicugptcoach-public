@@ -2066,6 +2066,34 @@ def build_semantic_json(context):
                 continue
 
             start = e.get("start_date_local") or e.get("date")
+
+            if not start:
+                continue
+
+            # normalize to YYYY-MM-DD
+            if isinstance(start, datetime):
+                start = start.date().isoformat()
+            elif isinstance(start, str) and "T" in start:
+                start = start.split("T")[0]
+
+            # -------------------------------------------------
+            # Restrict calendar to report period
+            # -------------------------------------------------
+            period = semantic.get("meta", {}).get("period")
+
+            if period and "→" in period:
+                try:
+                    p_start, p_end = [x.strip() for x in period.split("→")]
+
+                    d = pd.to_datetime(start).date()
+                    p_start = pd.to_datetime(p_start).date()
+                    p_end = pd.to_datetime(p_end).date()
+
+                    if not (p_start <= d <= p_end):
+                        continue
+
+                except Exception:
+                    continue
             if isinstance(start, datetime):
                 start = start.date().isoformat()
             elif isinstance(start, str) and "T" in start:
