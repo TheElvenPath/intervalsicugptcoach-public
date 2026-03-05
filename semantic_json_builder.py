@@ -447,6 +447,31 @@ def build_insights(semantic):
                 "coaching_implication": ef_block.get("coaching_implication"),
             }
 
+    # --------------------------------------------------
+    # Energy System Progression (Tier-3 interpretation)
+    # Weekly reports only for now
+    # --------------------------------------------------
+
+    if report_type == "weekly":
+
+        espe = semantic.get("energy_system_progression", {})
+        sports = espe.get("sports", {})
+
+        if isinstance(sports, dict) and sports:
+
+            insights["energy_system_progression"] = {}
+
+            for sport, sport_data in sports.items():
+
+                insights["energy_system_progression"][sport] = {
+                    "window": sport_data.get("curve_window", {}).get("comparison"),
+                    "basis": "Power-duration curve progression",
+                    "system_status": sport_data.get("system_status"),
+                    "adaptation_state": sport_data.get("adaptation_state"),
+                    "adaptation_bias": sport_data.get("adaptation_bias"),
+                }
+
+
     if report_type == "wellness":
 
         wellness = semantic.get("wellness", {})
