@@ -496,6 +496,7 @@ def fetch_athlete_profile(headers, from_cache=None, context=None):
     debug(context, f"[DEBUG-ATHLETE] sample type={type(context.get('athlete'))} content={str(context.get('athlete'))[:100]}")
 
     return athlete, context
+
 def fetch_power_curves(headers, context=None, from_cache=None):
     """
     Fetch ESPE power curve dataset and normalize to ESPE contract.
@@ -507,7 +508,13 @@ def fetch_power_curves(headers, context=None, from_cache=None):
     # Prefetched path
     # --------------------------------------------
     if from_cache is not None:
-        debug(context, "[T0] Using prefetched power_curve dataset")
+
+        # Worker already normalized the structure
+        if isinstance(from_cache, dict) and "Ride" in from_cache:
+            debug(context, "[T0] Using pre-normalized power_curve dataset")
+            return from_cache
+
+        debug(context, "[T0] Using prefetched raw power_curve dataset")
         payload = from_cache
     else:
 
