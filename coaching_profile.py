@@ -19,7 +19,7 @@ def get_profile_metrics(context):
 REPORT_CONTRACT = {
     "weekly": [
         "meta", "training_volume",
-        "metrics", "extended_metrics",
+        "metrics",
         "performance_intelligence", "energy_system_progression",
         "zones", "physiology", "daily_load", "events", "wbal_summary",
         "wellness", "phases", "insights", "insight_view", "actions",
@@ -29,7 +29,7 @@ REPORT_CONTRACT = {
 
     "season": [
         "meta", "training_volume",
-        "metrics", "extended_metrics",
+        "metrics",
         "adaptation_metrics", "trend_metrics",
         "performance_intelligence", "physiology",
         "phases", "phases_summary",
@@ -158,6 +158,8 @@ RENDERER_PROFILES = {
                 "NDLI",
                 "Durability",
                 "performance_intelligence.training_state"
+                "energy_system_progression."
+
             ],
             "intent_rule": "Assess whether acute load and recovery state align with immediate training intent.",
             "max_sentences": 4

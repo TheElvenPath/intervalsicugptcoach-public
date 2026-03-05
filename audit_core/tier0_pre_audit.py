@@ -516,113 +516,101 @@ def fetch_power_curves(headers, context=None, from_cache=None):
         curves = context.get("espe_curves")
         pm_type = "FFT_CURVES"
 
-        url = (
-            f"{INTERVALS_API}/athlete/{athlete_id}/power-curves-ext"
-            f"?type=Ride"
-            f"&curves={curves}"
-            f"&pmType={pm_type}"
-        )
+        SPORTS = ["Ride", "Run"]
+        normalized = {}
 
-        debug(context, f"[T0] Fetching power curves → {url}")
+        def extract_anchor(block, seconds):
+            secs = block.get("secs", [])
+            vals = block.get("values", [])
+            try:
+                idx = secs.index(seconds)
+                return vals[idx]
+            except ValueError:
+                return None
 
-        resp = fetch_with_retry(url, headers)
+        for sport in SPORTS:
 
-        if resp.status_code != 200:
-            raise AuditHalt(
-                f"❌ Power curve fetch failed ({resp.status_code}) → "
-                f"{resp.text[:200]}"
+            url = (
+                f"{INTERVALS_API}/athlete/{athlete_id}/power-curves-ext"
+                f"?type={sport}"
+                f"&curves={curves}"
+                f"&pmType={pm_type}"
             )
 
-        payload = resp.json()
+            debug(context, f"[T0] Fetching power curves → {sport}")
 
-        debug(context, "[T0] Power curve dataset retrieved")
+            resp = fetch_with_retry(url, headers)
 
-    # --------------------------------------------
-    # Window selection
-    # --------------------------------------------
+            if resp.status_code != 200:
+                debug(context, f"[T0] ⚠ Power curve fetch failed for {sport}")
+                continue
 
-    curves = payload.get("list")
+            payload = resp.json()
+            debug(context, f"[T0] Power curve dataset retrieved → {sport}")
 
-    if not curves or len(curves) < 2:
-        debug(context, "[T0] ⚠ power_curve payload missing windows")
-        return {}
+            curve_list = payload.get("list")
 
-    prev = curves[0]
-    curr = curves[1]
+            if not curve_list or len(curve_list) < 2:
+                debug(context, f"[T0] ⚠ power_curve payload missing windows for {sport}")
+                continue
 
-    def extract_anchor(block, seconds):
+            prev = curve_list[0]
+            curr = curve_list[1]
 
-        secs = block.get("secs", [])
-        vals = block.get("values", [])
-
-        try:
-            idx = secs.index(seconds)
-            return vals[idx]
-        except ValueError:
-            return None
-
-    # --------------------------------------------
-    # Anchor extraction
-    # --------------------------------------------
-
-    normalized = {
-        "Ride": {
-            "previous": {
-                "5s": extract_anchor(prev, 5),
-                "1m": extract_anchor(prev, 60),
-                "5m": extract_anchor(prev, 300),
-                "20m": extract_anchor(prev, 1200),
-                "60m": extract_anchor(prev, 3600),
-            },
-            "current": {
-                "5s": extract_anchor(curr, 5),
-                "1m": extract_anchor(curr, 60),
-                "5m": extract_anchor(curr, 300),
-                "20m": extract_anchor(curr, 1200),
-                "60m": extract_anchor(curr, 3600),
-            },
-            "window_days": prev.get("days"),
-
-            "curve_regression": {
-                "slope": curr.get("mapPlot", {}).get("poSlope"),
-                "r2": curr.get("mapPlot", {}).get("poR2")
+            normalized[sport] = {
+                "previous": {
+                    "5s": extract_anchor(prev, 5),
+                    "1m": extract_anchor(prev, 60),
+                    "5m": extract_anchor(prev, 300),
+                    "20m": extract_anchor(prev, 1200),
+                    "60m": extract_anchor(prev, 3600),
+                },
+                "current": {
+                    "5s": extract_anchor(curr, 5),
+                    "1m": extract_anchor(curr, 60),
+                    "5m": extract_anchor(curr, 300),
+                    "20m": extract_anchor(curr, 1200),
+                    "60m": extract_anchor(curr, 3600),
+                },
+                "window_days": prev.get("days"),
+                "curve_regression": {
+                    "slope": curr.get("mapPlot", {}).get("poSlope"),
+                    "r2": curr.get("mapPlot", {}).get("poR2")
+                }
             }
-        }
-    }
 
-    # --------------------------------------------
-    # FFT_CURVES model extraction
-    # --------------------------------------------
+            # --------------------------------------------
+            # FFT_CURVES model extraction
+            # --------------------------------------------
 
-    fft_model = next(
-        (m for m in curr.get("powerModels", []) if m.get("type") == "FFT_CURVES"),
-        None
-    )
+            fft_model = next(
+                (m for m in curr.get("powerModels", []) if m.get("type") == "FFT_CURVES"),
+                None
+            )
 
-    if fft_model:
+            if fft_model:
+                normalized[sport]["models"] = {
+                    "source": "FFT_CURVES",
+                    "cp": fft_model.get("criticalPower"),
+                    "w_prime": fft_model.get("wPrime"),
+                    "pmax": fft_model.get("pMax"),
+                    "ftp": fft_model.get("ftp")
+                }
 
-        normalized["Ride"]["models"] = {
-            "source": "FFT_CURVES",
-            "cp": fft_model.get("criticalPower"),
-            "w_prime": fft_model.get("wPrime"),
-            "pmax": fft_model.get("pMax"),
-            "ftp": fft_model.get("ftp")
-        }
+            # --------------------------------------------
+            # Guards
+            # --------------------------------------------
 
-    # --------------------------------------------
-    # Guards
-    # --------------------------------------------
+            if not normalized[sport]["current"]["5m"]:
+                debug(context, f"[NORM] ESPE missing 5m anchor for {sport}")
 
-    if not normalized["Ride"]["current"]["5m"]:
-        debug(context, "[NORM] ESPE missing 5m anchor for Ride")
+            debug(
+                context,
+                f"[T0] Normalized power_curve anchors → {sport}",
+                list(normalized[sport]["current"].keys())
+            )
 
-    debug(
-        context,
-        "[T0] Normalized power_curve anchors →",
-        f"{list(normalized['Ride']['current'].keys())}"
-    )
-
-    return normalized
+        return normalized
 
 
 def run_tier0_pre_audit(start: str, end: str, context: dict):
