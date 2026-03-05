@@ -2614,167 +2614,167 @@ def build_semantic_json(context):
     # ---------------------------------------------------------
     # 🗓️ Microcycle Execution Model (ISO Aligned)
     # ---------------------------------------------------------
-    report_start = pd.to_datetime(context.get("start"), errors="coerce")
-    report_end   = pd.to_datetime(context.get("end"), errors="coerce")
+    if semantic["meta"].get("report_type") == "weekly":
 
-    if pd.isna(report_start) or pd.isna(report_end):
         semantic["current_ISO_weekly_microcycle"] = None
-    else:
-        report_start = report_start.normalize()
-        report_end   = report_end.normalize()
 
-        today = pd.Timestamp.now(tz=context.get("timezone") or "UTC").normalize()
+        tz = context.get("timezone") or "UTC"
+        today = pd.Timestamp.now(tz=tz).date()
 
-        if not (report_start <= today <= report_end):
-            semantic["current_ISO_weekly_microcycle"] = None
-        else:
-            # run microcycle block
-            
-            current_ISO_weekly_microcycle = {
-                "week_iso": None,
-                "weekly_target_tss": 0.0,
-                "completed_tss": 0.0,
-                "planned_remaining_tss": 0.0,
-                "projected_total_tss": 0.0,
-                "delta_to_target": 0.0,
-                "basis": "The microcycle is based on the current ISO week (Monday to Sunday) and includes planned and completed with compliance,"
-            }
+        report_end = pd.to_datetime(context.get("period", {}).get("end"), errors="coerce")
 
-            try:
-                # -------------------------------------------------
-                # 1️⃣ ISO week (TRUE current week — time anchored)
-                # -------------------------------------------------
-                now = pd.Timestamp.now(tz=context.get("timezone") or "UTC")
-                iso = now.isocalendar()
+        if pd.notna(report_end):
+            iso = pd.Timestamp.now(tz=tz).isocalendar()
+            iso_monday = pd.Timestamp.fromisocalendar(iso.year, iso.week, 1).date()
 
-                week_label = f"{iso.year}-W{iso.week}"
-                current_ISO_weekly_microcycle["week_iso"] = week_label
+            if report_end.date() >= iso_monday:
 
-                monday = pd.Timestamp.fromisocalendar(int(iso.year), int(iso.week), 1)
-                sunday = monday + pd.Timedelta(days=6)
+                current_ISO_weekly_microcycle = {
+                    "week_iso": None,
+                    "weekly_target_tss": 0.0,
+                    "completed_tss": 0.0,
+                    "planned_remaining_tss": 0.0,
+                    "projected_total_tss": 0.0,
+                    "delta_to_target": 0.0,
+                    "basis": "The microcycle is based on the current ISO week (Monday to Sunday) and includes planned and completed with compliance,"
+                }
 
-                # -------------------------------------------------
-                # 2️⃣ Completed TSS (ISO week)
-                # -------------------------------------------------
-                df_actual = context.get("_df_scope_full")
-                week_df = pd.DataFrame()
+                try:
+                    # existing code unchanged
+                    # -------------------------------------------------
+                    # 1️⃣ ISO week (TRUE current week — time anchored)
+                    # -------------------------------------------------
+                    now = pd.Timestamp.now(tz=context.get("timezone") or "UTC")
+                    iso = now.isocalendar()
 
-                if isinstance(df_actual, pd.DataFrame) and not df_actual.empty:
-                    df_actual = df_actual.copy()
-                    df_actual["date_only"] = pd.to_datetime(
-                        df_actual["start_date_local"], errors="coerce"
-                    ).dt.date
+                    week_label = f"{iso.year}-W{iso.week}"
+                    current_ISO_weekly_microcycle["week_iso"] = week_label
 
-                    week_df = df_actual[
-                        (df_actual["date_only"] >= monday.date()) &
-                        (df_actual["date_only"] <= sunday.date())
-                    ]
+                    monday = pd.Timestamp.fromisocalendar(int(iso.year), int(iso.week), 1)
+                    sunday = monday + pd.Timedelta(days=6)
 
-                    completed = float(
-                        pd.to_numeric(
-                            week_df.get("icu_training_load", 0),
-                            errors="coerce"
-                        ).fillna(0).sum()
-                    )
+                    # -------------------------------------------------
+                    # 2️⃣ Completed TSS (ISO week)
+                    # -------------------------------------------------
+                    df_actual = context.get("_df_scope_full")
+                    week_df = pd.DataFrame()
 
-                    current_ISO_weekly_microcycle["completed_tss"] = round(completed, 1)
+                    if isinstance(df_actual, pd.DataFrame) and not df_actual.empty:
+                        df_actual = df_actual.copy()
+                        df_actual["date_only"] = pd.to_datetime(
+                            df_actual["start_date_local"], errors="coerce"
+                        ).dt.date
 
-                # -------------------------------------------------
-                # 3️⃣ Weekly Target (Calendar + Reconstruction)
-                # -------------------------------------------------
-                planned_summary = semantic.get("planned_summary_by_date", {}) or {}
-                weekly_target = 0.0
-                planned_dates = set()
+                        week_df = df_actual[
+                            (df_actual["date_only"] >= monday.date()) &
+                            (df_actual["date_only"] <= sunday.date())
+                        ]
 
-                # 3A — calendar intent
-                for offset in range(7):
-                    d = (monday + pd.Timedelta(days=offset)).date().isoformat()
-                    summary = planned_summary.get(d)
-                    if summary:
-                        weekly_target += float(summary.get("total_load", 0) or 0)
-                        planned_dates.add(d)
+                        completed = float(
+                            pd.to_numeric(
+                                week_df.get("icu_training_load", 0),
+                                errors="coerce"
+                            ).fillna(0).sum()
+                        )
 
-                # 3B — reconstruct for completed workouts not in calendar
-                for _, row in week_df.iterrows():
-                    activity_date = row["date_only"].isoformat()
+                        current_ISO_weekly_microcycle["completed_tss"] = round(completed, 1)
 
-                    if activity_date in planned_dates:
-                        continue
+                    # -------------------------------------------------
+                    # 3️⃣ Weekly Target (Calendar + Reconstruction)
+                    # -------------------------------------------------
+                    planned_summary = semantic.get("planned_summary_by_date", {}) or {}
+                    weekly_target = 0.0
+                    planned_dates = set()
 
-                    actual = float(row.get("icu_training_load", 0) or 0)
-                    compliance = row.get("compliance")
+                    # 3A — calendar intent
+                    for offset in range(7):
+                        d = (monday + pd.Timedelta(days=offset)).date().isoformat()
+                        summary = planned_summary.get(d)
+                        if summary:
+                            weekly_target += float(summary.get("total_load", 0) or 0)
+                            planned_dates.add(d)
 
-                    try:
-                        compliance_val = float(compliance)
-                    except Exception:
-                        compliance_val = None
-
-                    if compliance_val is not None and compliance_val > 0:
-                        planned_equivalent = actual / (compliance_val / 100.0)
-                    else:
-                        planned_equivalent = actual
-
-                    weekly_target += planned_equivalent
-
-                # fallback: truly no plan context
-                if weekly_target == 0.0 and current_ISO_weekly_microcycle["completed_tss"] > 0:
-                    weekly_target = current_ISO_weekly_microcycle["completed_tss"]
-
-                weekly_target = round(weekly_target, 1)
-                current_ISO_weekly_microcycle["weekly_target_tss"] = weekly_target
-
-                # -------------------------------------------------
-                # 4️⃣ Planned Remaining
-                # -------------------------------------------------
-                planned_remaining = 0.0
-
-                planned_events = semantic.get("planned_events", [])
-                week_planned_ids = set()
-
-                # Collect all planned IDs in this ISO week
-                for pe in planned_events:
-                    planned_date = pd.to_datetime(pe.get("start_date_local")).date()
-                    if monday.date() <= planned_date <= sunday.date():
-                        week_planned_ids.add(pe.get("id"))
-
-                # Collect all paired_event_ids from completed activities this week
-                consumed_ids = set()
-
-                if not week_df.empty:
+                    # 3B — reconstruct for completed workouts not in calendar
                     for _, row in week_df.iterrows():
-                        paired_id = row.get("paired_event_id")
-                        if paired_id:
-                            consumed_ids.add(paired_id)
+                        activity_date = row["date_only"].isoformat()
 
-                # Remaining = planned IDs not consumed
-                for pe in planned_events:
-                    planned_id = pe.get("id")
-                    planned_date = pd.to_datetime(pe.get("start_date_local")).date()
+                        if activity_date in planned_dates:
+                            continue
 
-                    if not (monday.date() <= planned_date <= sunday.date()):
-                        continue
+                        actual = float(row.get("icu_training_load", 0) or 0)
+                        compliance = row.get("compliance")
 
-                    if planned_id not in consumed_ids:
-                        planned_remaining += float(pe.get("icu_training_load", 0) or 0)
+                        try:
+                            compliance_val = float(compliance)
+                        except Exception:
+                            compliance_val = None
 
-                # expose planned remaining
-                current_ISO_weekly_microcycle["planned_remaining_tss"] = round(planned_remaining, 1)
+                        if compliance_val is not None and compliance_val > 0:
+                            planned_equivalent = actual / (compliance_val / 100.0)
+                        else:
+                            planned_equivalent = actual
 
-                # -------------------------------------------------
-                # 5️⃣ Delta (ALWAYS computed)
-                # -------------------------------------------------
-                completed_val = current_ISO_weekly_microcycle["completed_tss"]
-                projected_total = completed_val + planned_remaining
-                delta = projected_total - weekly_target
+                        weekly_target += planned_equivalent
 
-                current_ISO_weekly_microcycle["projected_total_tss"] = round(projected_total, 1)
-                current_ISO_weekly_microcycle["delta_to_target"] = round(delta, 1)
+                    # fallback: truly no plan context
+                    if weekly_target == 0.0 and current_ISO_weekly_microcycle["completed_tss"] > 0:
+                        weekly_target = current_ISO_weekly_microcycle["completed_tss"]
 
-            except Exception as e:
-                debug(context, f"[MICROCYCLE] ❌ {type(e).__name__}: {e}")
+                    weekly_target = round(weekly_target, 1)
+                    current_ISO_weekly_microcycle["weekly_target_tss"] = weekly_target
 
-            semantic["current_ISO_weekly_microcycle"] = current_ISO_weekly_microcycle
-            debug(context, f"[MICROCYCLE] {current_ISO_weekly_microcycle}")
+                    # -------------------------------------------------
+                    # 4️⃣ Planned Remaining
+                    # -------------------------------------------------
+                    planned_remaining = 0.0
+
+                    planned_events = semantic.get("planned_events", [])
+                    week_planned_ids = set()
+
+                    # Collect all planned IDs in this ISO week
+                    for pe in planned_events:
+                        planned_date = pd.to_datetime(pe.get("start_date_local")).date()
+                        if monday.date() <= planned_date <= sunday.date():
+                            week_planned_ids.add(pe.get("id"))
+
+                    # Collect all paired_event_ids from completed activities this week
+                    consumed_ids = set()
+
+                    if not week_df.empty:
+                        for _, row in week_df.iterrows():
+                            paired_id = row.get("paired_event_id")
+                            if paired_id:
+                                consumed_ids.add(paired_id)
+
+                    # Remaining = planned IDs not consumed
+                    for pe in planned_events:
+                        planned_id = pe.get("id")
+                        planned_date = pd.to_datetime(pe.get("start_date_local")).date()
+
+                        if not (monday.date() <= planned_date <= sunday.date()):
+                            continue
+
+                        if planned_id not in consumed_ids:
+                            planned_remaining += float(pe.get("icu_training_load", 0) or 0)
+
+                    # expose planned remaining
+                    current_ISO_weekly_microcycle["planned_remaining_tss"] = round(planned_remaining, 1)
+
+                    # -------------------------------------------------
+                    # 5️⃣ Delta (ALWAYS computed)
+                    # -------------------------------------------------
+                    completed_val = current_ISO_weekly_microcycle["completed_tss"]
+                    projected_total = completed_val + planned_remaining
+                    delta = projected_total - weekly_target
+
+                    current_ISO_weekly_microcycle["projected_total_tss"] = round(projected_total, 1)
+                    current_ISO_weekly_microcycle["delta_to_target"] = round(delta, 1)
+
+                except Exception as e:
+                    debug(context, f"[MICROCYCLE] ❌ {type(e).__name__}: {e}")
+
+                semantic["current_ISO_weekly_microcycle"] = current_ISO_weekly_microcycle
+                debug(context, f"[MICROCYCLE] {current_ISO_weekly_microcycle}")
 
     # ---------------------------------------------------------
     # 🧭 Phase Structure Normalisation (URF v5.1 — Science-Aligned)
