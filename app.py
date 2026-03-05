@@ -242,6 +242,7 @@ def normalize_prefetched_context(data):
         context["wellness"]         = df_well.to_dict(orient="records")
         context["athlete"]          = athlete
         context["calendar"]         = calendar
+        
         # -------------------------------------------------
         # 🔋 POWER CURVE NORMALIZATION (Worker → ESPE)
         # -------------------------------------------------
@@ -264,16 +265,24 @@ def normalize_prefetched_context(data):
                     debug(context, f"[NORM] Invalid curve block for {sport}")
                     continue
 
-                current = curve_data.get("current", {})
-                previous = curve_data.get("previous", {})
-                regression = curve_data.get("curve_regression", {})
-                model = curve_data.get("models", {})
+                current = curve_data.get("current") or {}
+                previous = curve_data.get("previous") or {}
+                regression = curve_data.get("curve_regression") or {}
+                model = curve_data.get("models") or {}
+
+                current_norm = {k: safe_float(current.get(k)) for k in REQUIRED}
+                previous_norm = {k: safe_float(previous.get(k)) for k in REQUIRED}
+
+                # Guard: ESPE requires anchors
+                if current_norm.get("5m") is None or current_norm.get("20m") is None:
+                    debug(context, f"[NORM] ESPE anchors incomplete for {sport}")
+                    continue
 
                 normalized_curves[sport] = {
 
-                    "current": {k: safe_float(current.get(k)) for k in REQUIRED},
+                    "current": current_norm,
 
-                    "previous": {k: safe_float(previous.get(k)) for k in REQUIRED},
+                    "previous": previous_norm,
 
                     "window_days": int(curve_data.get("window_days", 90)),
 
@@ -291,11 +300,6 @@ def normalize_prefetched_context(data):
                     },
                 }
 
-                c = normalized_curves[sport]["current"]
-
-                if c["5m"] is None or c["20m"] is None:
-                    debug(context, f"[NORM] ESPE anchors incomplete for {sport}")
-
                 debug(
                     context,
                     f"[NORM] {sport} regression slope={regression.get('slope')} "
@@ -312,6 +316,7 @@ def normalize_prefetched_context(data):
         else:
             context["power_curve"] = {}
 
+        # -------------------------------------------------------------------------------------
         # Derived Tier-0 equivalents
         context["df_light"]  = df_light
         context["df_master"] = df_full
