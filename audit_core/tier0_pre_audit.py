@@ -504,18 +504,12 @@ def fetch_power_curves(headers, context=None, from_cache=None):
 
     context = context or {}
 
-    # --------------------------------------------
-    # Prefetched path
-    # --------------------------------------------
+    # =================================================
+    # CACHE PATH (Cloudflare / prefetched)
+    # =================================================
     if from_cache is not None:
-
-        # Worker already normalized the structure
-        if isinstance(from_cache, dict) and "Ride" in from_cache:
-            debug(context, "[T0] Using pre-normalized power_curve dataset")
-            return from_cache
-
-        debug(context, "[T0] Using prefetched raw power_curve dataset")
-        payload = from_cache
+        debug(context, "[T0] Loaded cached power_curve dataset")
+        return from_cache
     else:
 
         athlete_id = context.get("athlete", {}).get("id", 0)
