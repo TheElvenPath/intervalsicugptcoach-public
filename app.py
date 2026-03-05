@@ -247,12 +247,6 @@ def normalize_prefetched_context(data):
         # -------------------------------------------------
         power_curve = data.get("power_curve")
 
-        try:
-            debug(context, "[DEBUG-POWER-CURVE] RAW DATASET ↓")
-            debug(context, json.dumps(power_curve, indent=2)[:10000])
-        except Exception as e:
-            debug(context, f"[DEBUG-POWER-CURVE] dump failed: {e}")
-
         if isinstance(power_curve, dict):
 
             REQUIRED = ["5s", "1m", "5m", "20m", "60m"]
