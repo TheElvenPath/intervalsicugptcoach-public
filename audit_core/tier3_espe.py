@@ -108,6 +108,7 @@ def _process_sport(sport: str, data: Dict[str, Any], context: Dict[str, Any]) ->
     adaptation_bias = _derive_adaptation_bias(system_status)
     adaptation_state = classify_adaptation_state(system_status, delta)
 
+    curve_dynamics = _compute_curve_dynamics(delta)
     # ---- curve window definition ----
     window = data.get(
         "window_days",
@@ -180,6 +181,8 @@ def _process_sport(sport: str, data: Dict[str, Any], context: Dict[str, Any]) ->
 
         "delta_percent": delta,
 
+        "curve_dynamics": curve_dynamics,
+
         "system_status": system_status,
         "system_status_timeline": system_timeline,
 
@@ -209,6 +212,34 @@ def _process_sport(sport: str, data: Dict[str, Any], context: Dict[str, Any]) ->
 
         "curve_profile": curve_profile
     }
+
+def _compute_curve_dynamics(delta: Dict[str, float]) -> Dict[str, Any]:
+
+    short = delta.get("1m", 0)
+    vo2 = delta.get("5m", 0)
+    thr = delta.get("20m", 0)
+    long = delta.get("60m", 0)
+
+    # average shift of entire curve
+    vertical_shift = round((short + vo2 + thr + long) / 4, 2)
+
+    # rotation strength (difference between short vs long systems)
+    rotation_index = round(((short + vo2) / 2) - ((thr + long) / 2), 2)
+
+    # classification
+    if abs(rotation_index) < 0.75:
+        dominant = "uniform_shift"
+    elif rotation_index > 0:
+        dominant = "anaerobic_rotation"
+    else:
+        dominant = "aerobic_rotation"
+
+    return {
+        "vertical_shift_pct": vertical_shift,
+        "rotation_index": rotation_index,
+        "dominant_shift": dominant
+    }
+
 
 # ---------------------------------------------------------------------
 # Calculations
