@@ -2077,21 +2077,20 @@ def build_semantic_json(context):
                 start = start.split("T")[0]
 
             # -------------------------------------------------
-            # Restrict calendar to report period
+            # Restrict calendar to planned horizon
             # -------------------------------------------------
-            period = context.get("period")
 
-            if period and period.get("start") and period.get("end"):
-                try:
-                    p_start = pd.to_datetime(period["start"]).date()
-                    p_end = pd.to_datetime(period["end"]).date()
-                    d = pd.to_datetime(start).date()
+            report_end = pd.to_datetime(context.get("end")).date()
+            planned_start = report_end
+            planned_end = report_end + pd.Timedelta(days=14)
 
-                    if not (p_start <= d <= p_end):
-                        continue
+            try:
+                event_date = pd.to_datetime(start).date()
+            except Exception:
+                continue
 
-                except Exception:
-                    continue
+            if not (planned_start <= event_date <= planned_end):
+                continue
             if isinstance(start, datetime):
                 start = start.date().isoformat()
             elif isinstance(start, str) and "T" in start:
