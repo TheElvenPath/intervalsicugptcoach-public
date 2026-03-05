@@ -96,7 +96,6 @@ def fetch_wellness_chunked(
     # =================================================
     # 🌐 FETCH PATH (Local / orchestrated)
     # =================================================
-    from datetime import timedelta
 
     wellness = []
     df_well = pd.DataFrame()
@@ -189,9 +188,6 @@ def fetch_activities_chunked(
     # =================================================
     # 🌐 FETCH PATH (Local / orchestrated)
     # =================================================
-    import numpy as np
-    import json
-    from datetime import timedelta
 
     # --- Determine mode (authoritative) -----------------
     light_mode = bool(context.get("force_light", False))
@@ -701,8 +697,7 @@ def run_tier0_pre_audit(start: str, end: str, context: dict):
         context["activities_light"] = df_light.copy()
 
     else:
-        from datetime import datetime, timedelta
-
+        
         # --------------------------------------------------------
         # 🌐 FETCH LIGHTWEIGHT DATASET (LOCAL / ORCHESTRATED)
         # --------------------------------------------------------
@@ -1156,7 +1151,7 @@ def run_tier0_pre_audit(start: str, end: str, context: dict):
             debug(context, f"[T0] Wellness range: {start_well} → {end_well}")
 
             # Clip wellness to last 42 days relative to the activity window
-            from datetime import timedelta
+
             cutoff_date = pd.to_datetime(end_acts.date()) - timedelta(days=42)
             wellness = wellness[wellness["date"] >= cutoff_date.strftime("%Y-%m-%d")]
 
