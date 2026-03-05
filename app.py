@@ -243,7 +243,7 @@ def normalize_prefetched_context(data):
         context["athlete"]          = athlete
         context["calendar"]         = calendar
         
-        # -------------------------------------------------
+       # -------------------------------------------------
         # 🔋 POWER CURVE NORMALIZATION (Worker → ESPE)
         # -------------------------------------------------
         power_curve = data.get("power_curve")
@@ -270,19 +270,11 @@ def normalize_prefetched_context(data):
                 regression = curve_data.get("curve_regression") or {}
                 model = curve_data.get("models") or {}
 
-                current_norm = {k: safe_float(current.get(k)) for k in REQUIRED}
-                previous_norm = {k: safe_float(previous.get(k)) for k in REQUIRED}
-
-                # Guard: ESPE requires anchors
-                if current_norm.get("5m") is None or current_norm.get("20m") is None:
-                    debug(context, f"[NORM] ESPE anchors incomplete for {sport}")
-                    continue
-
                 normalized_curves[sport] = {
 
-                    "current": current_norm,
+                    "current": {k: safe_float(current.get(k)) for k in REQUIRED},
 
-                    "previous": previous_norm,
+                    "previous": {k: safe_float(previous.get(k)) for k in REQUIRED},
 
                     "window_days": int(curve_data.get("window_days", 90)),
 
@@ -299,6 +291,11 @@ def normalize_prefetched_context(data):
                         "ftp": safe_float(model.get("ftp")),
                     },
                 }
+
+                c = normalized_curves[sport]["current"]
+
+                if c["5m"] is None or c["20m"] is None:
+                    debug(context, f"[NORM] ESPE anchors incomplete for {sport}")
 
                 debug(
                     context,
