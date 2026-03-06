@@ -522,12 +522,19 @@ def fetch_power_curves(headers, context=None, from_cache=None):
         def extract_anchor(block, seconds):
             secs = block.get("secs", [])
             vals = block.get("values", [])
+            acts = block.get("activity_id", [])
+
             try:
                 idx = secs.index(seconds)
-                return vals[idx]
+
+                return {
+                    "power": vals[idx],
+                    "activity_id": acts[idx] if idx < len(acts) else None
+                }
+
             except ValueError:
                 return None
-
+                
         for sport in SPORTS:
 
             url = (

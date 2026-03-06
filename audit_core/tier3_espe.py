@@ -19,6 +19,33 @@ from coaching_profile import COACH_PROFILE
 
 ESPE_VERSION = "espe_v1"
 
+# ---------------------------------------------------------------------
+# Power Anchor Helpers
+# ---------------------------------------------------------------------
+
+def _power(v):
+    if isinstance(v, dict):
+        return v.get("power")
+    return v
+
+def _activity_id(v):
+    if isinstance(v, dict):
+        return v.get("activity_id")
+    return None
+
+def _anchor_meta(v):
+    if isinstance(v, dict):
+        aid = v.get("activity_id")
+        return {
+            "power": v.get("power"),
+            "activity_id": aid,
+            "activity_link": f"getOneDayFullActivityV1(activity_id=\"{aid}\")" if aid else None
+        }
+    return {
+        "power": v,
+        "activity_id": None,
+        "activity_link": None
+    }
 
 # ---------------------------------------------------------------------
 # Entry Point
@@ -56,13 +83,31 @@ def _process_sport(sport: str, data: Dict[str, Any], context: Dict[str, Any]) ->
     current = data["current"]
     previous = data["previous"]
 
+    anchors = {
+        "5s": _anchor_meta(current.get("5s")),
+        "1m": _anchor_meta(current.get("1m")),
+        "5m": _anchor_meta(current.get("5m")),
+        "20m": _anchor_meta(current.get("20m")),
+        "60m": _anchor_meta(current.get("60m")),
+    }
+
     delta = _compute_delta_percent(current, previous, context)
 
-    glycolytic_bias = _safe_ratio(current.get("1m"), current.get("20m"))
-    aerobic_durability = _safe_ratio(current.get("60m"), current.get("5m"))
+    glycolytic_bias = _safe_ratio(
+        _power(current.get("1m")),
+        _power(current.get("20m"))
+    )
+
+    aerobic_durability = _safe_ratio(
+        _power(current.get("60m")),
+        _power(current.get("5m"))
+    )
 
     # durability gradient (long-duration sustainability)
-    durability_gradient = _safe_ratio(current.get("60m"), current.get("20m"))
+    durability_gradient = _safe_ratio(
+        _power(current.get("60m")),
+        _power(current.get("20m"))
+    )
 
     system_status = _classify_system_status(sport, delta)
     system_timeline = _build_system_timeline(system_status)
@@ -90,7 +135,7 @@ def _process_sport(sport: str, data: Dict[str, Any], context: Dict[str, Any]) ->
     ftp = models.get("ftp")
 
     # ---- ESPE v1 derived power metrics ----
-    p5m = current.get("5m")
+    p5m = _power(current.get("5m"))
 
     pdr_5m = None
     vo2_reserve_ratio = None
@@ -109,12 +154,17 @@ def _process_sport(sport: str, data: Dict[str, Any], context: Dict[str, Any]) ->
     adaptation_state = classify_adaptation_state(system_status, delta)
 
     curve_dynamics = _compute_curve_dynamics(delta)
+
     # ---- curve window definition ----
     window = data.get(
         "window_days",
         CHEAT_SHEET["thresholds"]["ESPE"]["curve_windows"]["default_days"]
     )
-
+    anchors_context = {
+        "window_days": window,
+        "description": f"Best power values recorded within the last {window} days"
+    }
+    
     curve_window = {
         "current_days": window,
         "previous_days": window,
@@ -179,6 +229,11 @@ def _process_sport(sport: str, data: Dict[str, Any], context: Dict[str, Any]) ->
 
         "curve_window": curve_window,
 
+        "power_curve_anchors": {
+            "context": anchors_context,
+            "values": anchors
+        },
+
         "delta_percent": delta,
 
         "curve_dynamics": curve_dynamics,
@@ -240,29 +295,30 @@ def _compute_curve_dynamics(delta: Dict[str, float]) -> Dict[str, Any]:
         "dominant_shift": dominant
     }
 
-
 # ---------------------------------------------------------------------
 # Calculations
 # ---------------------------------------------------------------------
 
 def _compute_delta_percent(
-    current: Dict[str, float],
-    previous: Dict[str, float],
+    current: Dict[str, Any],
+    previous: Dict[str, Any],
     context: Dict[str, Any]
 ) -> Dict[str, float]:
 
     delta = {}
 
     for k in current:
-        if k in previous and previous[k] > 0:
 
-            d = round(
-                ((current[k] - previous[k]) / previous[k]) * 100,
-                2
-            )
+        cur = _power(current.get(k))
+        prev = _power(previous.get(k))
 
-            delta[k] = d
-            debug(context, f"[ESPE] delta {k} = {d}%")
+        if cur is None or prev is None or prev <= 0:
+            continue
+
+        d = round(((cur - prev) / prev) * 100, 2)
+
+        delta[k] = d
+        debug(context, f"[ESPE] delta {k} = {d}%")
 
     return delta
 
@@ -518,7 +574,11 @@ def _valid_curve_block(
     previous = data.get("previous", {})
 
     for k in required:
-        if current.get(k, 0) <= 0 or previous.get(k, 0) <= 0:
+
+        cur = _power(current.get(k))
+        prev = _power(previous.get(k))
+
+        if cur is None or prev is None or cur <= 0 or prev <= 0:
             debug(context, f"[ESPE] missing anchor {k} for {sport}")
             return False
 
