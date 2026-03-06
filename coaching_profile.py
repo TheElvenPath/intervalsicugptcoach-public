@@ -1,7 +1,7 @@
-#!/usr/bin/env python3 
+#!/usr/bin/env python3
 """
-coaching_profile.py — Unified Coaching Profile (v16.1-Sync)
-Structured reference of frameworks, formulas, and methodology anchors.
+coaching_profile.py — Unified Coaching Profile (v17-Sync)
+Structured reference of frameworks, formulas, and methodology anchors. 
 """
 
 def get_profile_metrics(context):
