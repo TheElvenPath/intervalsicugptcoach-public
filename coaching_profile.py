@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python3 
 """
 coaching_profile.py — Unified Coaching Profile (v16.1-Sync)
 Structured reference of frameworks, formulas, and methodology anchors.
