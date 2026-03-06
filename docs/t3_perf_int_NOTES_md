@@ -569,3 +569,149 @@ Only anchor durations are used.
 This is rendered into the final report under:
 
 energy_system_progression
+
+ESPE v1
+
+energy_system_progression
+ └─ sports
+     └─ Ride
+         ├─ curve_window
+         ├─ delta_percent
+         ├─ system_status
+         ├─ system_status_timeline
+         ├─ derived_metrics  ← contextualised objects
+         ├─ curve_regression
+         ├─ curve_quality
+         ├─ power_model
+         ├─ plateau_detected
+         ├─ adaptation_bias
+         ├─ adaptation_state
+         └─ curve_profile
+
+
+ESPE v1/v2 assumes **two power-curve windows** only. If the endpoint returns multiple curves, you must select the correct pair before normalization.
+
+## Curves used by ESPE
+
+ESPE compares **two rolling windows**:
+
+| curve    | purpose                      |
+| -------- | ---------------------------- |
+| previous | baseline physiological state |
+| current  | recent physiological state   |
+
+The delta is:
+
+```
+(current − previous) / previous
+```
+
+This is what produces:
+
+* `delta_percent`
+* `system_status`
+* `adaptation_state`
+
+## Which Intervals curves to use
+
+From the `power-curves-ext` endpoint you normally receive curves like:
+
+| field    | meaning        |
+| -------- | -------------- |
+| best     | all-time curve |
+| season   | season best    |
+| rolling  | rolling window |
+| current  | recent window  |
+| previous | prior window   |
+
+For ESPE the correct pair is:
+
+```
+current
+previous
+```
+
+Those correspond to two **rolling windows of equal length** (usually 84–90 days).
+
+## The Worker already prepares the correct pair
+
+Your T0 normalization already does the right thing:
+
+```python
+normalized = {
+    "Ride": {
+        "previous": {...},
+        "current": {...},
+        "window_days": prev.get("days"),
+    }
+}
+```
+
+So ESPE receives exactly the two curves it needs.
+
+## Why other curves are not used
+
+These are intentionally ignored:
+
+| curve    | reason                                  |
+| -------- | --------------------------------------- |
+| best     | contaminated by historical peaks        |
+| season   | mixes early and late season adaptations |
+| lifetime | not physiologically meaningful          |
+| event    | race-specific                           |
+
+ESPE is designed to measure **adaptation velocity**, so it must compare **two recent rolling windows**.
+
+## Example pipeline
+
+Worker → returns multiple curves
+
+```
+power-curves-ext
+```
+
+Worker normalization selects:
+
+```
+previous window (90d)
+current window (90d)
+```
+
+Railway ESPE computes:
+
+```
+delta(current vs previous)
+```
+
+Which produced your current result:
+
+```
+threshold +1.99%
+aerobic durability +5.11%
+anaerobic −4.7%
+```
+
+## What ESPE v2 will additionally use
+
+From the **same two curves**:
+
+* full curve map
+* regression slope
+* regression R²
+
+Still **only current vs previous**.
+
+No additional curve sets are required.
+
+---
+
+## Short answer
+
+ESPE uses exactly **two curves**:
+
+```
+previous (baseline)
+current (recent)
+```
+
+All other curves returned by Intervals should be ignored for ESPE analysis.
