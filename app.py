@@ -727,6 +727,42 @@ async def run_audit_with_data(
             (isinstance(full, pd.DataFrame) and full.empty)
         )
 
+        # ---------------------------------------------------------
+        # LIGHT exists but FULL missing
+        # ---------------------------------------------------------
+        if not light_empty and full_empty:
+
+            last_date = None
+
+            try:
+                dates = [
+                    pd.to_datetime(a.get("start_date_local"))
+                    for a in light
+                    if a.get("start_date_local")
+                ]
+                if dates:
+                    last_date = max(dates)
+            except Exception:
+                pass
+
+            if last_date is not None:
+                last_date_str = last_date.strftime("%Y-%m-%d")
+                suggested_start = (last_date - pd.Timedelta(days=7)).strftime("%Y-%m-%d")
+
+                msg = (
+                    f"No weekly period activities detected, detailed data could not be retrieved. "
+                    f"Last activity I see is {last_date_str}. "
+                    f"Create a weekly report for {suggested_start}."
+                )
+            else:
+                msg = "Detailed activity data could not be retrieved."
+
+            raise AuditHalt(
+                msg,
+                code="FULL_DATA_UNAVAILABLE",
+                severity="soft"
+            )
+
         # Abort only if NO activity data at all
         if light_empty and full_empty:
             if demo:
