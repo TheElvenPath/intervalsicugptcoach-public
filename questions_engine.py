@@ -11,11 +11,17 @@ def select_question(report, signals):
     if not signals:
         return None
 
-    # Determine dominant signal + severity
-    sig, severity = sorted(signals, key=lambda x: x[1], reverse=True)[0]
+    # Sort signals by severity
+    signals_sorted = sorted(signals, key=lambda x: x[1], reverse=True)
 
-    # Map signal → category
-    category = SIGNAL_MAP.get(sig)
+    primary_sig, severity = signals_sorted[0]
+
+    secondary_sig = None
+    if len(signals_sorted) > 1:
+        secondary_sig = signals_sorted[1][0]
+
+    # Map primary signal → category
+    category = SIGNAL_MAP.get(primary_sig)
 
     if not category:
         return None
@@ -25,19 +31,28 @@ def select_question(report, signals):
     if not questions:
         return None
 
-    # Filter questions aligned to this signal
-    aligned = [q for q in questions if sig in q["signals"]]
+    # Filter questions aligned with primary signal
+    aligned = [q for q in questions if primary_sig in q["signals"]]
 
     if not aligned:
         return None
 
-    # Sort by priority (1 = strongest relevance)
+    # Sort by priority
     aligned = sorted(aligned, key=lambda q: q["priority"])
 
-    # Severity chooses depth of question
     idx = min(severity - 1, len(aligned) - 1)
 
-    return aligned[idx]["question"]
+    question = aligned[idx]["question"]
+
+    # Blend secondary signal context if useful
+    if secondary_sig and secondary_sig in SIGNAL_LABELS:
+
+        label = SIGNAL_LABELS[secondary_sig]
+
+        if "given the current" not in question:
+            question = f"{question} given the current {label}"
+
+    return question
 
 
 def detect_signals(report):
