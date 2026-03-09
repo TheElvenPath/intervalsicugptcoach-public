@@ -40,6 +40,7 @@ from math import isnan
 import pytz
 from audit_core.tier2_derived_metrics import classify_marker
 from textwrap import dedent
+from questions_engine import detect_signals, select_question
 
 # ---------------------------------------------------------
 # Helpers
@@ -2680,13 +2681,18 @@ def build_semantic_json(context):
         tz = context.get("timezone") or "UTC"
         today = pd.Timestamp.now(tz=tz).date()
 
-        report_end = pd.to_datetime(context.get("period", {}).get("end"), errors="coerce")
+        period_meta = semantic.get("meta", {}).get("period")
+
+        if isinstance(period_meta, str) and "→" in period_meta:
+            report_end = pd.to_datetime(period_meta.split("→")[1].strip(), errors="coerce")
+        else:
+            report_end = pd.to_datetime(context.get("period", {}).get("end"), errors="coerce")
 
         if pd.notna(report_end):
             iso = pd.Timestamp.now(tz=tz).isocalendar()
             iso_monday = pd.Timestamp.fromisocalendar(iso.year, iso.week, 1).date()
 
-            if report_end.date() >= iso_monday:
+        if today >= iso_monday: ### omg check this later in week if report_end.date() >= iso_monday:
 
                 current_ISO_weekly_microcycle = {
                     "week_iso": None,
@@ -3148,6 +3154,17 @@ def build_semantic_json(context):
 
 
     # ---------------------------------------------------------
+    # Coaching reflection (signal-driven)
+    # ---------------------------------------------------------
+
+    signals = detect_signals(semantic)
+
+    question = select_question(semantic, signals)
+
+    if question:
+        semantic.setdefault("meta", {})["closing_reflection"] = question
+
+    # ---------------------------------------------------------
     # ✅ Contract Enforcement
     # ---------------------------------------------------------
     return apply_report_type_contract(semantic)
@@ -3497,6 +3514,7 @@ def build_system_prompt_from_header(report_type: str, header: dict) -> str:
     {closing_note_block}
 
     {question_block}
+    
 
     """).strip()
 
