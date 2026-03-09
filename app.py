@@ -21,7 +21,6 @@ sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)), "audit_
 
 from audit_core.report_controller import run_report
 from audit_core.utils import debug
-from semantic_json_builder import build_semantic_json
 from audit_core.tier0_pre_audit import expand_zones
 
 import logging
@@ -525,7 +524,7 @@ def _run_full_audit(range: str, output_format="markdown", prefetch_context=None)
         context, markdown = {}, str(report)
 
     context["render_options"] = {"verbose_events": True, "include_all_events": True, "return_format": "markdown"}
-    semantic_graph = build_semantic_json(context)
+    semantic_graph = report.get("semantic_graph", {})
     return report, compliance, logs, context, semantic_graph, markdown
 
 
@@ -827,14 +826,17 @@ async def run_audit_with_data(
         )
 
         logs = buffer.getvalue()
+
         if fmt in ("json","semantic"):
-            context = report.get("context",{}) if isinstance(report,dict) else {}
+
+            semantic_graph = report.get("semantic_graph", {}) if isinstance(report, dict) else {}
+
             return JSONResponse({
                 "status": "ok",
                 "report_type": report_range,
                 "report_header": report_header,
                 "output_format": "semantic_json",
-                "semantic_graph": sanitize(sg),
+                "semantic_graph": sanitize(semantic_graph),
                 "compliance": compliance,
                 "logs": logs[-20000:],
             })
