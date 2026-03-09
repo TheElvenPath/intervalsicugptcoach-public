@@ -33,7 +33,7 @@ REPORT_CONTRACT = {
         "adaptation_metrics", "trend_metrics",
         "performance_intelligence", "energy_system_progression", "physiology",
         "phases", "phases_summary",
-        "wbal_summary", "performance_summary",
+        "wbal_summary",
         "insights", "actions", "future_forecast", "future_actions"
     ],
 
