@@ -2435,17 +2435,12 @@ def build_semantic_json(context):
     # ---------------------------------------------------------
     # 🧭 COACHING ACTIONS (Tier-2 guidance)
     # ---------------------------------------------------------
-    #semantic["actions"] = context.get("actions", [])
-    
-    # ---------------------------------------------------------
-    # Coaching Question
-    # ---------------------------------------------------------
 
-    actions = context.get("actions", []) or []
+    actions = list(context.get("actions", []) or [])
 
     signals = detect_signals(semantic)
     question = generate_question(semantic, signals)
-    #    question = select_question(semantic, signals) # moved to template
+
     if question:
         actions.append({
             "type": "reflection",
