@@ -3497,10 +3497,11 @@ def build_system_prompt_from_header(report_type: str, header: dict) -> str:
     {chr(10).join(manifest_lines)}
 
     {closing_note_block}
-    """).strip()
 
     {question_block}
-    
+
+    """).strip()
+
     return prompt
 
 
