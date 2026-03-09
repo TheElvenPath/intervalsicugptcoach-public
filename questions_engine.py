@@ -8,27 +8,38 @@ from question_bank import QUESTION_BANK, SIGNAL_MAP
 
 def select_question(report, signals):
 
-    sig = dominant_signal(signals)
+    if not signals:
+        return None
 
-    if sig is None:
-        category = "progression"
-    else:
-        category = SIGNAL_MAP.get(sig, "progression")
+    # Determine dominant signal + severity
+    sig, severity = sorted(signals, key=lambda x: x[1], reverse=True)[0]
+
+    # Map signal → category
+    category = SIGNAL_MAP.get(sig)
+
+    if not category:
+        return None
 
     questions = QUESTION_BANK.get(category)
 
     if not questions:
         return None
 
-    period = report.get("meta", {}).get("period", "default")
+    # Filter questions aligned to this signal
+    aligned = [q for q in questions if sig in q["signals"]]
 
-    idx = hash(str(period)) % len(questions)
+    if not aligned:
+        return None
 
-    return questions[idx]
+    # Sort by priority (1 = strongest relevance)
+    aligned = sorted(aligned, key=lambda q: q["priority"])
+
+    # Severity chooses depth of question
+    idx = min(severity - 1, len(aligned) - 1)
+
+    return aligned[idx]["question"]
 
 
-
-# Signal detection
 def detect_signals(report):
 
     signals = []
@@ -37,25 +48,33 @@ def detect_signals(report):
     espe = report.get("energy_system_progression", {})
     metrics = report.get("metrics", {})
 
+    # -----------------------------
     # Durability
+    # -----------------------------
     dec = pi.get("durability", {}).get("mean_decoupling_7d")
 
     if dec is not None:
-        if dec > 8:
+        if dec >= 8:
             signals.append(("durability_decline", 3))
-        elif dec > 5:
+        elif dec >= 5:
             signals.append(("durability_pressure", 2))
 
-    # Anaerobic repeatability
+
+    # -----------------------------
+    # Anaerobic Repeatability
+    # -----------------------------
     dep = pi.get("anaerobic_repeatability", {}).get("mean_depletion_pct_7d")
 
     if dep is not None:
-        if dep > 0.60:
+        if dep >= 0.60:
             signals.append(("anaerobic_depletion", 3))
-        elif dep > 0.40:
+        elif dep >= 0.40:
             signals.append(("anaerobic_load", 2))
 
-    # Neural density
+
+    # -----------------------------
+    # Neural Density
+    # -----------------------------
     hi_days = pi.get("neural_density", {}).get("high_intensity_days_7d")
 
     if hi_days is not None:
@@ -64,24 +83,35 @@ def detect_signals(report):
         elif hi_days == 3:
             signals.append(("high_intensity_density", 2))
 
-    # Load / fatigue
+
+    # -----------------------------
+    # Load / Fatigue
+    # -----------------------------
     fatigue = metrics.get("FatigueTrend")
     stress = metrics.get("StressTolerance")
 
-    # Extract numeric values if metrics are objects
     if isinstance(fatigue, dict):
         fatigue = fatigue.get("value")
 
     if isinstance(stress, dict):
         stress = stress.get("value")
 
-    if fatigue is not None and fatigue > 10:
-        signals.append(("fatigue_accumulation", 3))
+    if fatigue is not None:
+        if fatigue >= 15:
+            signals.append(("fatigue_accumulation", 3))
+        elif fatigue >= 10:
+            signals.append(("fatigue_accumulation", 2))
 
-    if stress is not None and stress > 1.3:
-        signals.append(("load_pressure", 2))
+    if stress is not None:
+        if stress >= 1.5:
+            signals.append(("load_pressure", 3))
+        elif stress >= 1.3:
+            signals.append(("load_pressure", 2))
 
-    # ESPE adaptation signals
+
+    # -----------------------------
+    # ESPE Adaptation Signals
+    # -----------------------------
     systems = espe.get("systems", {})
 
     for system in systems.values():
@@ -91,8 +121,18 @@ def detect_signals(report):
         if state == "decline":
             signals.append(("system_decline", 3))
 
-        if state == "strong_gain":
+        elif state == "strong_gain":
             signals.append(("system_progression", 2))
+
+        elif state == "fragile":
+            signals.append(("adaptation_fragile", 2))
+
+        elif state == "unstable":
+            signals.append(("adaptation_unstable", 3))
+
+        elif state == "stable":
+            signals.append(("adaptation_stable", 1))
+
 
     return signals
 

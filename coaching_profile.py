@@ -24,7 +24,7 @@ REPORT_CONTRACT = {
         "zones", "physiology", "daily_load", "events", "wbal_summary",
         "wellness", "phases", "insights", "insight_view", "actions",
         "planned_events", "planned_summary_by_date", "current_ISO_weekly_microcycle",
-        "future_forecast", "future_actions"
+        "future_forecast", "future_actions", "ask_question"
     ],
 
     "season": [
@@ -34,7 +34,7 @@ REPORT_CONTRACT = {
         "performance_intelligence", "energy_system_progression", "physiology",
         "phases", "phases_summary",
         "wbal_summary",
-        "insights", "actions", "future_forecast", "future_actions"
+        "insights", "actions", "future_forecast", "future_actions", "ask_question"
     ],
 
     "summary": [
@@ -131,7 +131,8 @@ RENDERER_PROFILES = {
             "planned_events": "full",
             "planned_summary_by_date": "weekly summary",
             "actions": "full",
-            "future_actions": "full"
+            "future_actions": "full",
+            "ask_question": "full"
         },
 
             "emphasis": {
@@ -202,7 +203,8 @@ RENDERER_PROFILES = {
             "physiology": "summary",
             "wellness": "summary",
             "actions": "full",
-            "future_actions": "full"
+            "future_actions": "full",
+            "ask_question": "full"
         },
 
         "emphasis": {

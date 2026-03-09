@@ -1,248 +1,122 @@
 # Montis Coaching Intelligence Question Bank
 
-## Durability & Aerobic Stability (20)
 QUESTION_BANK = {
 
 "durability": [
-"Is my durability improving or am I still decoupling under sustained load?",
-"Did aerobic stability hold across longer sessions this week?",
-"Is decoupling suggesting durability strain or normal fatigue?",
-"Am I able to maintain output late in sessions or drifting early?",
-"Is endurance resilience improving compared with recent weeks?",
-"Is pacing stability improving across longer rides?",
-"Am I holding efficiency deeper into sessions than before?",
-"Are longer efforts showing better stability than previous blocks?",
-"Is fatigue affecting pacing earlier than expected?",
-"Am I maintaining control across extended efforts?",
-"Has durability progressed or plateaued?",
-"Are endurance sessions reinforcing durability or exposing drift?",
-"Is aerobic durability keeping pace with training load?",
-"Am I sustaining steady output late in longer sessions?",
-"Are endurance adaptations appearing in session stability?",
-"Is decoupling revealing durability limits or expected fatigue?",
-"Are longer rides showing improved efficiency across time?",
-"Is pacing stability improving under fatigue?",
-"Am I finishing longer efforts with the same control I started with?",
-"Is endurance resilience strengthening across the block?",
-"Is durability responding to recent training stimulus?",
-"Are long efforts becoming easier to sustain?",
-"Is fatigue resistance improving across extended sessions?",
-"Am I maintaining aerobic efficiency late in workouts?",
-"Is durability developing in line with training volume?"
+{"signals":["durability_decline"],"priority":1,"question":"Is decoupling revealing durability limits or expected fatigue?"},
+{"signals":["durability_decline"],"priority":1,"question":"Am I able to maintain output late in sessions or drifting early?"},
+{"signals":["durability_pressure"],"priority":1,"question":"Is pacing stability improving across longer rides?"},
+{"signals":["durability_pressure"],"priority":1,"question":"Is endurance resilience improving compared with recent weeks?"},
+
+{"signals":["durability_decline","durability_pressure"],"priority":2,"question":"Is my durability improving or am I still decoupling under sustained load?"},
+{"signals":["durability_decline","durability_pressure"],"priority":2,"question":"Did aerobic stability hold across longer sessions this week?"},
+{"signals":["durability_decline","durability_pressure"],"priority":2,"question":"Are endurance sessions reinforcing durability or exposing drift?"},
+{"signals":["durability_decline","durability_pressure"],"priority":2,"question":"Are longer efforts showing better stability than previous blocks?"},
+
+{"signals":["durability_decline","durability_pressure"],"priority":3,"question":"Has durability progressed or plateaued?"},
+{"signals":["durability_decline","durability_pressure"],"priority":3,"question":"Is aerobic durability keeping pace with training load?"},
+{"signals":["durability_decline","durability_pressure"],"priority":3,"question":"Are longer rides showing improved efficiency across time?"},
+{"signals":["durability_decline","durability_pressure"],"priority":3,"question":"Is pacing stability improving under fatigue?"},
+{"signals":["durability_decline","durability_pressure"],"priority":3,"question":"Am I finishing longer efforts with the same control I started with?"},
+{"signals":["durability_decline","durability_pressure"],"priority":3,"question":"Is endurance resilience strengthening across the block?"}
 ],
 
-"repeatability": [
-"Is my anaerobic repeatability improving or declining?",
-"Are high-intensity efforts becoming more repeatable?",
-"Am I recovering W′ between efforts more effectively?",
-"Are repeated hard efforts maintaining quality?",
-"Is W′ depletion happening earlier than expected?",
-"Am I sustaining power across repeated efforts?",
-"Are intervals degrading across the session or remaining stable?",
-"Is high-intensity capacity progressing across recent weeks?",
-"Am I able to reproduce peak efforts consistently?",
-"Is anaerobic strain accumulating across intervals?",
-"Are repeated efforts showing improved resilience?",
-"Is high-intensity output stabilizing across sessions?",
-"Am I able to sustain repeated high-power efforts?",
-"Are hard efforts becoming more controlled?",
-"Is W′ depletion reflecting productive stimulus or excessive strain?",
-"Am I recovering capacity between efforts effectively?",
-"Are intervals maintaining quality across the set?",
-"Is repeatability improving across recent blocks?",
-"Are maximal efforts becoming easier to reproduce?",
-"Is high-intensity capacity evolving or stagnating?",
-"Are repeated efforts degrading more slowly than before?",
-"Is anaerobic resilience improving across intervals?",
-"Is repeatability limiting the quality of hard sessions?",
-"Are recovery periods restoring effort capacity effectively?",
-"Is repeatability supporting consistent intensity work?"
+
+"repeatability":[
+{"signals":["anaerobic_depletion"],"priority":1,"question":"Is W′ depletion happening earlier than expected?"},
+{"signals":["anaerobic_depletion"],"priority":1,"question":"Are repeated hard efforts maintaining quality?"},
+{"signals":["anaerobic_load"],"priority":1,"question":"Are high-intensity efforts becoming more repeatable?"},
+{"signals":["anaerobic_load"],"priority":1,"question":"Am I sustaining power across repeated efforts?"},
+
+{"signals":["anaerobic_depletion","anaerobic_load"],"priority":2,"question":"Is my anaerobic repeatability improving or declining?"},
+{"signals":["anaerobic_depletion","anaerobic_load"],"priority":2,"question":"Are intervals degrading across the session or remaining stable?"},
+{"signals":["anaerobic_depletion","anaerobic_load"],"priority":2,"question":"Is high-intensity capacity progressing across recent weeks?"},
+
+{"signals":["anaerobic_depletion","anaerobic_load"],"priority":3,"question":"Are repeated efforts showing improved resilience?"},
+{"signals":["anaerobic_depletion","anaerobic_load"],"priority":3,"question":"Is repeatability limiting the quality of hard sessions?"}
 ],
 
-"neural_density": [
-"Is my intensity distribution clustered or well distributed?",
-"Are high-intensity sessions accumulating effectively?",
-"Is neural load balanced across the week?",
-"Am I stacking intensity too closely together?",
-"Are hard efforts spaced well enough to allow adaptation?",
-"Is neural density progressing across recent weeks?",
-"Am I producing enough high-quality intensity stimulus?",
-"Is intensity clustering limiting adaptation?",
-"Are high-intensity days supporting progression?",
-"Is neural stimulus consistent across sessions?",
-"Am I over-concentrating intensity within short windows?",
-"Is neural load progressing sustainably?",
-"Are intensity sessions reinforcing adaptation or creating instability?",
-"Is the distribution of hard efforts balanced?",
-"Am I accumulating intensity in a productive pattern?",
-"Is neural demand aligned with the current training phase?",
-"Are intensity sessions driving adaptation or fatigue?",
-"Is neural density sufficient to stimulate progression?",
-"Is intensity distribution supporting repeatability?",
-"Is neural load evolving as expected across the block?",
-"Is neural demand appropriate for my current training load?",
-"Are high-intensity efforts spaced optimally?",
-"Is intensity clustering influencing fatigue levels?",
-"Is neural load helping build repeatable performance?",
-"Is the pattern of intensity supporting adaptation?"
+
+"neural_density":[
+{"signals":["intensity_clustering"],"priority":1,"question":"Am I stacking intensity too closely together?"},
+{"signals":["intensity_clustering"],"priority":1,"question":"Is intensity clustering limiting adaptation?"},
+{"signals":["high_intensity_density"],"priority":1,"question":"Are high-intensity sessions accumulating effectively?"},
+{"signals":["high_intensity_density"],"priority":1,"question":"Is neural density progressing across recent weeks?"},
+
+{"signals":["intensity_clustering","high_intensity_density"],"priority":2,"question":"Is neural load balanced across the week?"},
+{"signals":["intensity_clustering","high_intensity_density"],"priority":2,"question":"Is neural stimulus consistent across sessions?"},
+
+{"signals":["intensity_clustering","high_intensity_density"],"priority":3,"question":"Is neural load evolving as expected across the block?"}
 ],
 
-"training_load": [
-"Is my current training load sustainable?",
-"Is load progression aligned with recent adaptation?",
-"Am I accumulating productive stress or excessive load?",
-"Is the training load progressing smoothly?",
-"Is the workload building consistently across weeks?",
-"Am I accumulating stress faster than recovery capacity?",
-"Is the current load supporting adaptation?",
-"Is load progression stable or fluctuating excessively?",
-"Is my weekly stress aligned with recent training history?",
-"Is training demand increasing faster than adaptation?",
-"Is the load trajectory stable or volatile?",
-"Am I sustaining higher loads comfortably?",
-"Is the load pattern reinforcing progression?",
-"Is workload stability improving across the block?",
-"Is my training demand evolving steadily?",
-"Is accumulated stress producing meaningful adaptation?",
-"Is weekly load increasing within a manageable range?",
-"Is the load pattern supporting resilience?",
-"Is training demand appropriate for the current phase?",
-"Is workload building progressively rather than abruptly?",
-"Is training demand exceeding recovery capacity?",
-"Is load progression becoming easier to sustain?",
-"Is training stress aligned with my development stage?",
-"Is weekly load stabilizing at a higher level?",
-"Is the load trajectory supporting long-term progression?"
+
+"training_load":[
+{"signals":["load_pressure"],"priority":1,"question":"Is my current training load sustainable?"},
+{"signals":["load_pressure"],"priority":1,"question":"Am I accumulating productive stress or excessive load?"},
+{"signals":["load_pressure"],"priority":1,"question":"Is training demand exceeding recovery capacity?"},
+
+{"signals":["load_pressure"],"priority":2,"question":"Is the training load progressing smoothly?"},
+{"signals":["load_pressure"],"priority":2,"question":"Is the workload building consistently across weeks?"}
 ],
 
-"fatigue_balance": [
-"Is fatigue productive or accumulating excessively?",
-"Is the current fatigue level supporting adaptation?",
-"Is fatigue stabilizing or continuing to rise?",
-"Is the balance between fatigue and adaptation improving?",
-"Is fatigue signaling progression or instability?",
-"Am I absorbing training stress effectively?",
-"Is fatigue resolving between sessions?",
-"Is fatigue supporting stimulus or limiting performance?",
-"Is recovery keeping pace with accumulated stress?",
-"Is fatigue plateauing or escalating?",
-"Is the fatigue pattern expected for this training phase?",
-"Is recovery adequate relative to workload?",
-"Is fatigue progressing in a productive way?",
-"Am I maintaining training quality despite fatigue?",
-"Is fatigue beginning to constrain performance?",
-"Is fatigue stabilizing across the week?",
-"Is recovery sufficient for continued progression?",
-"Is fatigue manageable across consecutive sessions?",
-"Is fatigue accumulating faster than adaptation?",
-"Is fatigue within the expected adaptive range?",
-"Is fatigue interfering with high-quality sessions?",
-"Is fatigue resolving as expected after rest days?",
-"Is fatigue signaling productive overload?",
-"Is fatigue building gradually or abruptly?",
-"Is recovery effectively offsetting accumulated fatigue?"
+
+"fatigue_balance":[
+{"signals":["fatigue_accumulation"],"priority":1,"question":"Is fatigue accumulating faster than adaptation?"},
+{"signals":["fatigue_accumulation"],"priority":1,"question":"Is recovery keeping pace with accumulated stress?"},
+{"signals":["fatigue_accumulation"],"priority":1,"question":"Is fatigue beginning to constrain performance?"},
+
+{"signals":["fatigue_accumulation"],"priority":2,"question":"Is fatigue plateauing or escalating?"},
+{"signals":["fatigue_accumulation"],"priority":2,"question":"Is fatigue interfering with high-quality sessions?"}
 ],
 
-"progression": [
-"Is my performance trajectory improving or plateauing?",
-"Is progression visible across recent training blocks?",
-"Am I building capacity or maintaining current fitness?",
-"Is the trajectory of improvement stable?",
-"Is adaptation progressing steadily?",
-"Am I consolidating gains from previous weeks?",
-"Is my performance trend improving across sessions?",
-"Is training stimulus translating into progression?",
-"Is performance trending upward or stabilizing?",
-"Am I reinforcing adaptation or repeating the same stimulus?",
-"Is the training trajectory accelerating or stabilizing?",
-"Is progression occurring across the block?",
-"Am I building resilience in performance outputs?",
-"Is my trajectory consistent with the training phase?",
-"Is performance improving under similar stress?",
-"Am I reinforcing adaptations already achieved?",
-"Is the progression curve flattening or rising?",
-"Is training translating into measurable improvement?",
-"Is the trajectory of adaptation sustainable?",
-"Is progression visible across recent sessions?",
-"Is performance stabilizing at a higher level?",
-"Is my progression continuing despite increased load?",
-"Is adaptation visible in session quality?",
-"Is performance improving under fatigue?",
-"Is the current trajectory sustainable long-term?"
+
+"system_balance":[
+{"signals":["system_decline"],"priority":1,"question":"Which physiological system currently limits performance most?"},
+{"signals":["system_decline"],"priority":1,"question":"Is aerobic durability limiting performance?"},
+{"signals":["system_decline"],"priority":1,"question":"Is anaerobic repeatability becoming a constraint?"},
+
+{"signals":["system_decline"],"priority":2,"question":"Which physiological system needs the most development?"}
 ],
 
-"system_balance": [
-"Where is my current limiting factor — durability, repeatability, or neural load?",
-"Which system currently constrains performance most?",
-"Is aerobic durability limiting performance?",
-"Is anaerobic repeatability becoming a constraint?",
-"Is neural load dominating the training profile?",
-"Which physiological system needs the most development?",
-"Is system balance improving across the block?",
-"Is training emphasizing the correct system?",
-"Is any system being neglected?",
-"Is system development balanced across demands?",
-"Is one system progressing faster than the others?",
-"Which capacity is improving most clearly?",
-"Which system currently limits progression?",
-"Is physiological balance evolving as expected?",
-"Are system adaptations aligned with the training phase?",
-"Is the current emphasis producing balanced development?",
-"Are multiple systems progressing together?",
-"Is the training stimulus aligned with the limiting factor?",
-"Is the weakest system improving?",
-"Is system balance improving across recent weeks?",
-"Is any system receiving insufficient stimulus?",
-"Is system balance shifting across training phases?",
-"Is training addressing the primary performance constraint?",
-"Is physiological balance improving over time?",
-"Is system balance supporting long-term development?"
+
+"progression":[
+{"signals":["system_progression"],"priority":1,"question":"Is my performance trajectory improving across recent blocks?"},
+{"signals":["system_progression"],"priority":1,"question":"Is adaptation progressing steadily?"},
+
+{"signals":["system_progression"],"priority":2,"question":"Is training stimulus translating into measurable improvement?"}
 ],
 
-"adaptation_stability": [
-"Is the current adaptation stable or fragile?",
-"Is training producing durable improvements?",
-"Are gains stabilizing across repeated sessions?",
-"Is adaptation consolidating across weeks?",
-"Is the current progression sustainable?",
-"Are improvements appearing consistently?",
-"Is performance stabilizing at a higher level?",
-"Is adaptation reinforcing previous gains?",
-"Are improvements resilient under fatigue?",
-"Is the adaptation curve stable across sessions?",
-"Are gains being retained across the week?",
-"Is the current improvement trend reliable?",
-"Is the system adapting steadily or fluctuating?",
-"Are improvements persisting across repeated efforts?",
-"Is adaptation progressing smoothly?",
-"Are gains consolidating over time?",
-"Is the adaptation trajectory sustainable?",
-"Are improvements resilient under training stress?",
-"Is development occurring across multiple systems?",
-"Is the current progression reinforcing long-term capacity?",
-"Is adaptation stable under higher workloads?",
-"Are improvements holding under repeated sessions?",
-"Is the current adaptation durable across weeks?",
-"Is the trajectory of development stable?",
-"Are gains persisting despite accumulated fatigue?"
+
+"adaptation_stability":[
+{"signals":["system_progression"],"priority":2,"question":"Is the current adaptation stable or fragile?"},
+{"signals":["system_progression"],"priority":2,"question":"Are gains stabilizing across repeated sessions?"},
+{"signals":["system_progression"],"priority":2,"question":"Is adaptation consolidating across weeks?"},
+{"signals":["system_progression"],"priority":2,"question":"Are improvements resilient under fatigue?"},
+{"signals":["system_progression"],"priority":3,"question":"Is the trajectory of development stable?"}
 ]
 
 }
 
+
+
 SIGNAL_MAP = {
 
-    "durability_decline": "durability",
-    "durability_pressure": "durability",
+"durability_decline": "durability",
+"durability_pressure": "durability",
 
-    "anaerobic_depletion": "repeatability",
-    "anaerobic_load": "repeatability",
+"anaerobic_depletion": "repeatability",
+"anaerobic_load": "repeatability",
 
-    "intensity_clustering": "neural_density",
-    "high_intensity_density": "neural_density",
+"intensity_clustering": "neural_density",
+"high_intensity_density": "neural_density",
 
-    "fatigue_accumulation": "fatigue_balance",
-    "load_pressure": "training_load",
+"fatigue_accumulation": "fatigue_balance",
+"load_pressure": "training_load",
 
-    "system_decline": "system_balance",
-    "system_progression": "progression"
+"system_decline": "system_balance",
+"system_progression": "progression",
+
+"adaptation_fragile": "adaptation_stability",
+"adaptation_unstable": "adaptation_stability",
+"adaptation_stable": "adaptation_stability"
 }

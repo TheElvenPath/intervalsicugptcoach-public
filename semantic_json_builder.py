@@ -3154,15 +3154,14 @@ def build_semantic_json(context):
 
 
     # ---------------------------------------------------------
-    # Coaching reflection (signal-driven)
+    # Coaching Question
     # ---------------------------------------------------------
 
     signals = detect_signals(semantic)
-
     question = select_question(semantic, signals)
 
     if question:
-        semantic.setdefault("meta", {})["closing_reflection"] = question
+        semantic["ask_question"] = question
 
     # ---------------------------------------------------------
     # ✅ Contract Enforcement
