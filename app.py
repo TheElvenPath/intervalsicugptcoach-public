@@ -834,7 +834,7 @@ async def run_audit_with_data(
                 "report_type": report_range,
                 "report_header": report_header,
                 "output_format": "semantic_json",
-                "semantic_graph": sanitize(build_semantic_json(context)),
+                "semantic_graph": sanitize(sg),
                 "compliance": compliance,
                 "logs": logs[-20000:],
             })
