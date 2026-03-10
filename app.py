@@ -566,6 +566,9 @@ async def run_audit_with_data(
     debug: bool = Query(False)
 ):
 
+    print("DEBUG PARAM:", debug)
+    print("QUERY:", request.query_params)
+
     if debug:
         return await get_debug(request)
 
