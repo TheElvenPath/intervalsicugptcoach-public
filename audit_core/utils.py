@@ -22,27 +22,19 @@ IS_DEBUG_ENV = RAILWAY_ENV != "production"
 # Global state
 # ------------------------------------------------------------
 
-try:
-    context
-except NameError:
-    context = {}
-
 RUN_TIMESTAMP = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
 GLOBAL_LOGFILE = None
-
+GLOBAL_FILE_HANDLE = None
+MAX_STDERR_LINES = 2000
+STDERR_COUNT = 0
 # ------------------------------------------------------------
 # 🔎 Debug Logger (Auto-suppressed in Production)
 # ------------------------------------------------------------
 
 def debug(*args):
-    """
-    Unified flush-safe logger.
-    Auto-disabled in Railway production environment.
-    """
 
-    global GLOBAL_LOGFILE
+    global GLOBAL_LOGFILE, GLOBAL_FILE_HANDLE, STDERR_COUNT
 
-    # 🔒 Suppress debug in production automatically
     if not IS_DEBUG_ENV:
         return
 
@@ -59,7 +51,6 @@ def debug(*args):
 
         report_type = os.getenv("REPORT_TYPE", "unknown").lower()
 
-        # Initialize logfile once (staging only)
         if GLOBAL_LOGFILE is None:
             reports_dir = os.path.join(os.getcwd(), "reports")
             os.makedirs(reports_dir, exist_ok=True)
@@ -72,17 +63,24 @@ def debug(*args):
         msg = " ".join(str(m) for m in msgs)
         msg_out = f"[{ts}] {msg}"
 
-        # Store trace in context
         if context is not None:
             context.setdefault("debug_trace", []).append(msg_out)
 
-        # Print to stderr
-        sys.stderr.write(msg_out + "\n")
-        sys.stderr.flush()
+        # stdout → captured by redirect_stdout()
+        print(msg_out)
 
-        # Write to file
-        with open(GLOBAL_LOGFILE, "a", encoding="utf-8") as f:
-            f.write(msg_out + "\n")
+        # stderr → limited Railway logs
+        if STDERR_COUNT < MAX_STDERR_LINES:
+            sys.stderr.write(msg_out + "\n")
+            sys.stderr.flush()
+            STDERR_COUNT += 1
+
+        # persistent debug file
+        if GLOBAL_FILE_HANDLE is None:
+            GLOBAL_FILE_HANDLE = open(GLOBAL_LOGFILE, "a", encoding="utf-8")
+
+        GLOBAL_FILE_HANDLE.write(msg_out + "\n")
+        GLOBAL_FILE_HANDLE.flush()
 
     except Exception as e:
         sys.stderr.write(f"[debug-failure] {e}\n")

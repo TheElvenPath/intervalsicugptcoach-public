@@ -570,229 +570,232 @@ async def run_audit_with_data(
     print("QUERY:", request.query_params)
 
     buffer = io.StringIO()
-
-    if demo:
-        return load_demo_response("weekly", reason="MANUAL_DEMO")
+    redirect_ctx = redirect_stdout(buffer)
+    redirect_ctx.__enter__()
 
     try:
 
-        raw = await request.body()
+        if demo:
+            return load_demo_response("weekly", reason="MANUAL_DEMO")
 
-        if not raw:
-            raise ValueError("Empty request body")
-
-        data = json.loads(raw)
-
-        # DEBUG TRIGGER
-        if debug:
-            return await get_debug_with_data(data)
-
-        report_range = data.get("range","weekly")
-        fmt = data.get("format","markdown").lower()
-
-        # ✅ NEW — capture start/end from the worker payload
-        start = data.get("start")
-        end = data.get("end")
-        # ---------------------------------------------------------
-        # 🚫 Future Start-Date Safeguard - COMMENTED OUT FOR TESTING OF EMPTY FUL DATA
-        # ---------------------------------------------------------
-#        try:
-#            if start:
-#                dt_start = pd.to_datetime(start).date()
-#                today = datetime.utcnow().date()
-#
-#                if dt_start > today:
-#                    return JSONResponse(
-#                        status_code=400,
-#                        content={
-#                            "status": "error",
-#                            "error_type": "FUTURE_DATE_INVALID",
-#                            "severity": "hard",
-#                            "message": "Cannot generate a report for a future start date.",
-#                            "report_type": report_range,
-#                            "semantic_graph": {},
-#                            "compliance": {},
-#                            "logs": ""
-#                        }
-#                    )
-#        except Exception:
-#            pass
-
-        # normalize prefetched JSON into pandas-friendly context
         try:
-            prefetch_context = normalize_prefetched_context(data)
 
-        except AuditHalt as e:
-            context = locals().get("prefetch_context")
-            return handle_audit_halt(
-                e,
-                report_range,
-                buffer=None,
-                header=None,
-                context=context
-            )
+            raw = await request.body()
 
-        except HTTPException as e:
+            if not raw:
+                raise ValueError("Empty request body")
 
-            sys.stderr.write("\n🚫 HTTPException triggered\n")
-            sys.stderr.write(f"Status: {e.status_code}\n")
-            sys.stderr.write(f"Detail: {e.detail}\n")
-            sys.stderr.flush()
+            data = json.loads(raw)
 
-            return JSONResponse(
-                status_code=e.status_code,
-                content={
-                    "status": "error",
-                    "error_type": "STRAVA_API_RESTRICTED",
-                    "severity": "hard",
-                    "message": e.detail,
-                    "report_type": report_range,
-                    "semantic_graph": {},
+            # DEBUG TRIGGER
+            if debug:
+                return await get_debug_with_data(data)
+
+            report_range = data.get("range","weekly")
+            fmt = data.get("format","markdown").lower()
+
+            # ✅ NEW — capture start/end from the worker payload
+            start = data.get("start")
+            end = data.get("end")
+            # ---------------------------------------------------------
+            # 🚫 Future Start-Date Safeguard - COMMENTED OUT FOR TESTING OF EMPTY FUL DATA
+            # ---------------------------------------------------------
+    #        try:
+    #            if start:
+    #                dt_start = pd.to_datetime(start).date()
+    #                today = datetime.utcnow().date()
+    #
+    #                if dt_start > today:
+    #                    return JSONResponse(
+    #                        status_code=400,
+    #                        content={
+    #                            "status": "error",
+    #                            "error_type": "FUTURE_DATE_INVALID",
+    #                            "severity": "hard",
+    #                            "message": "Cannot generate a report for a future start date.",
+    #                            "report_type": report_range,
+    #                            "semantic_graph": {},
+    #                            "compliance": {},
+    #                            "logs": ""
+    #                        }
+    #                    )
+    #        except Exception:
+    #            pass
+
+            # normalize prefetched JSON into pandas-friendly context
+            try:
+                prefetch_context = normalize_prefetched_context(data)
+
+            except AuditHalt as e:
+                context = locals().get("prefetch_context")
+                return handle_audit_halt(
+                    e,
+                    report_range,
+                    buffer=None,
+                    header=None,
+                    context=context
+                )
+
+            except HTTPException as e:
+
+                sys.stderr.write("\n🚫 HTTPException triggered\n")
+                sys.stderr.write(f"Status: {e.status_code}\n")
+                sys.stderr.write(f"Detail: {e.detail}\n")
+                sys.stderr.flush()
+
+                return JSONResponse(
+                    status_code=e.status_code,
+                    content={
+                        "status": "error",
+                        "error_type": "STRAVA_API_RESTRICTED",
+                        "severity": "hard",
+                        "message": e.detail,
+                        "report_type": report_range,
+                        "semantic_graph": {},
+                        "compliance": {},
+                        "logs": ""
+                    }
+                )
+
+            # ============================================================
+            # 🧪 DATA QUALITY EARLY EXIT (no full report build)
+            # ============================================================
+            if report_range == "data_quality":
+                audit = data_quality_audit(prefetch_context)
+
+                return JSONResponse({
+                    "status": "ok",
+                    "report_type": "data_quality",
+                    "output_format": "semantic_json",
+                    "semantic_graph": {
+                        "meta": {
+                            "report_type": "data_quality"
+                        },
+                        "data_quality": audit
+                    },
                     "compliance": {},
                     "logs": ""
+                })
+
+            # ---------------------------------------------------------
+            # 🗓️ WINDOW RESOLUTION
+            # ---------------------------------------------------------
+
+            if report_range == "weekly":
+
+                # If start provided → enforce 7 consecutive days
+                if start:
+                    try:
+                        dt_start = pd.to_datetime(start)
+                        dt_end = dt_start + pd.Timedelta(days=6)
+                        start = dt_start.strftime("%Y-%m-%d")
+                        end   = dt_end.strftime("%Y-%m-%d")
+                    except Exception:
+                        pass
+
+                # If no start provided → derive most recent 7-day block from data
+                else:
+                    df_daily = prefetch_context.get("df_daily")
+                    if df_daily is not None and not df_daily.empty:
+                        dt_end = pd.to_datetime(df_daily["date"].max())
+                        dt_start = dt_end - pd.Timedelta(days=6)
+                        start = dt_start.strftime("%Y-%m-%d")
+                        end   = dt_end.strftime("%Y-%m-%d")
+
+
+            # ---------------------------------------------------------
+            # 📦 Persist canonical period
+            # ---------------------------------------------------------
+            if start and end:
+                prefetch_context["period"] = {
+                    "start": start,
+                    "end": end
                 }
+
+            # ✅ ALSO pass start/end in the legacy top-level keys (run_report consumes these)
+            if start:
+                prefetch_context["start"] = start
+            if end:
+                prefetch_context["end"] = end
+
+            # ---------------------------------------------------------
+            # 🧾 Header date range
+            # ---------------------------------------------------------
+            period = prefetch_context.get("period", {})
+            resolved_start = period.get("start")
+            resolved_end   = period.get("end")
+
+            date_range = (
+                f"{resolved_start} → {resolved_end}"
+                if resolved_start and resolved_end
+                else "not_passed"
             )
 
-        # ============================================================
-        # 🧪 DATA QUALITY EARLY EXIT (no full report build)
-        # ============================================================
-        if report_range == "data_quality":
-            audit = data_quality_audit(prefetch_context)
+            light = prefetch_context.get("activities_light")
+            full  = prefetch_context.get("activities_full")
 
-            return JSONResponse({
-                "status": "ok",
-                "report_type": "data_quality",
-                "output_format": "semantic_json",
-                "semantic_graph": {
-                    "meta": {
-                        "report_type": "data_quality"
-                    },
-                    "data_quality": audit
-                },
-                "compliance": {},
-                "logs": ""
-            })
+            light_empty = (
+                light is None or
+                (isinstance(light, list) and len(light) == 0) or
+                (isinstance(light, pd.DataFrame) and light.empty)
+            )
 
-        # ---------------------------------------------------------
-        # 🗓️ WINDOW RESOLUTION
-        # ---------------------------------------------------------
+            full_empty = (
+                full is None or
+                (isinstance(full, list) and len(full) == 0) or
+                (isinstance(full, pd.DataFrame) and full.empty)
+            )
 
-        if report_range == "weekly":
+            # ---------------------------------------------------------
+            # LIGHT exists but FULL missing (only critical for weekly/season)
+            # ---------------------------------------------------------
+            if report_range in ("weekly", "season") and not light_empty and full_empty:
 
-            # If start provided → enforce 7 consecutive days
-            if start:
+                last_date = None
+
                 try:
-                    dt_start = pd.to_datetime(start)
-                    dt_end = dt_start + pd.Timedelta(days=6)
-                    start = dt_start.strftime("%Y-%m-%d")
-                    end   = dt_end.strftime("%Y-%m-%d")
+                    dates = [
+                        pd.to_datetime(a.get("start_date_local"))
+                        for a in light
+                        if a.get("start_date_local")
+                    ]
+                    if dates:
+                        last_date = max(dates)
                 except Exception:
                     pass
 
-            # If no start provided → derive most recent 7-day block from data
-            else:
-                df_daily = prefetch_context.get("df_daily")
-                if df_daily is not None and not df_daily.empty:
-                    dt_end = pd.to_datetime(df_daily["date"].max())
-                    dt_start = dt_end - pd.Timedelta(days=6)
-                    start = dt_start.strftime("%Y-%m-%d")
-                    end   = dt_end.strftime("%Y-%m-%d")
+                if last_date is not None:
+                    last_date_str = last_date.strftime("%Y-%m-%d")
+                    suggested_start = (last_date - pd.Timedelta(days=7)).strftime("%Y-%m-%d")
 
+                    msg = (
+                        f"No weekly period activities detected, detailed data could not be retrieved. "
+                        f"Last activity I see is {last_date_str}. "
+                        f"Create a weekly report for {suggested_start}."
+                    )
+                else:
+                    msg = "Detailed activity data could not be retrieved."
 
-        # ---------------------------------------------------------
-        # 📦 Persist canonical period
-        # ---------------------------------------------------------
-        if start and end:
-            prefetch_context["period"] = {
-                "start": start,
-                "end": end
-            }
-
-        # ✅ ALSO pass start/end in the legacy top-level keys (run_report consumes these)
-        if start:
-            prefetch_context["start"] = start
-        if end:
-            prefetch_context["end"] = end
-
-        # ---------------------------------------------------------
-        # 🧾 Header date range
-        # ---------------------------------------------------------
-        period = prefetch_context.get("period", {})
-        resolved_start = period.get("start")
-        resolved_end   = period.get("end")
-
-        date_range = (
-            f"{resolved_start} → {resolved_end}"
-            if resolved_start and resolved_end
-            else "not_passed"
-        )
-
-        light = prefetch_context.get("activities_light")
-        full  = prefetch_context.get("activities_full")
-
-        light_empty = (
-            light is None or
-            (isinstance(light, list) and len(light) == 0) or
-            (isinstance(light, pd.DataFrame) and light.empty)
-        )
-
-        full_empty = (
-            full is None or
-            (isinstance(full, list) and len(full) == 0) or
-            (isinstance(full, pd.DataFrame) and full.empty)
-        )
-
-        # ---------------------------------------------------------
-        # LIGHT exists but FULL missing (only critical for weekly/season)
-        # ---------------------------------------------------------
-        if report_range in ("weekly", "season") and not light_empty and full_empty:
-
-            last_date = None
-
-            try:
-                dates = [
-                    pd.to_datetime(a.get("start_date_local"))
-                    for a in light
-                    if a.get("start_date_local")
-                ]
-                if dates:
-                    last_date = max(dates)
-            except Exception:
-                pass
-
-            if last_date is not None:
-                last_date_str = last_date.strftime("%Y-%m-%d")
-                suggested_start = (last_date - pd.Timedelta(days=7)).strftime("%Y-%m-%d")
-
-                msg = (
-                    f"No weekly period activities detected, detailed data could not be retrieved. "
-                    f"Last activity I see is {last_date_str}. "
-                    f"Create a weekly report for {suggested_start}."
+                raise AuditHalt(
+                    msg,
+                    code="FULL_DATA_UNAVAILABLE",
+                    severity="soft"
                 )
-            else:
-                msg = "Detailed activity data could not be retrieved."
 
-            raise AuditHalt(
-                msg,
-                code="FULL_DATA_UNAVAILABLE",
-                severity="soft"
-            )
-
-        # Abort only if NO activity data at all
-        if light_empty and full_empty:
-            if demo:
+            # Abort only if NO activity data at all
+            if light_empty and full_empty:
+                if demo:
+                    return load_demo_response(
+                        report_range,
+                        reason="MANUAL_DEMO"
+                    )
                 return load_demo_response(
                     report_range,
-                    reason="MANUAL_DEMO"
+                    reason="NO_ACTIVITIES_RANGE"
                 )
-            return load_demo_response(
-                report_range,
-                reason="NO_ACTIVITIES_RANGE"
-            )
 
-        # now run the unified audit (SAFE WRAPPED)
-        try:
-            with redirect_stdout(buffer):
+            # now run the unified audit (SAFE WRAPPED)
+            try:
                 report, compliance = run_report(
                     reportType=report_range,
                     output_format=fmt,
@@ -800,87 +803,88 @@ async def run_audit_with_data(
                     **prefetch_context
                 )
 
-        except AuditHalt as e:
-            return handle_audit_halt(
-                e,
-                report_range,
-                buffer=buffer,
-                header=prefetch_context.get("report_header"),
-                context=prefetch_context
+            except AuditHalt as e:
+                return handle_audit_halt(
+                    e,
+                    report_range,
+                    buffer=buffer,
+                    header=prefetch_context.get("report_header"),
+                    context=prefetch_context
+                )
+
+            except Exception:
+                raise
+
+            context = report.get("context", {}) if isinstance(report, dict) else {}
+
+            period = context.get("period", {})
+
+            resolved_start = period.get("start")
+            resolved_end   = period.get("end")
+
+            date_range = (
+                f"{resolved_start} → {resolved_end}"
+                if resolved_start and resolved_end
+                else "not_passed"
             )
 
-        except Exception:
-            raise
+            report_header = {
+                "athlete": context.get("athleteProfile", {}).get("name", "Unknown Athlete"),
+                "report_type": report_range,
+                "timezone": context.get("timezone", "Europe/Zurich"),
+                "date_range": date_range,
+            }
 
-        context = report.get("context", {}) if isinstance(report, dict) else {}
+            logger.info(
+                "[EXEC] report_header injected (post-run) → %s | report_type=%s | athlete=%s",
+                report_header,
+                report_range,
+                report_header.get("athlete", "unknown")
+            )
 
-        period = context.get("period", {})
+            logs = buffer.getvalue()
 
-        resolved_start = period.get("start")
-        resolved_end   = period.get("end")
+            if fmt in ("json","semantic"):
 
-        date_range = (
-            f"{resolved_start} → {resolved_end}"
-            if resolved_start and resolved_end
-            else "not_passed"
-        )
+                semantic_graph = report.get("semantic_graph", {}) if isinstance(report, dict) else {}
 
-        report_header = {
-            "athlete": context.get("athleteProfile", {}).get("name", "Unknown Athlete"),
-            "report_type": report_range,
-            "timezone": context.get("timezone", "Europe/Zurich"),
-            "date_range": date_range,
-        }
-
-        logger.info(
-            "[EXEC] report_header injected (post-run) → %s | report_type=%s | athlete=%s",
-            report_header,
-            report_range,
-            report_header.get("athlete", "unknown")
-        )
-
-        logs = buffer.getvalue()
-
-        if fmt in ("json","semantic"):
-
-            semantic_graph = report.get("semantic_graph", {}) if isinstance(report, dict) else {}
+                return JSONResponse({
+                    "status": "ok",
+                    "report_type": report_range,
+                    "report_header": report_header,
+                    "output_format": "semantic_json",
+                    "semantic_graph": sanitize(semantic_graph),
+                    "compliance": compliance,
+                    "logs": logs[-20000:],
+                })
 
             return JSONResponse({
                 "status": "ok",
                 "report_type": report_range,
                 "report_header": report_header,
-                "output_format": "semantic_json",
-                "semantic_graph": sanitize(semantic_graph),
-                "compliance": compliance,
+                "output_format": "markdown",
+                "markdown": report.get("markdown",""),
                 "logs": logs[-20000:],
             })
 
-        return JSONResponse({
-            "status": "ok",
-            "report_type": report_range,
-            "report_header": report_header,
-            "output_format": "markdown",
-            "markdown": report.get("markdown",""),
-            "logs": logs[-20000:],
-        })
+        except AuditHalt as e:
+            return handle_audit_halt(
+                e,
+                report_range,
+                buffer=buffer,
+                header=prefetch_context.get("report_header") if 'prefetch_context' in locals() else None,
+                context=prefetch_context if 'prefetch_context' in locals() else None
+            )
 
-    except AuditHalt as e:
-        return handle_audit_halt(
-            e,
-            report_range,
-            buffer=buffer,
-            header=prefetch_context.get("report_header") if 'prefetch_context' in locals() else None,
-            context=prefetch_context if 'prefetch_context' in locals() else None
-        )
+        except Exception as e:
 
-    except Exception as e:
+            sys.stderr.write("\n🔥 UNHANDLED EXCEPTION IN /run\n")
+            sys.stderr.write(traceback.format_exc())
+            sys.stderr.flush()
 
-        sys.stderr.write("\n🔥 UNHANDLED EXCEPTION IN /run\n")
-        sys.stderr.write(traceback.format_exc())
-        sys.stderr.flush()
-
-        return error_response(e, buffer)
-
+            return error_response(e, buffer)
+    finally:
+        redirect_ctx.__exit__(None, None, None)
 
 
 def error_response(e: Exception, buffer=None, status_code:int=500):
