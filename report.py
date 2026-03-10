@@ -521,23 +521,30 @@ def generate_full_report(
             [line for line in raw_logs if not any(term in line.lower() for term in skip_terms)]
         ).strip()
 
+        # Capture report + dataset summary
+        summary = None
         if isinstance(result, tuple):
-            report = result[0]
+            report, summary = result
         else:
             report = result
 
         if isinstance(report, dict):
+
             if output_format == "semantic":
                 semantic_output = report.get("semantic_graph", {})
+
                 full_output = {
                     "status": "ok",
                     "message": f"{report_type.title()} report generated",
                     "semantic_graph": semantic_output,
-                    "logs": log_output,
-                    "date_range": {"start": start, "end": end} if start and end else None,
+                    "summary": summary,
                 }
+
+                log_file_output = log_output
+
             else:
                 md_output = report.get("markdown", "")
+
                 full_output = (
                     f"# 🧾 {report_type.title()} Audit Report\n\n"
                     f"🗓️ Date Range: {start} → {end}\n\n" if start and end else ""
@@ -547,6 +554,7 @@ def generate_full_report(
                     "## Rendered Markdown Report\n\n"
                     + md_output.strip()
                 )
+
         else:
             full_output = {"markdown": str(report), "logs": log_output}
 
@@ -588,6 +596,17 @@ def generate_full_report(
             json.dump(full_output, f, indent=2, default=json_default)
 
         print(f"[LOCAL] ✅ Saved semantic JSON → {out_path}")
+
+        log_path = reports_dir / f"{base_name}.log"
+
+        if 'log_file_output' in locals() and log_file_output:
+            with open(log_path, "w", encoding="utf-8") as f:
+                f.write(log_file_output)
+
+            print(f"[LOCAL] 📜 Logs saved → {log_path}")
+
+            if os.getenv("OPEN_REPORT", "1") == "1":
+                webbrowser.open(log_path.resolve().as_uri())
 
         if os.getenv("OPEN_REPORT", "1") == "1":
             webbrowser.open(out_path.resolve().as_uri())

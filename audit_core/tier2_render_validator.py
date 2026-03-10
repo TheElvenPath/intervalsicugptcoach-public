@@ -777,13 +777,31 @@ def finalize_and_validate_render(context, reportType="weekly"):
     context["rendered"] = True
     report["rendered"] = True
 
-    # Optionally, attach a minimal summary
+    # --- Dataset coverage summary ---
+    df_events = context.get("df_events")
+    activities_light = context.get("activities_light")
+    wellness = context.get("wellness")
+    power_curve = context.get("power_curve")
+
+    def safe_len(x):
+        try:
+            if hasattr(x, "shape"):
+                return int(x.shape[0])
+            if isinstance(x, (list, tuple, dict)):
+                return len(x)
+        except Exception:
+            pass
+        return 0
+
     summary = {
         "status": "ok",
         "note": "semantic JSON finalized (markdown skipped)",
-        "total_events": len(context.get("df_events", []))
-        if isinstance(context.get("df_events"), list)
-        else None,
+        "rows": {
+            "full": safe_len(df_events),
+            "light": safe_len(activities_light),
+            "wellness": safe_len(wellness),
+            "power_curves": safe_len(power_curve),
+        }
     }
 
     return report, summary
