@@ -590,14 +590,6 @@ async def run_audit_with_data(
         report_range = data.get("range","weekly")
         fmt = data.get("format","markdown").lower()
 
-        if not raw:
-            raise ValueError("Empty request body")
-
-        data = json.loads(raw)
-
-        report_range = data.get("range","weekly")
-        fmt = data.get("format","markdown").lower()
-
         # ✅ NEW — capture start/end from the worker payload
         start = data.get("start")
         end = data.get("end")
