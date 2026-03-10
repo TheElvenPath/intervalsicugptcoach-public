@@ -559,20 +559,30 @@ def run_audit(
     except Exception as e:
         return error_response(e)
 
-
 @app.post("/run")
 async def run_audit_with_data(
     request: Request,
-    demo: bool = Query(False)
+    demo: bool = Query(False),
+    debug: bool = Query(False)
 ):
+
+    if debug:
+        return await get_debug(request)
+
     buffer = io.StringIO()
+
     if demo:
         return load_demo_response("weekly", reason="MANUAL_DEMO")
+
     try:
+
         raw = await request.body()
+
         if not raw:
             raise ValueError("Empty request body")
+
         data = json.loads(raw)
+
         report_range = data.get("range","weekly")
         fmt = data.get("format","markdown").lower()
 
