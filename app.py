@@ -895,15 +895,11 @@ def error_response(e: Exception, buffer=None, status_code:int=500):
 # ============================================================
 @app.post("/debug")
 async def get_debug(request: Request):
-    """
-    Debug endpoint.
-    Accepts the same payload as /run but returns
-    semantic graph + full logs without rendering.
-    """
 
     buffer = io.StringIO()
 
     try:
+
         raw = await request.body()
 
         if not raw:
@@ -912,30 +908,36 @@ async def get_debug(request: Request):
         data = json.loads(raw)
 
         report_range = data.get("range", "weekly")
-        fmt = "semantic"
 
-        # Normalize prefetched payload from Worker
+        # Normalize prefetched dataset
         prefetch_context = normalize_prefetched_context(data)
 
-        with redirect_stdout(buffer):
-            report, compliance = run_report(
-                reportType=report_range,
-                output_format=fmt,
-                include_coaching_metrics=True,
-                **prefetch_context
-            )
+        report, compliance, logs, context, sg, markdown = _run_full_audit(
+            range=report_range,
+            output_format="semantic",
+            prefetch_context=prefetch_context
+        )
 
-        logs = buffer.getvalue()
-
-        semantic_graph = report.get("semantic_graph", {}) if isinstance(report, dict) else {}
+        MAX_LOG = 250000
+        log_tail = logs[-MAX_LOG:]
 
         return JSONResponse({
             "status": "ok",
             "report_type": report_range,
             "output_format": "semantic_json",
-            "semantic_graph": sanitize(semantic_graph),
-            "logs": logs[-50000:]
+            "semantic_graph": sanitize(sg),
+            "compliance": compliance,
+            "logs": log_tail
         })
+
+    except AuditHalt as e:
+        return handle_audit_halt(
+            e,
+            report_range,
+            buffer=buffer,
+            header=None,
+            context=prefetch_context if 'prefetch_context' in locals() else None
+        )
 
     except Exception as e:
         return error_response(e, buffer)
