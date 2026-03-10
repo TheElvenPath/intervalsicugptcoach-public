@@ -169,16 +169,23 @@ def normalize_prefetched_context(data):
                     "[GUARD] All activities are STRAVA API stubs — aborting."
                 )
 
+                athlete = context.get("athleteProfile", {})
+
                 raise HTTPException(
                     status_code=422,
-                    detail=(
-                        "Activities exist for this period, but they originate from STRAVA "
-                        "and are not accessible via the Intervals API. "
-                        "No training metrics (time, distance, load) are available "
-                        "to generate a report. "
-                        "Connect Garmin/Wahoo/Zwift etc directly or upload FIT files. "
-                        "OR see https://forum.intervals.icu/t/import-all-data-from-strava/81068"
-                    ),
+                    detail={
+                        "code": "STRAVA_API_RESTRICTED",
+                        "message": (
+                            "Activities exist for this period, but they originate from STRAVA "
+                            "and are not accessible via the Intervals API. "
+                            "No training metrics (time, distance, load) are available "
+                            "to generate a report. "
+                            "Connect Garmin/Wahoo/Zwift etc directly or upload FIT files. "
+                            "OR see https://forum.intervals.icu/t/import-all-data-from-strava/81068"
+                        ),
+                        "athlete": athlete.get("name"),
+                        "timezone": athlete.get("timezone"),
+                    }
                 )
 
         # 🔒 STRAVA STUB FILTER — detect and remove unusable API stub rows
