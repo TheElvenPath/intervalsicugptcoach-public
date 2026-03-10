@@ -16,7 +16,9 @@ import os
 RAILWAY_ENV = os.getenv("RAILWAY_ENVIRONMENT_NAME", "").lower()
 
 # Explicitly suppress debug in production
-IS_DEBUG_ENV = RAILWAY_ENV != "production"
+#IS_DEBUG_ENV = RAILWAY_ENV != "production"
+IS_DEBUG_ENV = True # this enabled both prod and staging but stderr is removed. pass ?debug=true
+
 
 # ------------------------------------------------------------
 # Global state
@@ -69,11 +71,12 @@ def debug(*args):
         # stdout → captured by redirect_stdout()
         print(msg_out)
 
-        # stderr → limited Railway logs
-        if STDERR_COUNT < MAX_STDERR_LINES:
-            sys.stderr.write(msg_out + "\n")
-            sys.stderr.flush()
-            STDERR_COUNT += 1
+        # stderr → local terminal only (not Railway)
+        if not os.getenv("RAILWAY_ENVIRONMENT_NAME"):
+            if STDERR_COUNT < MAX_STDERR_LINES:
+                sys.stderr.write(msg_out + "\n")
+                sys.stderr.flush()
+                STDERR_COUNT += 1
 
         # persistent debug file
         if GLOBAL_FILE_HANDLE is None:

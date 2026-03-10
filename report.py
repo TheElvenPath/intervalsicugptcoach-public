@@ -141,10 +141,10 @@ def get_worker_base(staging=False):
 def fetch_debug_report(report_type, staging=False):
     """
     Fetch debug report via Cloudflare Worker (prefetch + debug routing).
+    Splits semantic report and debug logs into separate files.
     """
 
     worker_base = get_worker_base(staging)
-
     url = f"{worker_base}/run_{report_type}?debug=true&format=semantic"
 
     headers = {
@@ -164,18 +164,45 @@ def fetch_debug_report(report_type, staging=False):
 
     Path("reports").mkdir(exist_ok=True)
 
-    outname = f"report_{report_type}_{env}_debug.json"
-    out_path = Path("reports") / outname
+    # ------------------------------------------------
+    # Extract components
+    # ------------------------------------------------
+    logs = data.get("logs", "")
+    semantic = data.get("semantic_graph", {})
 
-    with open(out_path, "w", encoding="utf-8") as f:
-        json.dump(data, f, indent=2)
+    report_payload = {
+        "status": data.get("status"),
+        "report_type": data.get("report_type"),
+        "semantic_graph": semantic,
+        "compliance": data.get("compliance", {})
+    }
 
-    print(f"[DEBUG] ✅ Saved {outname}")
+    # ------------------------------------------------
+    # Save semantic report
+    # ------------------------------------------------
+    json_name = f"report_{report_type}_{env}_debug.json"
+    json_path = Path("reports") / json_name
 
-    if "logs" in data:
-        print(f"[DEBUG] 📜 Logs captured: {len(data['logs'].splitlines())} lines")
+    with open(json_path, "w", encoding="utf-8") as f:
+        json.dump(report_payload, f, indent=2)
 
-    return data
+    print(f"[DEBUG] ✅ Semantic report saved → {json_name}")
+
+    # ------------------------------------------------
+    # Save logs separately
+    # ------------------------------------------------
+    log_name = f"report_{report_type}_{env}_debug.log"
+    log_path = Path("reports") / log_name
+
+    with open(log_path, "w", encoding="utf-8") as f:
+        f.write(logs)
+
+    print(f"[DEBUG] 📜 Logs saved → {log_name}")
+
+    if logs:
+        print(f"[DEBUG] 📜 Logs captured: {len(logs.splitlines())} lines")
+
+    return report_payload
 
 
 # ─────────────────────────────────────────────
