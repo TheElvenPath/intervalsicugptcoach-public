@@ -507,15 +507,42 @@ def normalize_prefetched_context(data):
 # ============================================================
 # 🧠 CORE RUN FUNCTION
 # ============================================================
-def _run_full_audit(range: str, output_format="markdown", prefetch_context=None):
+def _run_full_audit(range: str, output_format="markdown", prefetch_context=None, capture_logs=True):
     os.environ["REPORT_TYPE"] = range.lower()
-    buffer = io.StringIO()
-    with redirect_stdout(buffer):
+
+    buffer = io.StringIO() if capture_logs else None
+
+    if buffer:
+        with redirect_stdout(buffer):
+            if prefetch_context:
+                report, compliance = run_report(
+                    reportType=range,
+                    output_format=output_format,
+                    include_coaching_metrics=True,
+                    **prefetch_context
+                )
+            else:
+                report, compliance = run_report(
+                    reportType=range,
+                    output_format=output_format,
+                    include_coaching_metrics=True
+                )
+    else:
         if prefetch_context:
-            report, compliance = run_report(reportType=range, output_format=output_format, include_coaching_metrics=True, **prefetch_context)
+            report, compliance = run_report(
+                reportType=range,
+                output_format=output_format,
+                include_coaching_metrics=True,
+                **prefetch_context
+            )
         else:
-            report, compliance = run_report(reportType=range, output_format=output_format, include_coaching_metrics=True)
-    logs = buffer.getvalue()
+            report, compliance = run_report(
+                reportType=range,
+                output_format=output_format,
+                include_coaching_metrics=True
+            )
+
+    logs = buffer.getvalue() if buffer else ""
 
     if isinstance(report, dict):
         context = report.get("context", {}) or {}
@@ -523,8 +550,14 @@ def _run_full_audit(range: str, output_format="markdown", prefetch_context=None)
     else:
         context, markdown = {}, str(report)
 
-    context["render_options"] = {"verbose_events": True, "include_all_events": True, "return_format": "markdown"}
-    semantic_graph = report.get("semantic_graph", {})
+    context["render_options"] = {
+        "verbose_events": True,
+        "include_all_events": True,
+        "return_format": "markdown"
+    }
+
+    semantic_graph = report.get("semantic_graph", {}) if isinstance(report, dict) else {}
+
     return report, compliance, logs, context, semantic_graph, markdown
 
 
@@ -547,9 +580,19 @@ def run_audit(
     try:
         report, compliance, logs, context, sg, markdown = _run_full_audit(range=range, output_format=format)
         if format in ("json", "semantic"):
-            return JSONResponse({"status":"ok","report_type":range,"output_format":"semantic_json",
-                "semantic_graph":sanitize(sg),"compliance":compliance,"logs":logs[:20000]})
-        return JSONResponse({"status":"ok","report_type":range,"output_format":"markdown","markdown":markdown,"logs":logs[:20000]})
+            return JSONResponse({
+                "status":"ok",
+                "report_type":range,
+                "output_format":"semantic_json",
+                "semantic_graph":sanitize(sg),
+                "compliance":compliance
+            })
+        return JSONResponse({
+            "status":"ok",
+            "report_type":range,
+            "output_format":"markdown",
+            "markdown":markdown
+        })
     except HTTPException as e:
         return JSONResponse(
             status_code=e.status_code,
@@ -566,12 +609,11 @@ async def run_audit_with_data(
     debug: bool = Query(False)
 ):
 
-    print("DEBUG PARAM:", debug)
-    print("QUERY:", request.query_params)
+    buffer = io.StringIO() if debug else None
 
-    buffer = io.StringIO()
-    redirect_ctx = redirect_stdout(buffer)
-    redirect_ctx.__enter__()
+    if debug:
+        redirect_ctx = redirect_stdout(buffer)
+        redirect_ctx.__enter__()
 
     try:
 
@@ -842,7 +884,7 @@ async def run_audit_with_data(
                 report_header.get("athlete", "unknown")
             )
 
-            logs = buffer.getvalue()
+            logs = buffer.getvalue() if buffer else ""
 
             if fmt in ("json","semantic"):
 
@@ -855,7 +897,7 @@ async def run_audit_with_data(
                     "output_format": "semantic_json",
                     "semantic_graph": sanitize(semantic_graph),
                     "compliance": compliance,
-                    "logs": logs[-20000:],
+#                    "logs": logs[-20000:], # no logs needed unless debug
                 })
 
             return JSONResponse({
@@ -864,7 +906,7 @@ async def run_audit_with_data(
                 "report_header": report_header,
                 "output_format": "markdown",
                 "markdown": report.get("markdown",""),
-                "logs": logs[-20000:],
+#                "logs": logs[-20000:], # no logs needed unless debug
             })
 
         except AuditHalt as e:
@@ -884,7 +926,8 @@ async def run_audit_with_data(
 
             return error_response(e, buffer)
     finally:
-        redirect_ctx.__exit__(None, None, None)
+        if debug:
+            redirect_ctx.__exit__(None, None, None)
 
 
 def error_response(e: Exception, buffer=None, status_code:int=500):

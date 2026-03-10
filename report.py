@@ -3,108 +3,223 @@
 Unified URF v5.1 Report Runner
 ==============================
 
-Generates and fetches audit reports for:
-  • weekly
-  • season
-  • wellness
-  • summary
+Command-line tool for generating and retrieving Montis URF v5.1 training reports.
 
-Supports both:
-  🔹 Local (direct) Railway-backed generation
-  🔹 Remote (prefetched) Worker-based generation
-  🔹 Optional GPT-rendered Markdown (via Cloudflare Worker + OpenAI)
+The runner can operate in two modes:
+
+• Local generation (direct Python execution via audit_core)
+• Remote generation (prefetched dataset via Cloudflare Worker → Railway)
+
+It supports optional GPT rendering, debug execution traces, synthetic dataset
+testing, and custom reporting windows.
+
 
 ───────────────────────────────────────────────
-📡 ENDPOINTS
+SYSTEM ARCHITECTURE
 ───────────────────────────────────────────────
-• Railway Production:
-    https://intervalsicugptcoach-public-production.up.railway.app
 
-• Railway Staging:
-    https://intervalsicugptcoach-public-staging.up.railway.app
+Local mode
+    CLI → audit_core.run_report()
 
-• Cloudflare Worker (Unified API Gateway):
-    https://intervalsicugptcoach.clive-a5a.workers.dev
+Remote mode
+    CLI → Cloudflare Worker → Railway /run → audit_core pipeline
 
-───────────────────────────────────────────────
-🚀 AVAILABLE ROUTES (Worker)
-───────────────────────────────────────────────
-• /run_weekly
-• /run_season
-• /run_wellness
-• /run_summary
-• /run_data_quality
+The Worker acts as a unified API gateway.
 
-Query parameters:
-  ?staging=1          → Staging determined by Worker hostname
-  ?render=gpt         → enables GPT-rendered Markdown output
-                         (includes both Markdown + semantic JSON)
-  ?test=strava        → simulate STRAVA-only account
-                        (removes usable activities and returns friendly error)
 
 ───────────────────────────────────────────────
-🏗️  MODES
+ENDPOINTS
 ───────────────────────────────────────────────
-LOCAL MODE
------------
-  • Runs report generation entirely in Python via audit_core.run_report()
-  • Writes either:
-        - report_<range>_prod_semantic.json  (default)
-        - report_<range>_prod_markdown.md    (if --format markdown)
 
-PREFETCH MODE (REMOTE)
-----------------------
-  • Fetches data from Cloudflare Worker which proxies Railway.
-  • Automatically handles both production and staging targets.
-  • Writes semantic JSON by default:
-        - report_<range>_prefetch_prod_semantic.json
-  • If GPT flag is enabled:
-        - report_<range>_prefetch_prod_gpt_markdown.md
-        - report_<range>_prefetch_prod_gpt_semantic.json
-    (Markdown is ChatGPT-rendered, JSON is original semantic graph)
+Railway Production
+https://intervalsicugptcoach-public-production.up.railway.app
+
+Railway Staging
+https://intervalsicugptcoach-public-staging.up.railway.app
+
+Cloudflare Worker (API Gateway)
+https://intervalsicugptcoach.clive-a5a.workers.dev
+
+Cloudflare Worker (Staging)
+https://intervalsicugptcoach-staging.clive-a5a.workers.dev
+
 
 ───────────────────────────────────────────────
-⚙️  CLI USAGE EXAMPLES
+WORKER ROUTES
 ───────────────────────────────────────────────
-  python report.py --range weekly (LOCAL JSON) 
-  python report.py --range weekly --format semantic (LOCAL JSON)
-  python report.py --range weekly --prefetch (RAILWAY JSON) - This would get sent to GPT
-  python report.py --range weekly --prefetch --staging (RAILWAY STAGING JSON) - this would get sent to GPT
-  python report.py --range season --prefetch --gpt (RAILWAY JSON AND GPT MD)
-  python report.py --range summary --start 2025-01-01 --end 2025-12-31 (LOCAL JSON)
-  python report.py --range weekly --prefetch --staging --strava-test
-    → simulates STRAVA-only account and returns friendly data-source error
 
-| CLI flag             | Worker param   | Test scenario                              | Expected result                                                            |
-| -------------------- | -------------- | ------------------------------------------ | -------------------------------------------------------------------------- |
-| `--strava-test stub` | `test=strava`  | All activities are STRAVA API stub rows    | Hard stop: `STRAVA_API_RESTRICTED` (422) with friendly data-source message |
-| `--strava-test 1`    | `test=strava1` | Only light activities present (no full)    | Soft halt: insufficient detailed data (`FULL_DATASET_EMPTY` or similar)    |
-| `--strava-test 2`    | `test=strava2` | Full dataset empty after filtering         | Soft halt: no usable activities in range                                   |
-| `--strava-test 3`    | `test=strava3` | Activities present but missing key metrics | Degraded data quality state, report continues with warnings                |
-| `--strava-test 4`    | `test=strava4` | Partial wellness or athlete metadata       | Degraded data quality score, report still generated                        |
-| `--strava-test 5`    | `test=strava5` | Mixed valid + stub activities              | Report runs, data quality flagged with `strava_stub_detected`              |
-| `--strava-test demo`    | `test=demo` | Demo report                                | Demo Report runs`              |
+/run_weekly
+    7-day training load and fatigue analysis.
 
+/run_season
+    Long-term performance progression and adaptation trends.
 
-  DATA QUALITY REPORT
-  python report.py --range data_quality --prefetch
-   -> this gets data quality report
+/run_wellness
+    Physiological recovery indicators (HRV, RHR, fatigue, sleep).
+
+/run_summary
+    High-level overview of athlete state and key metrics.
+
+/run_data_quality
+    Dataset integrity audit without building a full report.
+
 
 ───────────────────────────────────────────────
-🧠 NOTES
+QUERY PARAMETERS (Worker)
 ───────────────────────────────────────────────
-• The GPT-rendered version returns a single JSON payload:
+
+render=gpt
+    Enables GPT Markdown rendering.
+
+    Response:
     {
-        "markdown": "<AI-formatted Markdown>",
-        "semantic_graph": { ... },
+        "markdown": "...",
+        "semantic_graph": {...},
         "logs": "...",
         "status": "ok"
     }
 
-• Local runs with --format semantic never use GPT (direct JSON only).
+debug=true
+    Executes the debug pipeline and returns full execution logs.
 
-• Prefetch + GPT writes both Markdown and JSON files directly to ./reports
-  — no duplication or mirror files will be created.
+    Response:
+    {
+        "status": "ok",
+        "report_type": "...",
+        "semantic_graph": {...},
+        "compliance": {...},
+        "logs": "..."
+    }
+
+start=YYYY-MM-DD
+end=YYYY-MM-DD
+    Overrides the reporting window.
+
+    Supported reports:
+        weekly
+        summary
+
+    Weekly reports automatically expand the window to 7 days.
+
+test=strava*
+    Injects synthetic STRAVA-only dataset scenarios for pipeline testing.
+
+
+───────────────────────────────────────────────
+CLI MODES
+───────────────────────────────────────────────
+
+LOCAL MODE
+    Runs the full pipeline directly in Python.
+
+    Output files:
+        report_<range>_prod_semantic.json
+        report_<range>_prod_markdown.md
+
+
+PREFETCH MODE (REMOTE)
+    Fetches a prefetched dataset through the Worker.
+
+    Output files:
+        report_<range>_prefetch_prod_semantic.json
+
+    With GPT rendering:
+        report_<range>_prefetch_prod_gpt.md
+        report_<range>_prefetch_prod_semantic.json
+
+
+DEBUG MODE
+    Fetches the debug execution trace from the Worker.
+
+    Output files:
+        report_<range>_<env>_debug.json
+        report_<range>_<env>_debug.log
+
+
+───────────────────────────────────────────────
+CLI USAGE EXAMPLES
+───────────────────────────────────────────────
+
+Local semantic report
+python report.py --range weekly
+
+
+Local markdown report
+python report.py --range weekly --format markdown
+
+
+Remote report (Worker → Railway)
+python report.py --range weekly --prefetch
+
+
+Remote staging report
+python report.py --range weekly --prefetch --staging
+
+
+Remote GPT-rendered report
+python report.py --range season --prefetch --gpt
+
+
+Custom window (summary)
+python report.py --range summary --start 2025-01-01 --end 2025-12-31
+
+
+Weekly window override
+python report.py --range weekly --start 2026-03-01
+
+
+Debug execution trace
+python report.py --range weekly --debug --staging
+
+
+Data quality audit
+python report.py --range data_quality --prefetch
+
+
+───────────────────────────────────────────────
+TEST SCENARIOS
+───────────────────────────────────────────────
+
+Synthetic STRAVA-only datasets can be simulated using the CLI flag
+`--strava-test`.
+
+| CLI flag             | Worker param   | Scenario                                  | Expected behaviour |
+|----------------------|---------------|--------------------------------------------|-------------------|
+| --strava-test stub   | test=strava   | All activities are STRAVA API stub rows    | Hard stop: STRAVA_API_RESTRICTED |
+| --strava-test 1      | test=strava1  | Only light activities present              | Soft halt: insufficient detailed data |
+| --strava-test 2      | test=strava2  | Full dataset empty after filtering         | Soft halt: no usable activities |
+| --strava-test 3      | test=strava3  | Activities missing key metrics             | Report runs with degraded metrics |
+| --strava-test 4      | test=strava4  | Partial wellness or athlete metadata       | Report runs with degraded data quality |
+| --strava-test 5      | test=strava5  | Mixed valid and stub activities            | Report runs with warnings |
+| --strava-test demo   | test=demo     | Demo dataset                               | Demo report generated |
+
+
+───────────────────────────────────────────────
+OUTPUT LOCATION
+───────────────────────────────────────────────
+
+All reports are written to:
+
+./reports/
+
+Debug runs generate two files:
+
+    semantic report
+    execution log
+
+
+───────────────────────────────────────────────
+NOTES
+───────────────────────────────────────────────
+
+• Local semantic reports never use GPT.
+
+• Prefetch + GPT writes both Markdown and semantic JSON.
+
+• Debug mode captures full pipeline execution logs (Tier-0 → Tier-3).
+
+• The CLI runner doubles as an integration harness for Worker
+  and Railway pipelines.
 """
 
 
@@ -114,6 +229,7 @@ import sys
 import json
 import argparse
 import requests
+import webbrowser
 from datetime import datetime
 from contextlib import redirect_stdout
 from pathlib import Path
@@ -134,6 +250,17 @@ def get_worker_base(staging=False):
     if staging:
         return "https://intervalsicugptcoach-staging.clive-a5a.workers.dev"
     return "https://intervalsicugptcoach.clive-a5a.workers.dev"
+
+#---------------------------------------------
+#  OPEN report helper
+#----------------------------------------------
+
+def open_report(path):
+    if os.getenv("OPEN_REPORT", "1") == "1":
+        try:
+            webbrowser.open(Path(path).resolve().as_uri())
+        except Exception:
+            pass
 
 # ─────────────────────────────────────────────
 # DEBUG REPORTS
@@ -187,6 +314,7 @@ def fetch_debug_report(report_type, staging=False):
         json.dump(report_payload, f, indent=2)
 
     print(f"[DEBUG] ✅ Semantic report saved → {json_name}")
+    open_report(json_path)
 
     # ------------------------------------------------
     # Save logs separately
@@ -198,6 +326,7 @@ def fetch_debug_report(report_type, staging=False):
         f.write(logs)
 
     print(f"[DEBUG] 📜 Logs saved → {log_name}")
+    open_report(log_path)
 
     if logs:
         print(f"[DEBUG] 📜 Logs captured: {len(logs.splitlines())} lines")
@@ -276,13 +405,18 @@ def fetch_remote_report(report_type, staging=False, gpt=False, start=None, end=N
 
         if markdown:
             md_out = f"report_{report_type}_{env_tag}_gpt.md"
-            Path(f"reports/{md_out}").write_text(markdown, encoding="utf-8")
-            print(f"[REMOTE] ✅ Markdown saved → {md_out}")
+            md_path = Path("reports") / md_out
+            md_path.write_text(markdown, encoding="utf-8")
 
+            print(f"[REMOTE] ✅ Markdown saved → {md_out}")
+            open_report(md_path)
         if semantic:
             json_out = f"report_{report_type}_{env_tag}_semantic.json"
-            Path(f"reports/{json_out}").write_text(json.dumps(semantic, indent=2), encoding="utf-8")
+            json_path = Path("reports") / json_out
+            json_path.write_text(json.dumps(semantic, indent=2), encoding="utf-8")
+
             print(f"[REMOTE] ✅ Semantic JSON saved → {json_out}")
+            open_report(json_path)
 
         return data
 
@@ -455,11 +589,17 @@ def generate_full_report(
 
         print(f"[LOCAL] ✅ Saved semantic JSON → {out_path}")
 
+        if os.getenv("OPEN_REPORT", "1") == "1":
+            webbrowser.open(out_path.resolve().as_uri())
+
     else:
         out_path = reports_dir / f"{base_name}.md"
         with open(out_path, "w", encoding="utf-8") as f:
             f.write(full_output)
         print(f"[LOCAL] ✅ Saved markdown report → {out_path}")
+
+        if os.getenv("OPEN_REPORT", "1") == "1":
+            webbrowser.open(out_path.resolve().as_uri())
 
     return full_output
 
