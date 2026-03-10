@@ -68,11 +68,10 @@ def debug(*args):
        
         context.setdefault("debug_trace", []).append(msg_out)
 
-        # stdout → captured by redirect_stdout()
-        print(msg_out)
-
-        # stderr → local terminal only (not Railway)
+        # stdout/stderr → local terminal only (not Railway)
         if not os.getenv("RAILWAY_ENVIRONMENT_NAME"):
+            print(msg_out)
+
             if STDERR_COUNT < MAX_STDERR_LINES:
                 sys.stderr.write(msg_out + "\n")
                 sys.stderr.flush()
