@@ -766,6 +766,30 @@ async def run_audit_with_data(
                         start = dt_start.strftime("%Y-%m-%d")
                         end   = dt_end.strftime("%Y-%m-%d")
 
+            # ---------------------------------------------------------
+            # 🧭 FINAL DATE NORMALIZATION (must occur AFTER window resolution)
+            # ---------------------------------------------------------
+            try:
+                today = datetime.utcnow().date()
+
+                if start:
+                    dt_start = pd.to_datetime(start).date()
+
+                    if dt_start > today:
+                        raise AuditHalt(
+                            "Cannot generate a report starting in the future.",
+                            code="FUTURE_DATE_INVALID",
+                            severity="hard"
+                        )
+
+                if end:
+                    dt_end = pd.to_datetime(end).date()
+
+                    if dt_end > today:
+                        end = today.isoformat()
+
+            except Exception:
+                pass
 
             # ---------------------------------------------------------
             # 📦 Persist canonical period
