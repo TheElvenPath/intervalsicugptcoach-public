@@ -57,7 +57,7 @@ RENDERER_PROFILES = {
         "hard_rules": [
             "Render exactly ONE report.",
             "All sections MUST appear under their corresponding stack layer header.",
-            "Stack layer headers MUST be rendered as section separators using the layer name in UPPERCASE",
+            "Stack layer headers MUST be rendered using the provided stack labels in uppercase.",
             "Do NOT add numeric prefixes to section headers.",
             "Use emoji-based section headers only.",
             "Preserve section order exactly as defined by the contract.",

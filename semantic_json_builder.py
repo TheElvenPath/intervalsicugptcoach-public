@@ -3378,6 +3378,14 @@ def build_system_prompt_from_header(report_type: str, header: dict) -> str:
     # Optional blocks (existing)
     # --------------------------------------------------
 
+    stack_map_lines = []
+
+    for layer, sections in stack_structure.items():
+        label = stack_labels.get(layer, layer.upper())
+
+        for section in sections:
+            stack_map_lines.append(f"{section} → {label}")
+
     stack_lines = []
     for layer, sections in stack_structure.items():
         label = stack_labels.get(layer, layer.upper())
@@ -3416,9 +3424,20 @@ def build_system_prompt_from_header(report_type: str, header: dict) -> str:
         - modify interpretation_rules
         - alter table rendering rules
 
-        Sections must appear in the exact stack order.
+        Sections must appear in the exact URF contract order.
+        Stack layers only determine which layer header a section appears under.
 
         Each section must appear under its corresponding stack layer while still following the URF section order.
+        A stack layer header MUST be rendered once when the first section belonging to that layer appears.
+        Subsequent sections mapped to the same stack layer MUST remain under that header and MUST NOT repeat the header.
+        """).strip()
+
+    stack_map_block = ""
+
+    if stack_map_lines:
+        stack_map_block = dedent(f"""
+        STACK SECTION MAP:
+        {chr(10).join(stack_map_lines)}
         """).strip()
 
 
@@ -3606,6 +3625,8 @@ def build_system_prompt_from_header(report_type: str, header: dict) -> str:
     {chr(10).join(f"- {r}" for r in hard_rules)}
 
     {stack_block}
+
+    {stack_map_block}
 
     INTERPRETATION RULES:
     {chr(10).join(f"- {r}" for r in interpretation_rules)}
