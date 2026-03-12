@@ -3374,6 +3374,18 @@ def build_system_prompt_from_header(report_type: str, header: dict) -> str:
     # --------------------------------------------------
     # Optional blocks (existing)
     # --------------------------------------------------
+    section_handling_block = ""
+    if section_handling:
+        section_handling_block = dedent(f"""
+        SECTION HANDLING RULES:
+        {chr(10).join(f"- {k}: {v}" for k, v in section_handling.items())}
+
+        Handling meanings:
+        - full: render entire section exactly as provided
+        - summary: summarise using existing semantic aggregates only
+        - forbid: do NOT render this section
+        """).strip()
+
     closing_note_block = ""
 
     if closing_cfg.get("required"):
@@ -3561,6 +3573,8 @@ def build_system_prompt_from_header(report_type: str, header: dict) -> str:
     {emphasis_block}
 
     {framing_block}
+
+    {section_handling_block}
 
     {events_block}
 
