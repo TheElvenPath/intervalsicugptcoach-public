@@ -3406,7 +3406,7 @@ def build_system_prompt_from_header(report_type: str, header: dict) -> str:
         - modify interpretation_rules
         - alter table rendering rules
 
-        Sections must appear in the exact URF section order.
+        Sections must appear in the exact stack order.
 
         Each section must appear under its corresponding stack layer while still following the URF section order.
         """).strip()
@@ -3595,6 +3595,8 @@ def build_system_prompt_from_header(report_type: str, header: dict) -> str:
     HARD RULES:
     {chr(10).join(f"- {r}" for r in hard_rules)}
 
+    {stack_block}
+
     INTERPRETATION RULES:
     {chr(10).join(f"- {r}" for r in interpretation_rules)}
 
@@ -3611,8 +3613,6 @@ def build_system_prompt_from_header(report_type: str, header: dict) -> str:
     {emphasis_block}
 
     {framing_block}
-
-    {stack_block}
 
     {section_handling_block}
 
