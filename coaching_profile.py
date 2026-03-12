@@ -318,7 +318,7 @@ RENDERER_PROFILES = {
 
         "coaching_sentences": {
             "enabled": True,
-            "max_per_section": 5,
+            "max_per_section": 4,
             "placement": "after_data"
         },
 
@@ -370,6 +370,7 @@ RENDERER_PROFILES = {
             "meta": "full",
             "wellness": "full",
             "hrv_daily": "summary",
+            "performance_intelligence": "summary",
             "insights": "full",
             "insight_view": "full",
             "events": "forbid",
@@ -452,7 +453,7 @@ RENDERER_PROFILES = {
             "intent_rule":
                 "Assess whether autonomic and recovery markers support or constrain training intent.",
 
-            "exact_sentences": 6,
+            "exact_sentences": 5,
 
             "sentence_structure": [
                 "1. State classification.",
