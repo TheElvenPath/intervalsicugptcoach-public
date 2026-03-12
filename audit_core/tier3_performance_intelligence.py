@@ -15,6 +15,7 @@ Season → 90d LIGHT chronic aggregation + 7d acute overlay
 from audit_core.utils import debug
 import pandas as pd
 
+PI_VERSION = "PI_v1.1"
 # ===========================================================
 # Public Entry
 # ===========================================================
@@ -43,10 +44,12 @@ def compute_performance_intelligence(context, contract_type="weekly"):
 
     # ✅ Make result visible to interpreter
     context["performance_intelligence"] = result
+    context["PI_VERSION"] = PI_VERSION
 
     # ✅ Now interpret using actual data
     interpretation = interpret_training_state(context)
     context["training_state"] = interpretation
+    debug(context, f"[T3 OUTPUT KEYS] {list(result.keys())}")
 
     return result
 
@@ -67,8 +70,14 @@ def _compute_weekly(context, df_full):
     depletion = pd.to_numeric(df_full.get("icu_max_wbal_depletion"), errors="coerce")
     joules = pd.to_numeric(df_full.get("icu_joules_above_ftp"), errors="coerce")
     decoupling_raw = pd.to_numeric(df_full.get("decoupling"), errors="coerce")
+    efficiency = pd.to_numeric(df_full.get("icu_efficiency_factor"), errors="coerce")
+    variability = pd.to_numeric(df_full.get("icu_variability_index"), errors="coerce")
+    polarisation = pd.to_numeric(df_full.get("polarization_index"), errors="coerce")
     decoupling = decoupling_raw.abs()
     if_values = pd.to_numeric(df_full.get("icu_intensity"), errors="coerce")
+    # normalize legacy intensity values (sometimes stored as %)
+    if if_values is not None and not if_values.dropna().empty and if_values.max() > 2:
+        if_values = if_values / 100
     moving_time = pd.to_numeric(df_full.get("moving_time"), errors="coerce")
 
     depletion_pct = None
@@ -76,35 +85,26 @@ def _compute_weekly(context, df_full):
         depletion_pct = (depletion / w_prime.replace(0, pd.NA)).clip(upper=1.5)
 
     # ---------------------------------------------
-    # Divergence check (rolling vs athlete W′)
+    # W′ utilization divergence (physiological)
     # ---------------------------------------------
-
-    rolling_w_prime = pd.to_numeric(df_full.get("icu_pm_w_prime"), errors="coerce")
-    athlete_w_prime = pd.to_numeric(df_full.get("icu_w_prime"), errors="coerce")
 
     divergence = None
 
-    if rolling_w_prime is not None and athlete_w_prime is not None:
+    if depletion_pct is not None and not depletion_pct.dropna().empty:
 
-        # Clean zeros and NaNs
-        rolling_clean = rolling_w_prime.replace(0, pd.NA)
-        athlete_clean = athlete_w_prime.replace(0, pd.NA)
+        mean_dep = depletion_pct.dropna().mean()
 
-        valid_mask = rolling_clean.notna() & athlete_clean.notna()
+        # expected endurance baseline
+        expected = 0.30
 
-        if valid_mask.any():
+        divergence = float(mean_dep - expected)
 
-            mean_rolling = rolling_clean[valid_mask].mean()
-            mean_athlete = athlete_clean[valid_mask].mean()
-
-            if mean_athlete and mean_athlete != 0:
-                divergence = float((mean_rolling - mean_athlete) / mean_athlete)
-
-                debug(
-                    context,
-                    "[T3][W′] Rolling vs Athlete divergence",
-                    f"{divergence:.3f}"
-                )
+        debug(
+            context,
+            "[T3][W′] Utilization divergence",
+            f"{divergence:.3f}",
+            f"(mean_dep={mean_dep:.3f}, baseline={expected})"
+        )
 
     weekly_result = {
         "anaerobic_repeatability": {
@@ -126,6 +126,10 @@ def _compute_weekly(context, df_full):
             "rolling_joules_above_ftp_7d": _safe_sum(joules),
             "high_intensity_days_7d": _safe_count(joules, 20000),
             "mean_if_7d": _safe_mean(if_values),
+
+            # new Tier-3 signals
+            "mean_efficiency_factor_7d": _safe_mean(efficiency),
+            "mean_variability_index_7d": _safe_mean(variability),
         }
     }
 
@@ -154,7 +158,6 @@ def _compute_weekly(context, df_full):
         f"high_intensity_days={ndli['high_intensity_days_7d']}",
         f"mean_if={ndli['mean_if_7d']}")
 
-
     return weekly_result
 
 
@@ -172,22 +175,83 @@ def _compute_season(context, df_light, df_full):
 
     # -------- Chronic 90d State --------
 
-    w_prime = pd.to_numeric(df_light.get("icu_pm_w_prime"), errors="coerce")
+    # rolling CP model vs athlete profile W′
+    rolling_w_prime = pd.to_numeric(df_light.get("icu_rolling_w_prime"), errors="coerce")
+    athlete_w_prime = pd.to_numeric(df_light.get("icu_w_prime"), errors="coerce")
+
+    # ensure Series
+    if not isinstance(rolling_w_prime, pd.Series):
+        rolling_w_prime = pd.Series([rolling_w_prime] * len(df_light))
+
+    if not isinstance(athlete_w_prime, pd.Series):
+        athlete_w_prime = pd.Series([athlete_w_prime] * len(df_light))
+
     depletion = pd.to_numeric(df_light.get("icu_max_wbal_depletion"), errors="coerce")
+
+    if not isinstance(depletion, pd.Series):
+        depletion = pd.Series([depletion] * len(df_light))
+
     joules = pd.to_numeric(df_light.get("icu_joules_above_ftp"), errors="coerce")
     decoupling = pd.to_numeric(df_light.get("decoupling"), errors="coerce")
+
     if_values = pd.to_numeric(
         df_light.get("icu_intensity", df_light.get("IF")),
         errors="coerce"
     )
+
     # normalize legacy IF values
     if if_values is not None and if_values.max() > 2:
         if_values = if_values / 100
+
     training_load = pd.to_numeric(df_light.get("icu_training_load"), errors="coerce")
+    efficiency = pd.to_numeric(df_light.get("icu_efficiency_factor"), errors="coerce")
+    variability = pd.to_numeric(df_light.get("icu_variability_index"), errors="coerce")
+    polarisation = pd.to_numeric(df_light.get("polarization_index"), errors="coerce")
+
+    # -----------------------------
+    # W′ depletion %
+    # -----------------------------
 
     depletion_pct = None
-    if w_prime is not None and depletion is not None:
-        depletion_pct = (depletion / w_prime.replace(0, pd.NA)).clip(upper=1.5)
+    if rolling_w_prime is not None and depletion is not None:
+        depletion_pct = (depletion / rolling_w_prime.replace(0, pd.NA)).clip(upper=1.5)
+
+    # -----------------------------
+    # W′ model divergence (90d)
+    # -----------------------------
+
+    divergence_90d = None
+
+    if rolling_w_prime is not None and athlete_w_prime is not None:
+
+        rolling_clean = rolling_w_prime.replace(0, pd.NA)
+        athlete_clean = athlete_w_prime.replace(0, pd.NA)
+
+        valid_mask = rolling_clean.notna() & athlete_clean.notna()
+
+        if valid_mask.any():
+
+            mean_rolling = rolling_clean[valid_mask].mean()
+            mean_athlete = athlete_clean[valid_mask].mean()
+
+            if pd.notna(mean_athlete) and mean_athlete != 0:
+
+                divergence_90d = float((mean_rolling - mean_athlete) / mean_athlete)
+
+                # clamp extreme outliers
+                divergence_90d = max(min(divergence_90d, 1.0), -1.0)
+
+                debug(
+                    context,
+                    "[T3][W′] Model divergence (90d)",
+                    f"{divergence_90d:.3f}",
+                    f"(rolling={mean_rolling:.0f}, athlete={mean_athlete:.0f})"
+                )
+
+    model_diag = {}
+
+    if divergence_90d is not None:
+        model_diag["w_prime_divergence_90d"] = divergence_90d
 
     chronic = {
         "anaerobic_repeatability": {
@@ -196,24 +260,32 @@ def _compute_season(context, df_light, df_full):
             "high_depletion_sessions_90d": _safe_count(depletion_pct, 0.7),
             "total_joules_above_ftp_90d": _safe_sum(joules),
         },
+
+        "model_diagnostics": model_diag,
+
         "durability": {
             "mean_decoupling_90d": _safe_mean(decoupling),
             "max_decoupling_90d": _safe_max(decoupling),
             "high_drift_sessions_90d": _safe_count(decoupling, 5.0),
         },
+
         "neural_density": {
             "high_intensity_sessions_90d": _safe_count(joules, 20000),
             "mean_if_90d": _safe_mean(if_values),
             "mean_training_load_90d": _safe_mean(training_load),
+
+            # new Tier-3 signals
+            "mean_efficiency_factor_90d": _safe_mean(efficiency),
+            "mean_variability_index_90d": _safe_mean(variability),
         }
     }
 
     # -------- Acute Overlay (full fidelity weekly) --------
 
-    acute_overlay = None
     if df_full is not None and not df_full.empty:
-        debug(context, "[T3] Season computing acute overlay (7d FULL)")
         acute_overlay = _compute_weekly(context, df_full)
+    else:
+        acute_overlay = _empty_weekly()
 
     # -----------------------------------------------------------
     # T3 CONTRACT DEBUG — SEASON (CHRONIC 90D)
@@ -277,19 +349,8 @@ def _compute_season(context, df_light, df_full):
 
 
 def interpret_training_state(context):
-    """
-    Synthesizes Tier-3 metrics into athlete-facing decisions.
 
-    Returns:
-        {
-            state_label,
-            readiness,
-            adaptation,
-            recommendation,
-            next_session,
-            confidence
-        }
-    """
+    # Synthesizes Tier-3 metrics into athlete-facing decisions.
 
     pi = context.get("performance_intelligence", {})
     future = context.get("future_forecast", {})
@@ -299,7 +360,6 @@ def interpret_training_state(context):
         or context.get("phase_detected")
         or (context.get("phases", [{}])[-1].get("phase") if context.get("phases") else None)
     )
-
 
     # --------------------------------------------------
     # Pull signals (safe extraction)
@@ -311,6 +371,33 @@ def interpret_training_state(context):
 
     tsb_class = future.get("fatigue_class")
     recovery_index = wellness.get("recovery_index")
+
+    # --------------------------------------------------
+    # Load vs Recovery mismatch detection
+    # --------------------------------------------------
+
+    autonomic_ratio = wellness.get("Autonomic_ratio")
+    atl = wellness.get("ATL")
+    ctl = wellness.get("CTL")
+
+    load_recovery_state = "balanced"
+
+    if autonomic_ratio is not None and atl is not None and ctl is not None:
+
+        load_pressure = atl - ctl
+
+        # taper / recovery protection
+        if load_pressure <= 0:
+            load_recovery_state = "balanced"
+
+        elif autonomic_ratio < 0.90 and load_pressure > 10:
+            load_recovery_state = "maladaptation_risk"
+
+        elif autonomic_ratio < 0.95 and load_pressure > 5:
+            load_recovery_state = "adaptation_pressure"
+
+        elif autonomic_ratio >= 1.05 and load_pressure > 5:
+            load_recovery_state = "productive_load"
 
     # --------------------------------------------------
     # Decision Framing (no new math — just logic)
@@ -363,6 +450,7 @@ def interpret_training_state(context):
         "next_session": next_session,
         "confidence": confidence,
         "phase_context": phase,
+        "load_recovery_state": load_recovery_state,
     }
 
 
@@ -396,9 +484,10 @@ def _safe_count(series, threshold):
 
 def _empty_weekly():
     return {
-        "anaerobic_repeatability": None,
-        "durability": None,
-        "neural_density": None
+        "anaerobic_repeatability": {},
+        "model_diagnostics": {},
+        "durability": {},
+        "neural_density": {}
     }
 
 

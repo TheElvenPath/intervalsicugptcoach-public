@@ -38,13 +38,13 @@ REPORT_CONTRACT = {
     ],
 
     "summary": [
-        "meta", "training_volume",
+        "meta", "training_volume", 
         "wellness", "insights",
         "phases", "phases_summary", "performance_summary"
     ],
 
     "wellness": [
-        "meta", "wellness", "insights", "insight_view"
+        "meta", "wellness", "performance_intelligence", "insights", "insight_view"
     ]
 }
 
@@ -159,7 +159,7 @@ RENDERER_PROFILES = {
                 "FatigueTrend",
                 "NDLI",
                 "Durability",
-                "performance_intelligence.training_state"
+                "performance_intelligence.training_state",
                 "energy_system_progression"
             ],
             "intent_rule": "Assess whether acute load and recovery state align with immediate training intent.",
@@ -180,7 +180,7 @@ RENDERER_PROFILES = {
             "If semantic.training_volume exists, render it under the header 'Training Volume' with three stacked metrics: Hours, Training Load (TSS), Distance.",
             "Focus on trends, phases, and accumulated load.",
             "Avoid session-level or daily commentary.",
-            "If performance_intelligence exists, render chronic_state first (90d), then acute_overlay (7d). Emphasise contrast between chronic capacity and acute stress.",
+            "If performance_intelligence exists, render chronic signals (90d) first, then acute signals (7d). Emphasise contrast between long-term capacity and current stress.",
             "Interpretation may combine signals across sections when they describe the same physiological process (e.g. fatigue, adaptation, durability).",
             "When energy_system_progression exists, generate at least one sentence summarising the current adaptation direction using system_status and adaptation_state.",
             "Insights SHOULD prioritise adaptation signals (ESPE) before repeating metric definitions.",
@@ -231,7 +231,9 @@ RENDERER_PROFILES = {
                 "Efficiency_Factor",
                 "Fatigue_Resistance",
                 "phases_summary",
-                "performance_intelligence",
+                "performance_intelligence.chronic",
+                "performance_intelligence.acute",
+                "performance_intelligence.training_state",
                 "energy_system_progression",
             ],
             "intent_rule": "Determine whether the training block reflects expansion, consolidation, or plateau.",
@@ -240,28 +242,59 @@ RENDERER_PROFILES = {
     },
 
     # ==============================================================
-    # Wellness report (PROD-ALIGNED, SIGNAL-FIRST)
+    # Wellness report (URF v5.2 — SIGNAL-FIRST, MULTI-LAYER RECOVERY)
     # ==============================================================
+
     "wellness": {
+
         "coaching_sentences": {
             "enabled": True,
             "max_per_section": 5,
             "placement": "after_data"
         },
+
+        # ----------------------------------------------------------
+        # Signal hierarchy (used by prompt builder)
+        # ----------------------------------------------------------
+
+        "signal_hierarchy": [
+            "Autonomic signals (HRV, HRV stability, resting HR, sleep)",
+            "Load context (CTL, ATL, TSB, FatigueTrend)",
+            "Stress mechanisms (neural density, durability drift, intensity density)"
+        ],
+
+        # ----------------------------------------------------------
+        # Interpretation rules
+        # ----------------------------------------------------------
+
         "interpretation_rules": [
             "Interpret recovery using trends, means, and latest values together.",
-            "Explain HRV behaviour (variability, clustering, suppression) when present.",
-            "Integrate HRV with CTL, ATL, and TSB within the same section.",
-            "Avoid day-by-day narration when aggregates or trends exist."
+            "Prioritise autonomic signals (HRV, RHR, sleep) when determining recovery state.",
+            "Explain HRV behaviour including suppression, clustering, variability, and rebound.",
+            "Use CTL, ATL, and TSB as load context rather than primary fatigue indicators.",
+            "Avoid day-by-day narration when aggregates or trends exist.",
+            "When HRV remains stable despite high ATL, describe this as maintenance-under-load adaptation.",
+            "When autonomic signals disagree with load signals, prioritise autonomic interpretation."
         ],
+
+        # ----------------------------------------------------------
+        # Allowed enrichment
+        # ----------------------------------------------------------
+
         "allowed_enrichment": [
             "Summarise HRV behaviour using peaks, troughs, variability, and clustering.",
-            "Explain physiological meaning of HRV suppression vs personal baseline.",
-            "Describe maintenance-under-load states when CTL≈ATL and HRV is falling.",
-            "Highlight absence of subjective recovery data if present in semantic data.",
-            "Include short, non-predictive coach recommendations grounded in signals.",
-            "include sleep and RHR Analysis if available"
+            "Explain physiological meaning of HRV suppression relative to personal baseline.",
+            "Describe maintenance-under-load states when CTL≈ATL and HRV is stable.",
+            "Explain interaction between HRV behaviour and training load.",
+            "Include sleep and resting heart rate analysis when available.",
+            "Highlight absence of subjective recovery data when relevant.",
+            "Describe possible neural or durability fatigue only when supported by insight metrics."
         ],
+
+        # ----------------------------------------------------------
+        # Section rendering
+        # ----------------------------------------------------------
+
         "section_handling": {
             "meta": "full",
             "wellness": "full",
@@ -276,23 +309,57 @@ RENDERER_PROFILES = {
             "phases": "forbid"
         },
 
+        # ----------------------------------------------------------
+        # Narrative emphasis
+        # ----------------------------------------------------------
+
         "emphasis": {
             "wellness": "high",
-            "insights": "high"
+            "insights": "high",
+            "autonomic_signals": "high",
+            "load_context": "medium",
+            "stress_mechanisms": "medium"
         },
 
+        # ----------------------------------------------------------
+        # Framing intent
+        # ----------------------------------------------------------
+
         "framing": {
-            "intent": "recovery_signal_interpretation"
+            "intent": "recovery_signal_interpretation",
+            "model": "multi_layer_recovery"
         },
+
+        # ----------------------------------------------------------
+        # Fatigue interpretation guardrails
+        # ----------------------------------------------------------
+
+        "fatigue_logic": [
+            "Do not infer fatigue from load metrics alone.",
+            "FatigueTrend represents load equilibrium relative to the baseline window.",
+            "Autonomic suppression combined with elevated ATL indicates recovery pressure.",
+            "Stable HRV despite elevated ATL indicates productive adaptation under load."
+        ],
+
+        # ----------------------------------------------------------
+        # Closing note
+        # ----------------------------------------------------------
+
         "closing_note": {
+
             "required": True,
-            "verdict_rule": "State clearly whether current recovery status supports or constrains ongoing training.",
+
             "classification_required": [
                 "Adapting Well",
                 "Adaptation Under Pressure",
                 "Maladaptation Risk"
             ],
+
+            "verdict_rule":
+                "State clearly whether current recovery status supports or constrains ongoing training.",
+
             "focus": "recovery_validation",
+
             "anchor_metrics": [
                 "HRV",
                 "HRV_stability",
@@ -303,15 +370,19 @@ RENDERER_PROFILES = {
                 "ATL",
                 "TSB"
             ],
-            "intent_rule": "Assess whether autonomic and recovery markers support or constrain training intent.",
+
+            "intent_rule":
+                "Assess whether autonomic and recovery markers support or constrain training intent.",
+
             "exact_sentences": 6,
+
             "sentence_structure": [
-                "1. State classification (Supported / Borderline / Constrained).",
-                "2. Describe HRV behaviour relative to baseline (trend + stability).",
+                "1. State classification.",
+                "2. Describe HRV behaviour relative to baseline.",
                 "3. Describe interaction with CTL, ATL, and TSB.",
                 "4. Explain physiological meaning (autonomic balance or strain).",
-                "5. Translate into plain language (what this means for how you feel / cope).",
-                "6. Provide concrete guidance for today or the next 24–72 hours."
+                "5. Translate into plain language (how the body is coping).",
+                "6. Provide concrete guidance for the next 24–72 hours."
             ]
         }
     },
@@ -377,6 +448,7 @@ RENDERER_PROFILES = {
 
 
 REPORT_RESOLUTION = {
+
     "weekly": {
         "CTL": "authoritative",
         "ATL": "authoritative",
@@ -396,7 +468,7 @@ REPORT_RESOLUTION = {
         "zones": "not_available",
         "derived_metrics": "trend_only",
         "extended_metrics": "none",
-        "performance_intelligence": "acute_overlay_plus_chronic_90d",
+        "performance_intelligence": "acute_7d_plus_chronic_90d",
         "energy_system_progression": "adaptation",
         "insights": "strategic",
     },
@@ -408,6 +480,7 @@ REPORT_RESOLUTION = {
         "zones": "not_applicable",
         "derived_metrics": "wellness_only",
         "extended_metrics": "none",
+        "performance_intelligence": "acute_full_7d",
         "insights": "recovery",
     },
 
@@ -899,12 +972,30 @@ COACH_PROFILE = {
             "formula": "Composite ESPE score across anaerobic, VO₂, threshold and durability systems",
             "interpretation": "Composite indicator describing balance of energy system development.",
             "coaching_implication": "Values closer to 1 indicate balanced development across systems.",
-        }
+        },
+        "LoadRecoveryState": {
+            "framework": "HRV–Load Interaction Model (Plews 2013; Banister 1975)",
+            "formula": "HRV_autonomic_ratio interpreted alongside ATL − CTL load pressure",
+            "interpretation": (
+                "Qualitative state describing the interaction between autonomic recovery "
+                "(HRV relative to baseline) and current training load pressure (ATL vs CTL)."
+            ),
+            "criteria": {
+                "balanced": "Recovery signals aligned with training load.",
+                "productive_load": "Training load elevated but autonomic recovery stable.",
+                "adaptation_pressure": "Autonomic recovery suppressed under elevated load.",
+                "maladaptation_risk": "Recovery breakdown relative to training stress."
+            },
+            "coaching_implication": (
+                "Helps determine whether current training load is being productively absorbed "
+                "or whether recovery capacity is being exceeded."
+            )
+        },
     },
     "metadata": {
         "framework_chain": [
             "Seiler", "Treff 2019", "Banister", "Foster", "San Millán",
-            "Friel", "Sandbakk", "Skiba", "Coggan", "Noakes"
+            "Friel", "Sandbakk", "Skiba", "Coggan", "Noakes","Plews–Banister Interaction Framework"
         ],
         "unified_framework": "v5.1",
         "audit_validation": "Tier-2 verified, event-only totals enforced",

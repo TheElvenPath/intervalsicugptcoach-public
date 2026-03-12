@@ -2452,7 +2452,21 @@ def build_semantic_json(context):
     # 🧠 Performance Intelligence (Tier-3)
     # ---------------------------------------------------------
 
-    pi = context.get("performance_intelligence")
+    pi = context.get("performance_intelligence", {}) or {}
+
+    semantic["performance_intelligence"]["version"] = context.get("PI_VERSION")
+
+    acute_pi = {}
+    chronic_pi = {}
+
+    # Weekly structure
+    if "anaerobic_repeatability" in pi:
+        acute_pi = copy.deepcopy(pi)
+
+    # Season structure
+    elif "chronic_state" in pi or "acute_overlay" in pi:
+        chronic_pi = copy.deepcopy(pi.get("chronic_state", {}))
+        acute_pi   = copy.deepcopy(pi.get("acute_overlay", {}))
 
     if isinstance(pi, dict) and pi:
 
@@ -2492,9 +2506,12 @@ def build_semantic_json(context):
         def wrap_pi_block(pi_block, window_label):
             wrapped = {}
 
-            for group_name, metrics in pi_block.items():
+            for group_name, metrics in (pi_block or {}).items():
 
                 if group_name not in PI_GROUPS:
+                    continue
+
+                if metrics is None:
                     continue
 
                 group_meta = PI_GROUPS[group_name]
@@ -2509,28 +2526,30 @@ def build_semantic_json(context):
                     )
 
                     block["framework"] = group_meta["framework"]
-                    block["interpretation"] = CHEAT_SHEET["context"].get(
-                        group_meta["context_key"]
+
+                    metric_context = CHEAT_SHEET["context"].get(metric_name)
+                    group_context = CHEAT_SHEET["context"].get(group_meta["context_key"])
+
+                    metric_advice = (
+                        CHEAT_SHEET["advice"].get(metric_name)
+                        or CHEAT_SHEET["coaching_links"].get(metric_name)
                     )
-                    block["coaching_implication"] = CHEAT_SHEET["advice"].get(
-                        group_meta["advice_key"], {}
+
+                    group_advice = (
+                        CHEAT_SHEET["advice"].get(group_meta["advice_key"])
+                        or CHEAT_SHEET["coaching_links"].get(group_meta["advice_key"], {})
                     )
+
+                    block["interpretation"] = metric_context or group_context
+                    block["coaching_implication"] = metric_advice or group_advice
                     block["context_window"] = window_label
 
                     wrapped[group_name][metric_name] = block
 
             return wrapped
 
-        if report_type == "weekly":
-            semantic["performance_intelligence"]["acute"] = wrap_pi_block(pi, "7d")
-            semantic["performance_intelligence"]["chronic"] = {}
-
-        elif report_type in ("season", "summary"):
-            chronic = pi.get("chronic_state", {})
-            acute = pi.get("acute_overlay", {})
-
-            semantic["performance_intelligence"]["chronic"] = wrap_pi_block(chronic, "90d")
-            semantic["performance_intelligence"]["acute"] = wrap_pi_block(acute, "7d")
+        semantic["performance_intelligence"]["acute"] = wrap_pi_block(acute_pi, "7d")
+        semantic["performance_intelligence"]["chronic"] = wrap_pi_block(chronic_pi, "90d")
 
         # -----------------------------------------------------
         # 2️⃣ Inject Interpretation → Action Layer
@@ -2540,21 +2559,49 @@ def build_semantic_json(context):
 
         if training_state:
 
+            load_state = training_state.get("load_recovery_state")
+
+            classification = CLASSIFICATION_ALIASES.get(load_state)
+
             semantic["performance_intelligence"]["training_state"] = {
+                "framework": "Autonomic–Load Interaction Model",
+
+                # scientific explanation
+                "interpretation": CHEAT_SHEET["context"].get("load_recovery_state"),
+
+                # coaching interpretation
+                "coaching_implication": CHEAT_SHEET["advice"]
+                    .get("LoadRecoveryState", {})
+                    .get(load_state),
+
+                "context_window": "current_microcycle",
+
+                # traffic-light classification
+                "classification": classification,
+                "classification_source": "load_recovery_state",
+
                 "state_label": training_state.get("state_label"),
-                "readiness": training_state.get("readiness"),
-                "adaptation": training_state.get("adaptation"),
-                "recommendation": training_state.get("recommendation"),
-                "next_session": training_state.get("next_session"),
                 "confidence": training_state.get("confidence"),
-                "phase_context": training_state.get("phase_context"),
+
+                "signals": {
+                    "readiness_signal": training_state.get("readiness"),
+                    "adaptation_signal": training_state.get("adaptation"),
+                    "load_recovery_state": load_state
+                },
+
+                "recommended_action": {
+                    "recommendation": training_state.get("recommendation"),
+                    "next_session": training_state.get("next_session")
+                },
+
+                "phase_context": training_state.get("phase_context")
             }
 
             debug(
                 context,
                 f"[SEMANTIC] Injected training_state → "
-                f"{training_state.get('status')} | "
-                f"{training_state.get('next_session_focus')}"
+                f"{training_state.get('state_label')} | "
+                f"{training_state.get('next_session')}"
             )
 
         debug(
@@ -3312,6 +3359,8 @@ def build_system_prompt_from_header(report_type: str, header: dict) -> str:
     coaching_max = coaching_cfg.get("max_per_section", 0)
 
     section_handling = report_profile.get("section_handling", {})
+    signal_hierarchy = report_profile.get("signal_hierarchy", [])
+    fatigue_logic = report_profile.get("fatigue_logic", [])
 
     # ➕ NEW: presentation config (read directly, no helpers)
     state_presentation = global_profile.get("state_presentation", {})
@@ -3472,7 +3521,25 @@ def build_system_prompt_from_header(report_type: str, header: dict) -> str:
           {framing.get("intent")}
         - This intent guides prioritisation and narrative focus only.        
         """).strip()
+    # --------------------------------------------------
+    # Welness blocks
+    # --------------------------------------------------
+    fatigue_block = ""
+    if fatigue_logic:
+        fatigue_block = dedent(f"""
+        FATIGUE INTERPRETATION MODEL:
+        {chr(10).join(f"- {r}" for r in fatigue_logic)}
+        """).strip()
+    
+    signal_block = ""
+    if signal_hierarchy:
+        signal_block = dedent(f"""
+        SIGNAL PRIORITY MODEL:
+        Interpret recovery signals using the following hierarchy.
+        Earlier layers take precedence when signals disagree.
 
+        {chr(10).join(f"- {s}" for s in signal_hierarchy)}
+        """).strip()
     # --------------------------------------------------
     # Assemble final prompt
     # --------------------------------------------------
@@ -3495,6 +3562,10 @@ def build_system_prompt_from_header(report_type: str, header: dict) -> str:
     {coaching_block}
 
     {enrichment_block}
+
+    {signal_block}
+
+    {fatigue_block}
 
     {state_presentation_block}
 

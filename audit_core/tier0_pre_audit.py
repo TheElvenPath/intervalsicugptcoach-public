@@ -229,7 +229,7 @@ def fetch_activities_chunked(
                     acts_url = (
                         f"{INTERVALS_API}/athlete/{athlete_id}/activities_t0light?"
                         f"oldest={chunk_start:%Y-%m-%d}&newest={chunk_end:%Y-%m-%d}"
-                        "&fields=id,name,type,sport_type,start_date_local,distance,moving_time,icu_training_load,icu_atl,icu_ctl,icu_intensity,average_heartrate,VO2MaxGarmin,HrtLndLt1,HrtLndLt1p,icu_pm_w_prime,icu_max_wbal_depletion,icu_joules_above_ftp,decoupling"
+                        "&fields=id,name,type,sport_type,start_date_local,distance,moving_time,icu_training_load,icu_atl,icu_ctl,icu_intensity,average_heartrate,VO2MaxGarmin,HrtLndLt1,HrtLndLt1p,icu_pm_w_prime,icu_max_wbal_depletion,icu_joules_above_ftp,decoupling,icu_w_prime,icu_rolling_w_prime,icu_efficiency_factor,icu_variability_index,polarization_index"
                     )
                 else:
                     acts_url = (
@@ -700,7 +700,7 @@ def run_tier0_pre_audit(start: str, end: str, context: dict):
         context["prefetch_done"] = True
 
         fields = (
-            "id,name,type,sport_type,start_date_local,distance,moving_time,icu_training_load,icu_atl,icu_ctl,icu_intensity,average_heartrate,VO2MaxGarmin,HrtLndLt1,HrtLndLt1p,icu_pm_w_prime,icu_max_wbal_depletion,icu_joules_above_ftp,decoupling"
+            "id,name,type,sport_type,start_date_local,distance,moving_time,icu_training_load,icu_atl,icu_ctl,icu_intensity,average_heartrate,VO2MaxGarmin,HrtLndLt1,HrtLndLt1p,icu_pm_w_prime,icu_max_wbal_depletion,icu_joules_above_ftp,decoupling,icu_w_prime,icu_rolling_w_prime,icu_efficiency_factor,icu_variability_index,polarization_index"
         )
 
         # 🔧 Determine baseline range (default: from controller start/end)

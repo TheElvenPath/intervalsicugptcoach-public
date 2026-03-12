@@ -119,9 +119,9 @@ CHEAT_SHEET["thresholds"] = {
         "red": (0.90, 1.0),
     },
     "w_prime_divergence_7d": {
-        "green": (-0.1, 0.2),
-        "amber": (0.2, 0.5),
-        "red": (0.5, 1.0)
+        "green": (-0.10, 0.15),
+        "amber": (0.15, 0.30),
+        "red": (0.30, 1.00)
     },
     "w_prime_divergence_90d": {
         "green": (-0.1, 0.2),
@@ -549,6 +549,7 @@ CLASSIFICATION_ALIASES = {
     "consistent": "green",
     "low": "green",
     "green": "green",
+    "productive_load": "green",
 
     # ---------------------------
     # AMBER (Watch / transitional)
@@ -565,6 +566,7 @@ CLASSIFICATION_ALIASES = {
     "moderate_high": "amber",
     "accumulating": "amber",
     "amber": "amber",
+    "adaptation_pressure": "amber",
 
     # ---------------------------
     # RED (Risk / undesirable)
@@ -579,7 +581,8 @@ CLASSIFICATION_ALIASES = {
     "extreme": "red",
     "high": "red",
     "extreme_accumulation": "red",
-    "red": "red"
+    "red": "red",
+    "maladaptation_risk": "red"
 }
 
 # === Context ===
@@ -711,16 +714,26 @@ CHEAT_SHEET["context"] = {
         "Values near 1.0 indicate stable autonomic balance. "
         "Suppression below 0.92 may indicate fatigue."
     ),
-    "RestingHRDelta": "Resting heart rate trend — elevated HR indicates fatigue or stress.",
+    "RestingHRDelta": (
+        "Resting heart rate trend — elevated HR indicates fatigue or stress."
+    ),
     "w_prime_divergence_7d": (
-        "Relative difference between rolling CP-derived W′ (performance model) "
-        "and athlete profile W′ setting. Measures coherence between model-estimated "
-        "anaerobic capacity and configured profile capacity."
+        "Difference between observed W′ depletion behaviour and expected endurance baseline. "
+        "Positive values indicate higher-than-normal anaerobic utilisation, "
+        "while negative values indicate lower-than-expected supra-threshold engagement."
     ),
     "w_prime_divergence_90d": (
         "Relative difference between rolling CP-derived W′ (performance model) "
         "and athlete profile W′ setting. Measures coherence between model-estimated "
         "anaerobic capacity and configured profile capacity."
+    ),
+    "load_recovery_state": (
+        "Load–Recovery state describing the interaction between training load "
+        "(ATL vs CTL) and autonomic recovery (HRV ratio). "
+        "Balanced indicates load and recovery aligned. "
+        "Productive_load indicates elevated load with stable recovery. "
+        "Adaptation_pressure indicates recovery suppression under load. "
+        "Maladaptation_risk indicates recovery breakdown relative to training stress."
     ),
 }
 
@@ -811,16 +824,16 @@ CHEAT_SHEET["coaching_links"] = {
         "If HRV deviation is negative beyond -10%, reduce intensity "
         "and prioritise sleep. Positive deviation suggests readiness."
     ),
-    "w_prime_divergence_7d": (
-        "green - Model windows aligned — W′ setting reflects current power curve."
-        "amber - Mild divergence — monitor CP curve stability or review W′ setting."
-        "red - Large mismatch between rolling CP W′ and athlete profile W′ — depletion metrics may be distorted. Review W′ calibration."
-    ),
-    "w_prime_divergence_90d": (
-        "green - Model windows aligned — W′ setting reflects current power curve."
-        "amber - Mild divergence — monitor CP curve stability or review W′ setting."
-        "red - Large mismatch between rolling CP W′ and athlete profile W′ — depletion metrics may be distorted. Review W′ calibration."
-    ),
+    "w_prime_divergence_7d": {
+        "green": "Anaerobic utilisation within normal endurance range.",
+        "amber": "Elevated W′ usage — indicates VO₂max or anaerobic stimulus.",
+        "red": "Very high W′ utilisation — likely race load or repeated high-intensity sessions."
+    },
+    "w_prime_divergence_90d": {
+        "green": "Model windows aligned — W′ setting reflects the current power curve.",
+        "amber": "Mild divergence — monitor CP curve stability or review W′ setting.",
+        "red": "Large mismatch between rolling CP W′ and athlete profile W′ — depletion metrics may be distorted. Review W′ calibration."
+    },
     "pdr_5m": (
         "Power Duration Reserve at 5 minutes. "
         "Calculated as P5m minus Critical Power (CP). "
@@ -863,8 +876,12 @@ CHEAT_SHEET["coaching_links"] = {
         "and durability systems derived from the power-duration curve. "
         "Values closer to 1 indicate balanced development across systems."
     ),
-
-    
+    "load_recovery_state": (
+        "Balanced — training load and recovery are aligned. Maintain planned structure.\n"
+        "Productive_load — load elevated but recovery stable; continue progression while monitoring HRV.\n"
+        "Adaptation_pressure — recovery signals falling under load; reduce intensity density or insert recovery.\n"
+        "Maladaptation_risk — recovery suppressed relative to load; prioritize rest or deload."
+    ),
 }
 
 CHEAT_SHEET["display_names"] = {
@@ -881,8 +898,44 @@ CHEAT_SHEET["display_names"] = {
     "load_alignment": "Acute vs Chronic Load Alignment",
     "wdrm_7d": "Anaerobic Repeatability (7-day)",
     "wdrm_90d": "Anaerobic Repeatability (90-day)",
-    "w_prime_divergence_7d": "W′ Model Coherence (7-day)",
+    "w_prime_divergence_7d": "W′ Utilisation Divergence (7-day)",
     "w_prime_divergence_90d": "W′ Model Coherence (90-day)",
+    # WDRM metrics
+    "max_depletion_pct_7d": "Max W′ Depletion (7-day)",
+    "mean_depletion_pct_7d": "Mean W′ Depletion (7-day)",
+    "high_depletion_sessions_7d": "High W′ Depletion Sessions (7-day)",
+    "total_joules_above_ftp_7d": "Total Work Above FTP (7-day)",
+
+    # ISDM metrics
+    "mean_decoupling_7d": "Mean Decoupling (7-day)",
+    "max_decoupling_7d": "Max Decoupling (7-day)",
+    "high_drift_sessions_7d": "High Drift Sessions (7-day)",
+    "long_sessions_7d": "Long Endurance Sessions (7-day)",
+
+    # NDLI metrics
+    "rolling_joules_above_ftp_7d": "Rolling Work Above FTP (7-day)",
+    "high_intensity_days_7d": "High-Intensity Days (7-day)",
+    "mean_if_7d": "Mean Intensity Factor (7-day)",
+    "mean_variability_index_7d": "Mean Variability Index (7-day)",
+    "mean_efficiency_factor_7d": "Mean Efficiency Factor (7-day)",
+    
+    # WDRM metrics (90d)
+    "max_depletion_pct_90d": "Max W′ Depletion (90-day)",
+    "mean_depletion_pct_90d": "Mean W′ Depletion (90-day)",
+    "high_depletion_sessions_90d": "High W′ Depletion Sessions (90-day)",
+    "total_joules_above_ftp_90d": "Total Work Above FTP (90-day)",
+
+    # ISDM metrics (90d)
+    "mean_decoupling_90d": "Mean Decoupling (90-day)",
+    "max_decoupling_90d": "Max Decoupling (90-day)",
+    "high_drift_sessions_90d": "High Drift Sessions (90-day)",
+
+    # NDLI metrics (90d)
+    "high_intensity_sessions_90d": "High-Intensity Sessions (90-day)",
+    "mean_if_90d": "Mean Intensity Factor (90-day)",
+    "mean_training_load_90d": "Mean Training Load (90-day)",
+    "mean_efficiency_factor_90d": "Mean Efficiency Factor (90-day)",
+    "mean_variability_index_90d": "Mean Variability Index (90-day)"
 }
 
 CHEAT_SHEET["advice"] = {
@@ -1017,6 +1070,12 @@ CHEAT_SHEET["advice"] = {
         "underload": "Acute below baseline — safe to build.",
         "aligned": "Acute aligned with chronic baseline.",
         "overreach": "Acute significantly above baseline — recovery advised."
+    },
+    "LoadRecoveryState": {
+        "balanced": "Training load and recovery signals aligned.",
+        "productive_load": "Recovery stable under elevated load — productive adaptation likely.",
+        "adaptation_pressure": "Recovery markers suppressed under load — monitor fatigue and reduce intensity density.",
+        "maladaptation_risk": "Recovery breakdown detected — deload or recovery advised."
     },
 }
 
@@ -1359,9 +1418,10 @@ CHEAT_SHEET["metric_confidence"] = {
         "high_confidence_when": {"min_samples": 7},
     },
     "w_prime_divergence_7d": {
-        "default": "informational",
+        "default": "contextual",
         "notes": (
-            "Model coherence diagnostic only. Does not directly indicate fatigue or performance change.",
+            "Indicator of anaerobic load exposure. Should be interpreted "
+            "alongside W′ depletion and high-intensity session counts."
         )
     },
     "w_prime_divergence_90d": {
