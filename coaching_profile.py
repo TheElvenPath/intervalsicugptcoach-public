@@ -161,6 +161,9 @@ RENDERER_PROFILES = {
     # ==============================================================
     "weekly": {
         "stack_structure": {
+            "meta_context": [
+                "meta"
+            ],
             "training_load": [
                 "training_volume",
                 "metrics",
@@ -195,6 +198,7 @@ RENDERER_PROFILES = {
             ]
         },
         "stack_labels": {
+            "meta_context": "📊 REPORT CONTEXT",
             "training_load": "🧭 TRAINING LOAD",
             "physiology_response": "🫀 PHYSIOLOGY RESPONSE",
             "performance_intelligence": "⚙️ PERFORMANCE INTELLIGENCE",
@@ -351,7 +355,9 @@ RENDERER_PROFILES = {
     # ==============================================================
     "season": {
         "stack_structure": {
-
+            "meta_context": [
+                "meta"
+            ],
             "training_load": [
                 "training_volume",
                 "metrics",
@@ -383,6 +389,7 @@ RENDERER_PROFILES = {
         },
 
         "stack_labels": {
+            "meta_context": "📊 REPORT CONTEXT",
             "training_load": "🧭 TRAINING LOAD",
             "physiology_response": "🫀 PHYSIOLOGY RESPONSE",
             "performance_intelligence": "⚙️ PERFORMANCE INTELLIGENCE",
@@ -475,7 +482,9 @@ RENDERER_PROFILES = {
     "wellness": {
 
         "stack_structure": {
-
+            "meta_context": [
+                "meta"
+            ],
             "physiology_response": [
                 "wellness",
                 "insight_view"
@@ -487,6 +496,7 @@ RENDERER_PROFILES = {
         },
 
         "stack_labels": {
+            "meta_context": "📊 REPORT CONTEXT",
             "physiology_response": "🫀 PHYSIOLOGY RESPONSE",
             "performance_intelligence": "⚙️ PERFORMANCE INTELLIGENCE"
         },
@@ -647,6 +657,10 @@ RENDERER_PROFILES = {
     "summary": {
         "stack_structure": {
 
+            "meta_context": [
+                "meta"
+            ],
+
             "training_load": [
                 "training_volume"
             ],
@@ -665,6 +679,7 @@ RENDERER_PROFILES = {
         },
 
         "stack_labels": {
+            "meta_context": "📊 REPORT CONTEXT",
             "training_load": "🧭 TRAINING LOAD",
             "physiology_response": "🫀 PHYSIOLOGY RESPONSE",
             "performance_intelligence": "⚙️ PERFORMANCE INTELLIGENCE",
