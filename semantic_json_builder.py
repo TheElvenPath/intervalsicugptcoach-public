@@ -2893,6 +2893,32 @@ def build_semantic_json(context):
                     current_ISO_weekly_microcycle["projected_total_tss"] = round(projected_total, 1)
                     current_ISO_weekly_microcycle["delta_to_target"] = round(delta, 1)
 
+                    # -------------------------------------------------
+                    # 6️⃣ Projected Hours (derived from observed intensity)
+                    # -------------------------------------------------
+
+                    completed_hours = 0.0
+                    projected_hours = None
+
+                    if not week_df.empty:
+                        completed_hours = float(
+                            pd.to_numeric(week_df.get("moving_time", 0), errors="coerce")
+                            .fillna(0)
+                            .sum()
+                        ) / 3600.0
+
+                    completed_hours = round(completed_hours, 2)
+                    current_ISO_weekly_microcycle["completed_hours"] = completed_hours
+
+                    if completed_hours > 0 and completed_val > 0:
+                        tss_per_hour = completed_val / completed_hours
+                        projected_hours = projected_total / tss_per_hour
+                    else:
+                        projected_hours = completed_hours
+
+                    current_ISO_weekly_microcycle["projected_hours"] = round(projected_hours, 2)
+
+
                 except Exception as e:
                     debug(context, f"[MICROCYCLE] ❌ {type(e).__name__}: {e}")
 
@@ -2998,24 +3024,66 @@ def build_semantic_json(context):
                 if micro and micro.get("week_iso"):
 
                     current_week = micro["week_iso"]
-                    projected = micro.get("projected_total_tss")
 
-                    if projected and projected > 0:
+                    projected_tss = micro.get("projected_total_tss")
+                    projected_hours = micro.get("projected_hours")
 
-                        # update dataframe
+                    completed_tss = micro.get("completed_tss")
+                    planned_remaining_tss = micro.get("planned_remaining_tss")
+
+                    if projected_tss and projected_tss > 0:
+
+                        # -----------------------------
+                        # update dataframe representation
+                        # -----------------------------
                         mask = df_weeks["week"] == current_week
-                        if mask.any():
-                            df_weeks.loc[mask, "tss"] = projected
-                            df_weeks.loc[mask, "is_projected"] = True
 
-                        # update original weekly_phases source
+                        if mask.any():
+
+                            df_weeks.loc[mask, "tss"] = projected_tss
+
+                            if projected_hours:
+                                df_weeks.loc[mask, "hours"] = projected_hours
+
+                            df_weeks.loc[mask, "is_projected"] = True
+                            df_weeks.loc[mask, "projection_basis"] = "planned_remaining"
+
+                            # optional transparency fields
+                            df_weeks.loc[mask, "completed_tss"] = completed_tss
+                            df_weeks.loc[mask, "planned_remaining_tss"] = planned_remaining_tss
+                            df_weeks.loc[mask, "projected_total_tss"] = projected_tss
+
+                        # -----------------------------
+                        # update original weekly source
+                        # -----------------------------
                         for wk in raw_weeks:
                             if wk.get("week") == current_week:
-                                wk["tss"] = projected
+
+                                wk["tss"] = projected_tss
+
+                                if projected_hours:
+                                    wk["hours"] = projected_hours
+
                                 wk["is_projected"] = True
+                                wk["projection_basis"] = "planned_remaining"
+
+                                wk["completed_tss"] = completed_tss
+                                wk["planned_remaining_tss"] = planned_remaining_tss
+                                wk["projected_total_tss"] = projected_tss
+
                                 break
 
-                        debug(context, f"[PHASES] 🔧 Current week projected TSS applied ({projected})")
+                        # -----------------------------
+                        # mark microcycle projection
+                        # -----------------------------
+                        micro["is_projected"] = True
+
+                        debug(
+                            context,
+                            f"[PHASES] 🔧 Current week projection applied "
+                            f"(TSS={projected_tss}, hours={projected_hours}, "
+                            f"completed={completed_tss}, remaining={planned_remaining_tss})"
+                        )
 
                 # Diagnostic
                 debug(
@@ -3106,7 +3174,7 @@ def build_semantic_json(context):
                             "start": seg["start"].min().strftime("%Y-%m-%d"),
                             "end": seg["end"].max().strftime("%Y-%m-%d"),
                             "duration_days": int((seg["end"].max() - seg["start"].min()).days) + 1,
-                            "duration_weeks": round((seg["end"].max() - seg["start"].min()).days / 7, 1),
+                            "duration_weeks": round(((seg["end"].max() - seg["start"].min()).days + 1) / 7, 1),
                             "tss_total": round(seg["tss"].sum(), 1),
                             "hours_total": round(seg["hours"].sum(), 1),
                             "distance_km_total": round(seg["distance_km"].sum(), 1),
@@ -3135,7 +3203,7 @@ def build_semantic_json(context):
                     "start": seg["start"].min().strftime("%Y-%m-%d"),
                     "end": seg["end"].max().strftime("%Y-%m-%d"),
                     "duration_days": int((seg["end"].max() - seg["start"].min()).days) + 1,
-                    "duration_weeks": round((seg["end"].max() - seg["start"].min()).days / 7, 1),
+                    "duration_weeks": round(((seg["end"].max() - seg["start"].min()).days + 1) / 7, 1),
                     "tss_total": round(seg["tss"].sum(), 1),
                     "hours_total": round(seg["hours"].sum(), 1),
                     "distance_km_total": round(seg["distance_km"].sum(), 1),
@@ -3149,6 +3217,45 @@ def build_semantic_json(context):
                         else None
                     ),
                 })
+
+            # -----------------------------------------------------
+            # 🔧 PATCH projection metadata into summary
+            # -----------------------------------------------------
+
+            micro = semantic.get("current_ISO_weekly_microcycle")
+
+            if micro and micro.get("week_iso"):
+
+                iso_week = micro["week_iso"]
+
+                for block in summaries:
+
+                    # find matching ISO week block
+                    start = pd.Timestamp(block["start"])
+                    iso = start.isocalendar()
+
+                    block_week = f"{iso.year}-W{iso.week}"
+
+                    if block_week == iso_week:
+
+                        block["is_projected"] = True
+                        block["projection_basis"] = "planned_remaining"
+
+                        block["completed_tss"] = micro.get("completed_tss")
+                        block["planned_remaining_tss"] = micro.get("planned_remaining_tss")
+                        block["projected_total_tss"] = micro.get("projected_total_tss")
+
+                        block["completed_hours"] = micro.get("completed_hours")
+                        block["projected_hours"] = micro.get("projected_hours")
+
+                        # ensure totals match projected state
+                        if micro.get("projected_total_tss"):
+                            block["tss_total"] = micro["projected_total_tss"]
+
+                        if micro.get("projected_hours"):
+                            block["hours_total"] = round(micro["projected_hours"], 1)
+
+                        break
 
             # 🔒 Mirror totals for easy debugging and validation
             semantic["meta"]["phases_summary"] = {
@@ -3194,6 +3301,21 @@ def build_semantic_json(context):
                     ]
                 ].to_dict(orient="records")
             )
+            micro = semantic.get("current_ISO_weekly_microcycle")
+
+            if micro and micro.get("week_iso"):
+
+                for row in weekly_output:
+
+                    if row["week"] == micro["week_iso"]:
+
+                        row["is_projected"] = True
+                        row["completed_tss"] = micro.get("completed_tss")
+                        row["planned_remaining_tss"] = micro.get("planned_remaining_tss")
+                        row["projected_total_tss"] = micro.get("projected_total_tss")
+                        row["projected_hours"] = micro.get("projected_hours")
+
+                        break
 
             semantic["phases"] = weekly_output
             debug(context, f"[PHASES] ✅ Cleaned weekly phase output ({len(weekly_output)} weeks)")
