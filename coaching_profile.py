@@ -228,7 +228,8 @@ RENDERER_PROFILES = {
             "When energy_system_progression exists, generate at least one sentence summarising the current adaptation direction using system_status and adaptation_state.",
             "Insights SHOULD prioritise adaptation signals (ESPE) before repeating metric definitions.",
             "When activity_link exists inside energy_system_progression.power_curve_anchors.values, the corresponding power value MUST be rendered as a Markdown link using the format: [<power> W](activity_link).",
-            "If activity_link is missing, the power value MUST be rendered normally without a link."
+            "If activity_link is missing, the power value MUST be rendered normally without a link.",
+            "Ensure current_ISO_weekly_microcycle is totled as 'Current ISO Week ## (Mon-Sun)'",
         ],
         "allowed_enrichment": [
             "Restate semantic interpretation fields.",
@@ -413,6 +414,7 @@ RENDERER_PROFILES = {
             "Interpretation may combine signals across sections when they describe the same physiological process (e.g. fatigue, adaptation, durability).",
             "When energy_system_progression exists, generate at least one sentence summarising the current adaptation direction using system_status and adaptation_state.",
             "Insights SHOULD prioritise adaptation signals (ESPE) before repeating metric definitions.",
+            "Ensure current_ISO_weekly_microcycle is totled as 'Current ISO Week ## (Mon-Sun)'",
         ],
         "allowed_enrichment": [
             "Restate phase descriptors already present in semantic data."
@@ -713,7 +715,7 @@ RENDERER_PROFILES = {
             "meta": "full",
             "training_volume": "full",
             "daily_load": "forbid",
-            "wellness": "summary",
+            "wellness": "headline",
             "phases": "forbid",
             "phases_summary": "full",
             "insight_view": "forbid",
