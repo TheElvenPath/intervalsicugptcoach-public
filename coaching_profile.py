@@ -529,9 +529,9 @@ RENDERER_PROFILES = {
             "Avoid day-by-day narration when aggregates or trends exist.",
             "When HRV remains stable despite elevated ATL, describe this as maintenance-under-load adaptation.",
             "When autonomic signals disagree with load signals, prioritise autonomic interpretation.",
-            "Performance intelligence metrics must be used only as brief context explaining training stress exposure.",
-            "Do NOT analyse training performance, session quality, or training structure in this report.",
-            "If performance_intelligence is rendered, summarise it in a single compact section (maximum 3–4 indicators) without detailed subsections."
+            "Performance intelligence metrics must only provide context explaining training stress exposure.",
+            "When rendered in a wellness report, performance intelligence MUST appear as a single condensed headline-style block (maximum 3–4 indicators).",
+            "Do NOT analyse training performance, workout structure, or detailed training metrics in this report."
         ],
 
         # ----------------------------------------------------------
@@ -576,8 +576,9 @@ RENDERER_PROFILES = {
             "wellness": "high",
             "insight_view": "high",
             "autonomic_signals": "high",
-            "load_context": "medium",
-            "stress_mechanisms": "medium"
+            "performance_intelligence": "low",
+            "load_context": "low",
+            "stress_mechanisms": "low"
         },
 
         # ----------------------------------------------------------
