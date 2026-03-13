@@ -1189,7 +1189,7 @@ def build_semantic_json(context):
                     "hrv_source": context.get("hrv_source", "unknown"),
                     "hrv_available": True,
                     "hrv_samples": int(len(vals)),
-                    "hrv_series": dfw.tail(42)[["date", "hrv"]]
+                    "hrv_series": dfw[["date", "hrv"]]
                         .dropna()
                         .assign(date=lambda x: pd.to_datetime(x["date"]).dt.strftime("%Y-%m-%d"))
                         .to_dict(orient="records"),
