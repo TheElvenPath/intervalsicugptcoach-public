@@ -17,6 +17,7 @@ def get_profile_metrics(context):
 # coaching_profile.py
 
 REPORT_CONTRACT = {
+
     "weekly": [
         "meta",
 
@@ -36,7 +37,6 @@ REPORT_CONTRACT = {
 
         # 📈 ADAPTATION
         "energy_system_progression",
-        # physiological calibration
         "physiology",
         "zones",
 
@@ -53,24 +53,70 @@ REPORT_CONTRACT = {
         "insights",
     ],
 
+
     "season": [
-        "meta", "training_volume",
+        "meta",
+
+        # 🧭 TRAINING LOAD
+        "training_volume",
         "metrics",
-        "adaptation_metrics", "trend_metrics",
-        "performance_intelligence", "energy_system_progression", "physiology",
-        "phases", "phases_summary",
+        "trend_metrics",
+
+        # 🫀 PHYSIOLOGY RESPONSE
+        "adaptation_metrics",
+        "insight_view",
+
+        # ⚙️ PERFORMANCE INTELLIGENCE
+        "performance_intelligence",
         "wbal_summary",
-        "insights", "actions", "future_forecast", "future_actions"
+
+        # 📈 ADAPTATION
+        "energy_system_progression",
+        "physiology",
+        "phases",
+        "phases_summary",
+
+        # 🎯 ADAPTIVE DECISIONS
+        "actions",
+        "future_forecast",
+        "future_actions",
+
+        # hidden narrative
+        "insights",
     ],
+
 
     "summary": [
-        "meta", "training_volume", 
-        "wellness", "insights",
-        "phases", "phases_summary", "performance_summary"
+        "meta",
+
+        # 🧭 TRAINING LOAD
+        "training_volume",
+
+        # 🫀 PHYSIOLOGY RESPONSE
+        "wellness",
+
+        # ⚙️ PERFORMANCE INTELLIGENCE
+        "performance_summary",
+
+        # 📈 ADAPTATION
+        "phases",
+        "phases_summary",
+
+        # hidden narrative
+        "insights",
     ],
 
+
     "wellness": [
-        "meta", "wellness", "performance_intelligence", "insights", "insight_view"
+        "meta",
+
+        # 🫀 PHYSIOLOGY RESPONSE
+        "wellness",
+        "insights",
+        "insight_view",
+
+        # ⚙️ PERFORMANCE INTELLIGENCE
+        "performance_intelligence",
     ]
 }
 
@@ -123,7 +169,7 @@ RENDERER_PROFILES = {
             ],
 
             "physiology_response": [
-                "wellness"
+                "wellness",
                 "insight_view",
             ],
 
@@ -200,6 +246,7 @@ RENDERER_PROFILES = {
             "planned_summary_by_date": "forbid",
             "actions": "full",
             "future_actions": "full",
+            "insights": "forbid",
             "insight_view": "summary"
         },
 
@@ -312,6 +359,7 @@ RENDERER_PROFILES = {
 
             "physiology_response": [
                 "adaptation_metrics"
+                "insights_view"
             ],
 
             "performance_intelligence": [
@@ -373,6 +421,8 @@ RENDERER_PROFILES = {
             "wellness": "summary",
             "actions": "full",
             "future_actions": "full",
+            "insights": "forbid",
+            "insight_view": "summary"
         },
 
         "emphasis": {
@@ -420,6 +470,24 @@ RENDERER_PROFILES = {
     # ==============================================================
     # Wellness report (URF v5.2 — SIGNAL-FIRST, MULTI-LAYER RECOVERY)
     # ==============================================================
+
+    "stack_structure": {
+
+        "physiology_response": [
+            "wellness",
+            "insights",
+            "insight_view"
+        ],
+
+        "performance_intelligence": [
+            "performance_intelligence"
+        ]
+    },
+
+    "stack_labels": {
+        "physiology_response": "🫀 PHYSIOLOGY RESPONSE",
+        "performance_intelligence": "⚙️ PERFORMANCE INTELLIGENCE"
+    },
 
     "wellness": {
 
@@ -576,6 +644,34 @@ RENDERER_PROFILES = {
     # ==============================================================
     # Summary report (ANNUAL / EXECUTIVE)
     # ==============================================================
+    
+    "stack_structure": {
+
+        "training_load": [
+            "training_volume"
+        ],
+
+        "physiology_response": [
+            "wellness"
+        ],
+
+        "performance_intelligence": [
+            "performance_summary"
+        ],
+
+        "adaptation": [
+            "phases",
+            "phases_summary"
+        ]
+    },
+
+    "stack_labels": {
+        "training_load": "🧭 TRAINING LOAD",
+        "physiology_response": "🫀 PHYSIOLOGY RESPONSE",
+        "performance_intelligence": "⚙️ PERFORMANCE INTELLIGENCE",
+        "adaptation": "📈 ADAPTATION"
+    },
+
     "summary": {
         "coaching_sentences": {
             "enabled": True,
@@ -599,7 +695,9 @@ RENDERER_PROFILES = {
             "extended_metrics": "forbid",
             "zones": "summary",
             "wellness": "summary",
-            "phases": "full"
+            "phases": "full",
+            "insight_view": "forbid",
+            "insights": "forbid",
         },
         
         "emphasis": {
