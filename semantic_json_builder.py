@@ -371,24 +371,6 @@ def build_insights(semantic):
     # Polarisation and load-distribution metrics are short-term (7-day)
     polarisation_window = "7d"
 
-
-    # --- Fatigue Trend (authoritative Tier-2 value) ---
-    fatigue_metric = semantic.get("metrics", {}).get("FatigueTrend", {})
-
-    ft = fatigue_metric.get("value")
-
-    fatigue_block = semantic_block_for_metric("FatigueTrend", ft, semantic)
-
-    insights["fatigue_trend"] = {
-        "value_pct": ft,
-        "window": fatigue_metric.get("context_window", "90d"),
-        "basis": "Tier-2 derived (7d vs 28d load delta)",
-        "classification": fatigue_block.get("classification"),
-        "confidence": fatigue_block.get("metric_confidence"),
-        "interpretation": fatigue_block.get("interpretation"),
-        "coaching_implication": fatigue_block.get("coaching_implication"),
-    }
-
     if report_type != "wellness":
 
         # --- Metabolic (FOxI proxy) ---
