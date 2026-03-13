@@ -518,7 +518,7 @@ RENDERER_PROFILES = {
 
         "signal_hierarchy": [
             "Autonomic signals (HRV, HRV stability, resting HR, sleep)",
-            "Load context (CTL, ATL, TSB, FatigueTrend)",
+            "Load context (CTL, ATL, TSB)",
             "Training stress mechanisms (from performance_intelligence: neural density, durability drift, anaerobic depletion)"
         ],
 
@@ -601,7 +601,6 @@ RENDERER_PROFILES = {
 
         "fatigue_logic": [
             "Do not infer fatigue from load metrics alone.",
-            "FatigueTrend represents load equilibrium relative to the baseline window.",
             "Autonomic suppression combined with elevated ATL indicates recovery pressure.",
             "Stable HRV despite elevated ATL indicates productive adaptation under load."
         ],
