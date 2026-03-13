@@ -562,7 +562,7 @@ RENDERER_PROFILES = {
         "section_handling": {
             "meta": "full",
             "wellness": "full",
-            "hrv_daily": "table_summary",
+            "hrv_daily": "forbid",
             "performance_intelligence": "headine",
             "insights": "full",
             "insight_view": "forbid",
