@@ -50,7 +50,7 @@ REPORT_CONTRACT = {
 
         # hidden narrative (not rendered)
         "phases",
-        "insights",
+        "insights"
     ],
 
 
@@ -83,7 +83,7 @@ REPORT_CONTRACT = {
         "future_actions",
 
         # hidden narrative
-        "insights",
+        "insights"
     ],
 
 
@@ -95,7 +95,7 @@ REPORT_CONTRACT = {
 
         # 🫀 PHYSIOLOGY RESPONSE
         "wellness",
-        "insights"
+        "insights",
 
         # ⚙️ PERFORMANCE INTELLIGENCE
         "performance_summary",
@@ -103,7 +103,7 @@ REPORT_CONTRACT = {
         # 📈 ADAPTATION
         "phases",
         "phases_summary",
-        "current_ISO_weekly_microcycle",
+        "current_ISO_weekly_microcycle"
     ],
 
 
@@ -116,7 +116,7 @@ REPORT_CONTRACT = {
         "insight_view",
 
         # ⚙️ PERFORMANCE INTELLIGENCE
-        "performance_intelligence",
+        "performance_intelligence"
     ]
 }
 
