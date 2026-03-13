@@ -522,14 +522,16 @@ RENDERER_PROFILES = {
         # ----------------------------------------------------------
 
         "interpretation_rules": [
-            "Interpret recovery using trends, means, and latest values together.",
-            "Prioritise autonomic signals (HRV, RHR, sleep) when determining recovery state.",
-            "Explain HRV behaviour including suppression, clustering, variability, and rebound.",
-            "Use CTL, ATL, and TSB as load context rather than primary fatigue indicators.",
+            "Interpret recovery primarily using autonomic and subjective signals (HRV, resting HR, sleep, subjective recovery scores).",
+            "Prioritise autonomic signals over training load metrics when determining recovery state.",
+            "Explain HRV behaviour using trends, means, variability, and recent values relative to baseline.",
+            "Use CTL, ATL, and TSB only as contextual load indicators, not as primary fatigue determinants.",
             "Avoid day-by-day narration when aggregates or trends exist.",
-            "When HRV remains stable despite high ATL, describe this as maintenance-under-load adaptation.",
+            "When HRV remains stable despite elevated ATL, describe this as maintenance-under-load adaptation.",
             "When autonomic signals disagree with load signals, prioritise autonomic interpretation.",
-            "When performance_intelligence exists, relate autonomic recovery signals to training stress signals (durability drift, neural density, anaerobic depletion) to explain whether the athlete is tolerating current training load."
+            "Performance intelligence metrics must be used only as brief context explaining training stress exposure.",
+            "Do NOT analyse training performance, session quality, or training structure in this report.",
+            "If performance_intelligence is rendered, summarise it in a single compact section (maximum 3–4 indicators) without detailed subsections."
         ],
 
         # ----------------------------------------------------------
