@@ -95,6 +95,7 @@ REPORT_CONTRACT = {
 
         # 🫀 PHYSIOLOGY RESPONSE
         "wellness",
+        "insights"
 
         # ⚙️ PERFORMANCE INTELLIGENCE
         "performance_summary",
@@ -103,9 +104,6 @@ REPORT_CONTRACT = {
         "phases",
         "phases_summary",
         "current_ISO_weekly_microcycle",
-
-        # hidden narrative
-        "insights",
     ],
 
 
@@ -676,6 +674,7 @@ RENDERER_PROFILES = {
 
             "physiology_response": [
                 "wellness"
+                "insights"
             ],
 
             "performance_intelligence": [
@@ -719,7 +718,7 @@ RENDERER_PROFILES = {
             "phases": "forbid",
             "phases_summary": "full",
             "insight_view": "forbid",
-            "insights": "forbid",
+            "insights": "summary",
             "current_ISO_weekly_microcycle": "forbid",
         },
         
