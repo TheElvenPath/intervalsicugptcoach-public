@@ -100,11 +100,17 @@ def fetch_wellness_chunked(
     wellness = []
     df_well = pd.DataFrame()
 
-    total_days = (newest - oldest).days #+1
+    total_days = (newest - oldest).days + 1
 
-    # --- Determine wellness window --------------------
+    report_type = context.get("report_type") or context.get("meta", {}).get("report_type")
+
     default_wellness_days = context.get("range", {}).get("wellnessDays", 42)
-    well_chunk_days = min(total_days, default_wellness_days)
+
+    # Summary / annual → fetch entire requested window
+    if report_type == "summary":
+        well_chunk_days = total_days
+    else:
+        well_chunk_days = min(total_days, default_wellness_days)
 
     debug(
         context,

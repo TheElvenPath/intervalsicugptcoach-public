@@ -1106,10 +1106,16 @@ def run_tier1_controller(df_master, wellness, context):
                 if len(vals) > 0:
                     context["hrv_mean"] = round(vals.mean(), 1)
                     context["hrv_latest"] = round(vals.iloc[-1], 1)
-                    context["hrv_trend_7d"] = (
-                        round(vals.tail(7).mean() - vals.head(7).mean(), 1)
-                        if len(vals) >= 14 else None
-                    )
+                    if len(vals) >= 90:
+                        trend = vals.tail(30).mean() - vals.head(30).mean()
+                    elif len(vals) >= 28:
+                        trend = vals.tail(14).mean() - vals.head(14).mean()
+                    elif len(vals) >= 14:
+                        trend = vals.tail(7).mean() - vals.head(7).mean()
+                    else:
+                        trend = None
+
+                    context["hrv_trend_7d"] = round(trend, 1) if trend is not None else None
                     debug(
                         context,
                         f"[T1] HRV summary → mean={context['hrv_mean']}, "

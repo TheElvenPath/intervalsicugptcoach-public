@@ -580,14 +580,17 @@ def build_insights(semantic):
 
                 df_hrv = pd.DataFrame(hrv_series)
                 df_hrv["hrv"] = pd.to_numeric(df_hrv["hrv"], errors="coerce")
+
                 recent = df_hrv.tail(14)["hrv"].dropna()
 
                 if len(recent) >= 5:
                     mean_val = recent.mean()
                     std_val = recent.std()
 
-                    stability = round(1 - (std_val / mean_val), 3)
-
+                    if mean_val > 0:
+                        stability = round(1 - (std_val / mean_val), 3)
+                    else:
+                        stability = None
                     block = semantic_block_for_metric(
                         "HRVStability",
                         stability,
