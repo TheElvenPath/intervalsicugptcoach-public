@@ -564,7 +564,7 @@ RENDERER_PROFILES = {
             "wellness": "full",
             "hrv_daily": "table_summary",
             "performance_intelligence": "headine",
-            "insights": "summary",
+            "insights": "full",
             "insight_view": "forbid",
             "events": "forbid",
             "daily_load": "forbid",
