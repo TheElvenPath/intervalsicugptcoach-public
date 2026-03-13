@@ -443,6 +443,76 @@ def build_insights(semantic):
                 "coaching_implication": dec_block.get("coaching_implication"),
             }
 
+        trend = semantic.get("trend_metrics", {})
+
+        # --------------------------------------------------
+        # Load Trend
+        # --------------------------------------------------
+        lt = trend.get("load_trend")
+
+        if isinstance(lt, (int, float)):
+
+            insights["load_trend"] = {
+                "value": round(lt, 1),
+                "window": "7d vs 28d",
+                "basis": "Training load change relative to baseline",
+                "interpretation":
+                    "Recent load rising rapidly" if lt > 20
+                    else "Progressive load increase" if lt > 10
+                    else "Stable training load" if lt > -10
+                    else "Training load decreasing",
+                "coaching_implication":
+                    "Monitor fatigue accumulation if sustained."
+                    if lt > 20
+                    else "Healthy progression."
+                    if lt > 10
+                    else "Stable workload."
+                    if lt > -10
+                    else "Recovery phase active."
+            }
+
+
+        # --------------------------------------------------
+        # Fitness Trend
+        # --------------------------------------------------
+        ft = trend.get("fitness_trend")
+
+        if isinstance(ft, (int, float)):
+
+            insights["fitness_trend"] = {
+                "value": round(ft, 2),
+                "window": "CTL slope",
+                "basis": "Change in chronic training load",
+                "interpretation":
+                    "Fitness building steadily" if ft > 0.3
+                    else "Fitness stable",
+                "coaching_implication":
+                    "Continue progressive overload."
+                    if ft > 0.3
+                    else "Maintain training consistency."
+            }
+
+
+        # --------------------------------------------------
+        # Fatigue Trend
+        # --------------------------------------------------
+        fat = trend.get("fatigue_trend")
+
+        if isinstance(fat, (int, float)):
+
+            insights["fatigue_trend"] = {
+                "value": round(fat, 2),
+                "window": "ATL slope",
+                "basis": "Change in short-term training stress",
+                "interpretation":
+                    "Fatigue accumulating" if fat > 5
+                    else "Stable fatigue load",
+                "coaching_implication":
+                    "Monitor recovery if fatigue continues rising."
+                    if fat > 5
+                    else "Load appears manageable."
+            }
+
     # --------------------------------------------------
     # Energy System Progression (Tier-3 interpretation)
     # Weekly reports only for now
@@ -2408,19 +2478,11 @@ def build_semantic_json(context):
     # 🧮 CTL / ATL / TSB RESOLUTION (AUTHORITATIVE + FALLBACK)
     # ---------------------------------------------------------
     semantic.setdefault("wellness", {})
-    ext = semantic.get("extended_metrics", {})
-
-    if isinstance(ext, dict) and all(k in ext for k in ("CTL", "ATL", "TSB")):
-        semantic["wellness"]["CTL"] = ext["CTL"].get("value")
-        semantic["wellness"]["ATL"] = ext["ATL"].get("value")
-        semantic["wellness"]["TSB"] = ext["TSB"].get("value")
-        debug(context, "[SEM] CTL/ATL/TSB sourced from semantic.extended_metrics")
-    else:
-        ws = context.get("wellness_summary", {})
-        semantic["wellness"]["CTL"] = ws.get("ctl")
-        semantic["wellness"]["ATL"] = ws.get("atl")
-        semantic["wellness"]["TSB"] = ws.get("tsb")
-        debug(context, "[SEM] CTL/ATL/TSB sourced from wellness_summary fallback")
+    ws = context.get("wellness_summary", {})
+    semantic["wellness"]["CTL"] = ws.get("ctl")
+    semantic["wellness"]["ATL"] = ws.get("atl")
+    semantic["wellness"]["TSB"] = ws.get("tsb")
+    debug(context, "[SEM] CTL/ATL/TSB sourced from wellness_summary fallback")
 
     # ---------------------------------------------------------
     # 🌤️ Copy future actions to semantic structure
@@ -2734,24 +2796,6 @@ def build_semantic_json(context):
         ]:
             wellness.pop(k, None)
 
-
-    # ---------------------------------------------------------
-    # 🧠 INSIGHTS (computed once, after all metrics resolved)
-    # ---------------------------------------------------------
-    semantic["insights"] = build_insights(semantic)
-
-    # ✅ pass weekly phase detail (not macro) to insight view
-    full_phases_for_view = (
-        semantic.get("weekly_phases")
-        or semantic.get("phases_detail")
-        or []
-    )
-    semantic["insight_view"] = build_insight_view({
-        **semantic,
-        "phases_detail": full_phases_for_view
-    })
-
-    #semantic["context_ref"] = context
 
     # ---------------------------------------------------------
     #  Echo render options for transparency
@@ -3122,9 +3166,10 @@ def build_semantic_json(context):
                     f"({len(df_ctl)} weekly rows) — mean TSB={df_ctl['tsb'].mean():.2f}"
                 )
             else:
-                ctl_val = semantic.get("extended_metrics", {}).get("CTL", {}).get("value", 0.0)
-                atl_val = semantic.get("extended_metrics", {}).get("ATL", {}).get("value", 0.0)
-                tsb_val = ctl_val - atl_val
+                ws = context.get("wellness_summary", {})
+                ctl_val = float(ws.get("ctl", 0.0) or 0.0)
+                atl_val = float(ws.get("atl", 0.0) or 0.0)
+                tsb_val = float(ws.get("tsb", ctl_val - atl_val) or (ctl_val - atl_val))
                 df_weeks["ctl"], df_weeks["atl"], df_weeks["tsb"] = ctl_val, atl_val, tsb_val
                 debug(context, "[PHASES] ⚠️ No df_light/df_master — fallback static CTL/ATL/TSB")
 
@@ -3395,7 +3440,21 @@ def build_semantic_json(context):
             semantic.clear()
             semantic.update(ordered)
 
+    # ---------------------------------------------------------
+    # 🧠 INSIGHTS (computed once, after all metrics resolved)
+    # ---------------------------------------------------------
+    semantic["insights"] = build_insights(semantic)
 
+    # ✅ pass weekly phase detail (not macro) to insight view
+    full_phases_for_view = (
+        semantic.get("weekly_phases")
+        or semantic.get("phases_detail")
+        or []
+    )
+    semantic["insight_view"] = build_insight_view({
+        **semantic,
+        "phases_detail": full_phases_for_view
+    })
 
     # ---------------------------------------------------------
     # ✅ Contract Enforcement

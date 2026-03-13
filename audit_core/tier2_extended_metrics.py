@@ -2,6 +2,7 @@
 
 from audit_core.utils import debug
 from coaching_cheat_sheet import CHEAT_SHEET
+import numpy as np
 
 def compute_extended_metrics(context):
     """
@@ -33,34 +34,41 @@ def compute_extended_metrics(context):
     )
 
     # ---------------------------------------------------------
-    # 2️⃣ TREND METRICS
+    # CORRELATION METRICS
     # ---------------------------------------------------------
-    from coaching_heuristics import derive_trends
-    trend = derive_trends(context)
+    df = context.get("df_events")
 
-    context["trend_metrics"] = {
-        "load_trend": trend.get("load_trend", "—"),
-        "fitness_trend": trend.get("fitness_trend", "—"),
-        "fatigue_trend": trend.get("fatigue_trend", "—"),
+    corr_metrics = {
+        "power_hr_correlation": None,
+        "fatigue_vs_load": None,
+        "efficiency_factor_change": None,
     }
 
-    # ---------------------------------------------------------
-    # 3️⃣ CORRELATION METRICS
-    # ---------------------------------------------------------
-    from coaching_heuristics import derive_correlations
-    corr = derive_correlations(context)
+    if df is not None and not df.empty:
+        try:
+            df = df.tail(90)
 
-    context["correlation_metrics"] = {
-        "power_hr_correlation": corr.get("power_hr_correlation", "—"),
-        "efficiency_factor_change": corr.get("efficiency_factor_change", "—"),
-        "fatigue_vs_load": corr.get("fatigue_vs_load", "—"),
-    }
+            if "power" in df and "hr" in df:
+                power = df["power"].values
+                hr = df["hr"].values
+                corr = np.corrcoef(power, hr)[0, 1]
+                corr_metrics["power_hr_correlation"] = float(np.clip(corr, -1, 1))
 
-    debug(
-        context,
-        f"[T2-CHECK] athleteProfile.ftp={context.get('athleteProfile',{}).get('ftp')} "
-        f"athlete.sportSettings[0].ftp={context.get('athlete',{}).get('sportSettings',[{}])[0].get('ftp')}"
-    )
+            if "fatigue" in df and "icu_training_load" in df:
+                fatigue = df["fatigue"].values
+                load = df["icu_training_load"].values
+                corr = np.corrcoef(fatigue, load)[0, 1]
+                corr_metrics["fatigue_vs_load"] = float(np.clip(corr, -1, 1))
+
+            if "efficiency_factor" in df:
+                ef = df["efficiency_factor"].dropna()
+                if len(ef) > 3:
+                    corr_metrics["efficiency_factor_change"] = float(ef.iloc[-1] - ef.iloc[0])
+
+        except Exception as e:
+            debug(context, f"[EXT] Correlation computation failed → {e}")
+
+    context["correlation_metrics"] = corr_metrics
 
     # ---------------------------------------------------------
     # 🧠 Personalized Endurance (Z2) Calibration via Lactate Context
