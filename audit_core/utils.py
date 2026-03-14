@@ -17,8 +17,8 @@ RAILWAY_ENV = os.getenv("RAILWAY_ENVIRONMENT_NAME", "").lower()
 
 # Explicitly suppress debug in production
 #IS_DEBUG_ENV = RAILWAY_ENV != "production"
-IS_DEBUG_ENV = True # this enabled both prod and staging but stderr is removed. pass ?debug=true
-
+#IS_DEBUG_ENV = True # this enabled both prod and staging but stderr is removed. pass ?debug=true
+#IS_DEBUG_ENV = os.getenv("CLI_DEBUG") == "1"
 
 # ------------------------------------------------------------
 # Global state
@@ -37,7 +37,7 @@ def debug(*args):
 
     global GLOBAL_LOGFILE, GLOBAL_FILE_HANDLE, STDERR_COUNT
 
-    if not IS_DEBUG_ENV:
+    if os.getenv("CLI_DEBUG") != "1":
         return
 
     try:
@@ -58,7 +58,7 @@ def debug(*args):
             os.makedirs(reports_dir, exist_ok=True)
             GLOBAL_LOGFILE = os.path.join(
                 reports_dir,
-                f"debug_{report_type}_{RUN_TIMESTAMP}.log"
+                f"report_{report_type}_local_prod_debug.log"
             )
 
         ts = datetime.datetime.now().strftime("%H:%M:%S")
@@ -79,7 +79,7 @@ def debug(*args):
 
         # persistent debug file
         if GLOBAL_FILE_HANDLE is None:
-            GLOBAL_FILE_HANDLE = open(GLOBAL_LOGFILE, "a", encoding="utf-8")
+            GLOBAL_FILE_HANDLE = open(GLOBAL_LOGFILE, "w", encoding="utf-8")
 
         GLOBAL_FILE_HANDLE.write(msg_out + "\n")
         GLOBAL_FILE_HANDLE.flush()

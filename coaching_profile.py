@@ -34,6 +34,7 @@ REPORT_CONTRACT = {
         "actions",
         "planned_events",
         "planned_summary_by_date",
+        "planned_summary_by_iso_week",
         "current_ISO_weekly_microcycle",
         "future_forecast",
         "future_actions",
@@ -184,6 +185,7 @@ RENDERER_PROFILES = {
                 "planned_events",
                 "planned_summary_by_date",
                 "current_ISO_weekly_microcycle",
+                "planned_summary_by_iso_week",
                 "future_forecast",
                 "future_actions",
             ]
@@ -240,6 +242,7 @@ RENDERER_PROFILES = {
             "phases": "forbid",
             "planned_events": "full",
             "planned_summary_by_date": "forbid",
+            "planned_summary_by_iso_week": "full",
             "actions": "full",
             "future_actions": "full",
             "insights": "forbid",

@@ -266,7 +266,7 @@ def open_report(path):
 # ─────────────────────────────────────────────
 # DEBUG REPORTS
 # ─────────────────────────────────────────────
-def fetch_debug_report(report_type, staging=False):
+def fetch_debug_report(report_type, staging=False, prefetch=False):
     """
     Fetch debug report via Cloudflare Worker (prefetch + debug routing).
     Splits semantic report and debug logs into separate files.
@@ -306,10 +306,11 @@ def fetch_debug_report(report_type, staging=False):
         "compliance": data.get("compliance", {})
     }
 
-    # ------------------------------------------------
+  # ------------------------------------------------
     # Save semantic report
     # ------------------------------------------------
-    mode = "prefetch" if os.getenv("PREFETCH_MODE") == "1" else "local"
+    mode = "prefetch" if prefetch else "local"
+
     json_name = f"report_{report_type}_{mode}_{env}_debug.json"
     json_path = Path("reports") / json_name
 
@@ -501,10 +502,12 @@ def generate_full_report(
     gpt=False,
     provider=None,
     model=None,
-    strava_test=False
+    strava_test=False,
+    debug_mode=False
 ):
     """Run report and capture logs and output into one file."""
     buffer = io.StringIO()
+    logs = ""
     os.environ["REPORT_TYPE"] = report_type.lower()
     Path("reports").mkdir(parents=True, exist_ok=True)
 
@@ -549,7 +552,7 @@ def generate_full_report(
             }
 
     # ============================================================
-    # 💻 LOCAL MODE — Run directly via Railway
+    # 💻 LOCAL MODE — Run local
     # ============================================================
     else:
         debug({}, f"🧭 Generating {report_type.title()} Report (local mode)")
@@ -563,15 +566,23 @@ def generate_full_report(
         else:
             debug(context, "[CLI] Using default auto-window (today-365 for summary, etc.)")
 
-        with redirect_stdout(buffer):
+        if debug_mode:
+            with redirect_stdout(buffer):
+                result = run_report(
+                    reportType=report_type,
+                    include_coaching_metrics=True,
+                    output_format=output_format,
+                    **context,
+                )
+            logs = buffer.getvalue()
+        else:
             result = run_report(
                 reportType=report_type,
                 include_coaching_metrics=True,
                 output_format=output_format,
                 **context,
             )
-
-        logs = buffer.getvalue()
+            logs = ""
         raw_logs = logs.splitlines()
         skip_terms = ["snapshot", "trace", "json", "context", "activities_full", "DataFrame"]
         log_output = "\n".join(
@@ -655,7 +666,22 @@ def generate_full_report(
 
         print(f"[LOCAL] ✅ Saved semantic JSON → {out_path}")
 
-        log_path = reports_dir / f"{base_name}.log"
+        # Write debug logs (local debug mode)
+        if debug_mode and logs:
+
+            log_path = reports_dir / f"report_{report_type}_local_{env_tag}_debug.log"
+
+            with open(log_path, "w", encoding="utf-8") as f:
+                f.write(logs)
+
+            print(f"[DEBUG] 📜 Logs saved → {log_path.name}")
+            print(f"[DEBUG] 📜 Logs captured: {len(logs.splitlines())} lines")
+
+            open_report(log_path)
+
+        if debug and logs:
+            with open(log_path, "w", encoding="utf-8") as f:
+                f.write(logs)
 
         if os.getenv("OPEN_REPORT", "1") == "1":
             webbrowser.open(out_path.resolve().as_uri())
@@ -716,16 +742,18 @@ def main():
     )
 
     args = parser.parse_args()
-
-    # 🧠 Debug mode shortcut — directly fetch from /debug and exit
     if args.debug:
+        os.environ["CLI_DEBUG"] = "1"
+    else:
+        os.environ["CLI_DEBUG"] = "0"
+    # 🧠 Debug mode shortcut — directly fetch from /debug and exit
+    if args.debug and args.prefetch:
 
-        if args.prefetch:
-            os.environ["PREFETCH_MODE"] = "1"
+        os.environ["PREFETCH_MODE"] = "1"
 
-        print(f"[CLI] 🧠 Debug mode enabled for '{args.range}' (staging={args.staging})")
+        print(f"[CLI] 🧠 Prefetch debug mode for '{args.range}' (staging={args.staging})")
 
-        fetch_debug_report(args.range, staging=args.staging)
+        fetch_debug_report(args.range, staging=args.staging, prefetch=args.prefetch)
 
         return
 
@@ -741,7 +769,8 @@ def main():
         gpt=args.gpt,
         provider=args.provider,
         model=args.model,
-        strava_test=args.strava_test
+        strava_test=args.strava_test,
+        debug_mode=args.debug
     )
 
 
