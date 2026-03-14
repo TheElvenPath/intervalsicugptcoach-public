@@ -71,6 +71,7 @@ REPORT_CONTRACT = {
         # 🎯 ADAPTIVE DECISIONS
         "actions",
         "current_ISO_weekly_microcycle",
+        "planned_summary_by_iso_week",
         "future_forecast",
         "future_actions",
 
@@ -379,6 +380,7 @@ RENDERER_PROFILES = {
             "adaptive_decisions": [
                 "actions",
                 "current_ISO_weekly_microcycle",
+                "planned_summary_by_iso_week",
                 "future_forecast",
                 "future_actions"
             ]
@@ -422,6 +424,7 @@ RENDERER_PROFILES = {
             "metrics": "table_summary",
             "performance_intelligence": "full",
             "current_ISO_weekly_microcycle": "full",
+            "planned_summary_by_iso_week": "full",
             "energy_system_progression": "summary",
             "physiology": "summary",
             "wellness": "headline",
