@@ -95,7 +95,7 @@ def classify_wbal_pattern(row: dict) -> dict:
 def classify_event_efficiency(ev: dict) -> dict:
     """
     Classify per-activity efficiency using icu_efficiency_factor.
-    Event-native, deterministic, renderer-safe.
+    Uses canonical thresholds from CHEAT_SHEET.
     """
 
     ef = ev.get("icu_efficiency_factor")
@@ -114,13 +114,20 @@ def classify_event_efficiency(ev: dict) -> dict:
             "event_efficiency_value": None,
         }
 
-    # Thresholds aligned with CHEAT_SHEET EfficiencyFactor bands
-    if 1.8 <= ef <= 2.2:
+    thr = CHEAT_SHEET["thresholds"]["EfficiencyFactor"]
+
+    g_low, g_high = thr["green"]
+    a_low, a_high = thr["amber"]
+    r_low, r_high = thr["red"]
+
+    if g_low <= ef <= g_high:
         state = "efficient"
-    elif 1.5 <= ef < 1.8 or 2.2 < ef <= 2.5:
+    elif a_low <= ef < a_high:
         state = "moderate"
-    else:
+    elif r_low <= ef < r_high:
         state = "inefficient"
+    else:
+        state = "unknown"
 
     return {
         "event_efficiency": state,
