@@ -128,7 +128,8 @@ def run_future_forecast(context, forecast_days="auto"):
 
     ctl_future = _safe_float(last_row.get("icu_ctl"), ctl)
     atl_future = _safe_float(last_row.get("icu_atl"), atl)
-
+    latest_tsb = ctl_future - atl_future
+    
     # determine trend vs current CTL
     current_ctl = float(context.get("wellness_summary", {}).get("ctl", ctl_future))
     load_trend = "increasing" if ctl_future > current_ctl else "declining"
@@ -136,7 +137,7 @@ def run_future_forecast(context, forecast_days="auto"):
     # 6️⃣ Derive fatigue/form zone aligned with Intervals.icu categories
     # -----------------------------------------------------------------
     thresholds = CHEAT_SHEET.get("thresholds", {}).get("TSB", {})
-    latest_tsb = ctl_future - atl_future
+    
     fatigue_class = "grey"  # default fallback
 
     # Dynamically classify based on Cheat Sheet numeric ranges

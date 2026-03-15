@@ -1254,7 +1254,6 @@ CHEAT_SHEET["labels"] = {
     "strain": "Load × Monotony",
     "fatigue_trend": "EMA(Load, decay=0.2) (Percentage change)",
 }
-
 CHEAT_SHEET["future_actions"] = {
 
     "transition": {
@@ -1291,17 +1290,17 @@ CHEAT_SHEET["future_actions"] = {
 CHEAT_SHEET["future_labels"] = {
     "transition": "Very fresh — light training phase",
     "fresh": "Fresh — well recovered",
-    "grey": "Neutral — balanced load",
-    "optimal": "Optimal — productive training zone",
-    "high_risk": "High fatigue — risk of overreaching"
+    "neutral": "Neutral — balanced load",
+    "productive_fatigue": "Productive fatigue — overload zone",
+    "overreached": "High fatigue — risk of overreaching"
 }
 
 CHEAT_SHEET["future_colors"] = {
     "transition": "#66ccff",
     "fresh": "#99ff99",
-    "grey": "#cccccc",
-    "optimal": "#ffcc66",
-    "high_risk": "#ff6666"
+    "neutral": "#cccccc",
+    "productive_fatigue": "#ffcc66",
+    "overreached": "#ff6666"
 }
 
 CHEAT_SHEET["wbal_patterns"] = {
