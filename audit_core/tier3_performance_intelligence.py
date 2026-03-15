@@ -76,7 +76,7 @@ def _compute_weekly(context, df_full):
     decoupling = decoupling_raw.abs()
     if_values = pd.to_numeric(df_full.get("icu_intensity"), errors="coerce")
     # normalize legacy intensity values (sometimes stored as %)
-    if if_values is not None and not if_values.dropna().empty and if_values.max() > 2:
+    if if_values is not None and if_values.dropna().size > 0 and if_values.max() > 2:
         if_values = if_values / 100
     moving_time = pd.to_numeric(df_full.get("moving_time"), errors="coerce")
 
@@ -332,10 +332,10 @@ def _compute_season(context, df_light, df_full):
         dep_ratio = None
         drift_ratio = None
 
-        if acute_mean_dep and chronic_mean_dep and chronic_mean_dep != 0:
+        if acute_mean_dep is not None and chronic_mean_dep not in (None, 0):
             dep_ratio = acute_mean_dep / chronic_mean_dep
 
-        if acute_mean_dec and chronic_mean_dec and chronic_mean_dec != 0:
+        if acute_mean_dec is not None and chronic_mean_dec not in (None, 0):
             drift_ratio = acute_mean_dec / chronic_mean_dec
 
         debug(
@@ -356,6 +356,11 @@ def interpret_training_state(context):
     # Synthesizes Tier-3 metrics into athlete-facing decisions.
 
     pi = context.get("performance_intelligence", {})
+    # weekly + season compatibility
+    if "acute" in pi:
+        pi = pi["acute"]
+    elif "acute_overlay" in pi:
+        pi = pi["acute_overlay"]
     future = context.get("future_forecast", {})
     wellness = context.get("wellness_summary", {})
     phase = (
@@ -480,7 +485,7 @@ def interpret_training_state(context):
     elif load_recovery_state == "productive_load":
         state_label = "Productive Load"
         readiness = "Load and recovery interaction suggests productive stimulus."
-        
+
     # --------------------------------------------------
     # Confidence
     # --------------------------------------------------

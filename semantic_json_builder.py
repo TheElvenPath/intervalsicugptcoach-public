@@ -58,7 +58,7 @@ def classify_wbal_pattern(row: dict) -> dict:
     strain = row.get("strain_score") or 0
     IF = row.get("icu_intensity") or 0
 
-    if not wprime or not max_dep or not joules:
+    if wprime is None or max_dep is None or joules is None:
         return {
             "wbal_engagement": "none",
             "wbal_pattern": "none",
@@ -69,9 +69,13 @@ def classify_wbal_pattern(row: dict) -> dict:
     density = joules / max(duration, 1)
 
     # --- engagement ---
-    if depth_pct < 0.15:
+    thr = CHEAT_SHEET["thresholds"]["WBalDepletion"]
+    g_low, g_high = thr["green"]
+    a_low, a_high = thr["amber"]
+
+    if depth_pct < g_high:
         engagement = "light"
-    elif depth_pct < 0.35:
+    elif depth_pct < a_high:
         engagement = "moderate"
     else:
         engagement = "heavy"
@@ -79,7 +83,7 @@ def classify_wbal_pattern(row: dict) -> dict:
     # --- pattern ---
     if joules < 0.1 * wprime:
         pattern = "single"
-    elif density > 5 and strain > 100:
+    elif density > 5 and IF > 0.85: #changed from strain to IF
         pattern = "stochastic"
     elif duration > 3600 and depth_pct > 0.3:
         pattern = "progressive"
@@ -122,9 +126,9 @@ def classify_event_efficiency(ev: dict) -> dict:
 
     if g_low <= ef <= g_high:
         state = "efficient"
-    elif a_low <= ef < a_high:
+    elif a_low <= ef < g_low:
         state = "moderate"
-    elif r_low <= ef < r_high:
+    elif r_low <= ef < a_low:
         state = "inefficient"
     else:
         state = "unknown"
