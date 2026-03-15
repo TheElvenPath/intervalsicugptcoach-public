@@ -3007,7 +3007,16 @@ def build_semantic_json(context):
 
                     calendar_events = context.get("calendar", []) or []
 
+                    debug(context, f"[MICROCYCLE-CALENDAR] events={len(calendar_events)}")
 
+                    for ce in calendar_events:
+                        debug(
+                            context,
+                            f"[MICROCYCLE-CALENDAR] id={ce.get('id')} "
+                            f"date={ce.get('start_date_local')} "
+                            f"load={ce.get('icu_training_load',0)} "
+                            f"name={ce.get('name')}"
+                        )
                     # -------------------------------------------------
                     # identify planned sessions already executed
                     # -------------------------------------------------
