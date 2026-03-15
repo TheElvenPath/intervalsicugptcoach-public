@@ -114,11 +114,20 @@ def run_future_forecast(context, forecast_days="auto"):
     # 4️⃣ Use Intervals projected CTL/ATL directly
     # -----------------------------------------------------------------
 
+    def _safe_float(v, fallback):
+        try:
+            v = float(v)
+            if np.isnan(v):
+                return float(fallback)
+            return v
+        except (TypeError, ValueError):
+            return float(fallback)
+
+
     last_row = df.iloc[-1]
 
-    ctl_future = float(last_row.get("icu_ctl", ctl))
-    atl_future = float(last_row.get("icu_atl", atl))
-    latest_tsb = ctl_future - atl_future
+    ctl_future = _safe_float(last_row.get("icu_ctl"), ctl)
+    atl_future = _safe_float(last_row.get("icu_atl"), atl)
 
     # determine trend vs current CTL
     current_ctl = float(context.get("wellness_summary", {}).get("ctl", ctl_future))
