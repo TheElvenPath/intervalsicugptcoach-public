@@ -2922,11 +2922,11 @@ def build_semantic_json(context):
         period_meta = semantic.get("meta", {}).get("period")
 
         if isinstance(period_meta, str) and "→" in period_meta:
-            report_end = pd.to_datetime(period_meta.split("→")[1].strip(), errors="coerce")
+            report_end = pd.to_datetime(period_meta.split("→")[1].strip(), errors="coerce").date()
         else:
-            report_end = pd.to_datetime(context.get("period", {}).get("end"), errors="coerce")
+            report_end = pd.to_datetime(context.get("period", {}).get("end"), errors="coerce").date()
 
-        now = pd.Timestamp.now(tz=tz)
+        now = pd.Timestamp.now(tz=tz).date()
         iso = now.isocalendar()
 
         if pd.notna(report_end):
