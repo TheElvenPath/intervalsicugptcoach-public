@@ -2749,6 +2749,7 @@ def build_semantic_json(context):
                 "classification_source": "load_recovery_state",
 
                 "state_label": training_state.get("state_label"),
+                "operational_state": training_state.get("operational_state"),
                 "confidence": training_state.get("confidence"),
 
                 "signals": {

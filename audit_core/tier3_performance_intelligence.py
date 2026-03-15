@@ -487,6 +487,23 @@ def interpret_training_state(context):
         readiness = "Load and recovery interaction suggests productive stimulus."
 
     # --------------------------------------------------
+    # Operational coaching state (2-state model) aligns with Sieler approach
+    # --------------------------------------------------
+
+    operational_state = (
+        "recovery_priority"
+        if load_recovery_state in ("adaptation_pressure", "maladaptation_risk")
+        else "load_accepting"
+    )
+
+    context["operational_state"] = operational_state
+
+    debug(
+        context,
+        f"[T3-STATE] operational_state → {operational_state}"
+    )
+
+    # --------------------------------------------------
     # Confidence
     # --------------------------------------------------
 
@@ -504,6 +521,7 @@ def interpret_training_state(context):
         "confidence": confidence,
         "phase_context": phase,
         "load_recovery_state": load_recovery_state,
+        "operational_state": operational_state
     }
 
 
