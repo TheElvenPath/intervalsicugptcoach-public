@@ -1649,7 +1649,7 @@ def build_semantic_json(context):
         )
 
         core_fields = [
-            "id","start_date_local", "name", "type",
+            "id","start_date_local", "name", "type", "paired_event_id", "compliance",
             "distance", "moving_time", "icu_training_load",
             "average_heartrate", "average_cadence",
             "icu_average_watts", "icu_variability_index", "icu_weighted_avg_watts",
@@ -2926,8 +2926,10 @@ def build_semantic_json(context):
         else:
             report_end = pd.to_datetime(context.get("period", {}).get("end"), errors="coerce")
 
+        now = pd.Timestamp.now(tz=tz)
+        iso = now.isocalendar()
+
         if pd.notna(report_end):
-            iso = pd.Timestamp.now(tz=tz).isocalendar()
             iso_monday = pd.Timestamp.fromisocalendar(iso.year, iso.week, 1).date()
 
         if today >= iso_monday: ### THIS IS CORRECT AS WE DONT OUPTE MICROCYCLE FOR HISTORICAL
@@ -2947,8 +2949,6 @@ def build_semantic_json(context):
                     # -------------------------------------------------
                     # 1️⃣ ISO week (TRUE current week — time anchored)
                     # -------------------------------------------------
-                    now = pd.Timestamp.now(tz=context.get("timezone") or "UTC")
-                    iso = now.isocalendar()
 
                     week_label = f"{iso.year}-W{iso.week}"
                     current_ISO_weekly_microcycle["week_iso"] = week_label
@@ -2982,118 +2982,159 @@ def build_semantic_json(context):
 
                         current_ISO_weekly_microcycle["completed_tss"] = round(completed, 1)
 
+
                     # -------------------------------------------------
-                    # 3️⃣ Weekly Target (Calendar + Reconstruction)
+                    # 3️⃣ Weekly Target (Plan Reconstruction)
                     # -------------------------------------------------
-                    planned_summary = semantic.get("planned_summary_by_date", {}) or {}
+                    #
+                    # Because Cloudflare only forwards future calendar events,
+                    # executed planned sessions from earlier in the ISO week are
+                    # no longer present in the calendar feed.
+                    #
+                    # Therefore we reconstruct the original planned load using:
+                    #
+                    # planned_load = actual_load / (compliance / 100)
+                    #
+                    # Data sources
+                    # ------------
+                    # remaining plan → context["calendar"]
+                    # executed plan  → week_df + paired_event_id + compliance
+                    #
+                    # -------------------------------------------------
+
                     weekly_target = 0.0
-                    planned_dates = set()
-
-                    # 3A — calendar intent
-                    for offset in range(7):
-                        d = (monday + pd.Timedelta(days=offset)).date().isoformat()
-                        summary = planned_summary.get(d)
-                        if summary:
-                            weekly_target += float(summary.get("total_load", 0) or 0)
-                            planned_dates.add(d)
-
-                    # 3B — reconstruct for completed workouts not in calendar
-                    for _, row in week_df.iterrows():
-                        activity_date = row["date_only"].isoformat()
-
-                        if activity_date in planned_dates:
-                            continue
-
-                        actual = float(row.get("icu_training_load", 0) or 0)
-                        compliance = row.get("compliance")
-
-                        try:
-                            compliance_val = float(compliance)
-                        except Exception:
-                            compliance_val = None
-                        
-                        planned_equivalent = actual
-
-                        weekly_target += planned_equivalent
-
-                    # fallback: truly no plan context
-                    if weekly_target == 0.0 and current_ISO_weekly_microcycle["completed_tss"] > 0:
-                        weekly_target = current_ISO_weekly_microcycle["completed_tss"]
-
-                    weekly_target = round(weekly_target, 1)
-                    current_ISO_weekly_microcycle["weekly_target_tss"] = weekly_target
-
-                    # -------------------------------------------------
-                    # 4️⃣ Planned Remaining
-                    # -------------------------------------------------
                     planned_remaining = 0.0
 
-                    planned_events = semantic.get("planned_events", [])
-                    week_planned_ids = set()
+                    calendar_events = context.get("calendar", []) or []
 
-                    # Collect all planned IDs in this ISO week
-                    for pe in planned_events:
-                        planned_date = pd.to_datetime(pe.get("start_date_local")).date()
-                        if monday.date() <= planned_date <= sunday.date():
-                            week_planned_ids.add(pe.get("id"))
 
-                    # Collect all paired_event_ids from completed activities this week
-                    consumed_ids = set()
+                    # -------------------------------------------------
+                    # identify planned sessions already executed
+                    # -------------------------------------------------
+
+                    consumed_plan_ids = set()
 
                     if not week_df.empty:
                         for _, row in week_df.iterrows():
+
                             paired_id = row.get("paired_event_id")
-                            if paired_id:
-                                consumed_ids.add(paired_id)
 
-                    # Remaining = planned IDs not consumed
-                    for pe in planned_events:
-                        planned_id = pe.get("id")
-                        planned_date = pd.to_datetime(pe.get("start_date_local")).date()
+                            if pd.notna(paired_id):
+                                consumed_plan_ids.add(int(float(paired_id)))
+                    # -------------------------------------------------
+                    # remaining calendar sessions
+                    # -------------------------------------------------
 
-                        if not (monday.date() <= planned_date <= sunday.date()):
+                    for ce in calendar_events:
+
+                        ce_date = pd.to_datetime(ce.get("start_date_local"), errors="coerce")
+
+                        if pd.isna(ce_date):
                             continue
 
-                        if planned_id not in consumed_ids:
-                            planned_remaining += float(pe.get("icu_training_load", 0) or 0)
+                        ce_date = ce_date.date()
 
-                    # expose planned remaining
-                    current_ISO_weekly_microcycle["planned_remaining_tss"] = round(planned_remaining, 1)
+                        if monday.date() <= ce_date <= sunday.date():
+
+                            ce_id = ce.get("id")
+
+                            # skip if this planned session was already executed
+                            if ce_id in consumed_plan_ids:
+                                continue
+
+                            load = float(ce.get("icu_training_load", 0) or 0)
+
+                            weekly_target += load
+                            planned_remaining += load
+
 
                     # -------------------------------------------------
-                    # 5️⃣ Delta (ALWAYS computed)
+                    # executed planned sessions (reconstruct original plan)
                     # -------------------------------------------------
-                    completed_val = current_ISO_weekly_microcycle["completed_tss"]
+
+                    if not week_df.empty:
+
+                        for _, row in week_df.iterrows():
+
+                            paired_id = row.get("paired_event_id")
+
+                            # skip unplanned activities
+                            if pd.isna(paired_id):
+                                continue
+
+                            actual = float(row.get("icu_training_load", 0) or 0)
+
+                            compliance = row.get("compliance")
+
+                            try:
+                                compliance_val = float(compliance)
+                            except Exception:
+                                compliance_val = None
+
+                            if compliance_val and compliance_val > 0:
+
+                                planned_equivalent = actual / (compliance_val / 100.0)
+
+                            else:
+                                planned_equivalent = actual
+
+                            weekly_target += planned_equivalent
+                            weekly_target = round(weekly_target,1)
+
+                    # -------------------------------------------------
+                    # 4️⃣ Projection + Delta
+                    # -------------------------------------------------
+
+                    completed_val = current_ISO_weekly_microcycle.get("completed_tss", 0.0)
+
                     projected_total = completed_val + planned_remaining
                     delta = projected_total - weekly_target
 
                     current_ISO_weekly_microcycle["projected_total_tss"] = round(projected_total, 1)
                     current_ISO_weekly_microcycle["delta_to_target"] = round(delta, 1)
 
+                    current_ISO_weekly_microcycle["weekly_target_tss"] = weekly_target
+                    current_ISO_weekly_microcycle["planned_remaining_tss"] = planned_remaining
+
                     # -------------------------------------------------
-                    # 6️⃣ Projected Hours (derived from observed intensity)
+                    # 6️⃣ Projected Hours (reconstructed from compliance)
                     # -------------------------------------------------
 
-                    completed_hours = 0.0
-                    projected_hours = None
+                    completed_seconds = 0.0
+                    planned_seconds = 0.0
 
                     if not week_df.empty:
-                        completed_hours = float(
-                            pd.to_numeric(week_df.get("moving_time", 0), errors="coerce")
-                            .fillna(0)
-                            .sum()
-                        ) / 3600.0
 
-                    completed_hours = round(completed_hours, 2)
+                        for _, row in week_df.iterrows():
+
+                            moving_time = float(row.get("moving_time", 0) or 0)
+
+                            completed_seconds += moving_time
+
+                            paired_id = row.get("paired_event_id")
+
+                            if pd.isna(paired_id):
+                                continue
+
+                            compliance = row.get("compliance")
+
+                            try:
+                                compliance_val = float(compliance)
+                            except Exception:
+                                compliance_val = None
+
+                            if compliance_val and compliance_val > 0:
+
+                                planned_seconds += moving_time / (compliance_val / 100.0)
+
+                            else:
+                                planned_seconds += moving_time
+
+                    completed_hours = round(completed_seconds / 3600.0, 2)
+                    projected_hours = round(planned_seconds / 3600.0, 2)
+
                     current_ISO_weekly_microcycle["completed_hours"] = completed_hours
-
-                    if completed_hours > 0 and completed_val > 0:
-                        tss_per_hour = completed_val / completed_hours
-                        projected_hours = projected_total / tss_per_hour
-                    else:
-                        projected_hours = completed_hours
-
-                    current_ISO_weekly_microcycle["projected_hours"] = round(projected_hours, 2)
+                    current_ISO_weekly_microcycle["projected_hours"] = projected_hours
 
 
                 except Exception as e:
