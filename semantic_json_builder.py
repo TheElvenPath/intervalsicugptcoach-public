@@ -2299,44 +2299,61 @@ def build_semantic_json(context):
         else:
             report_end = pd.to_datetime(context.get("end"))
 
-        current_iso_year, current_iso_week, _ = report_end.isocalendar()
-        current_week_key = f"{current_iso_year}-W{current_iso_week:02d}"
+
+        # ---------------------------------------------------------
+        # Determine report week vs real current week
+        # ---------------------------------------------------------
+
+        report_iso = report_end.isocalendar()
+        report_week_key = f"{report_iso.year}-W{report_iso.week:02d}"
+
+        now = pd.Timestamp.now(tz=context.get("timezone") or "UTC")
+        current_iso = now.isocalendar()
+        current_week_key = f"{current_iso.year}-W{current_iso.week:02d}"
 
 
-
-        
         # ---------------------------------------------------------
         # 📊 PLANNED SUMMARY — ISO WEEK (Future Weeks Only)
         # ---------------------------------------------------------
 
-        planned_by_week = {}
+        if report_week_key != current_week_key:
 
-        for day, events in planned_by_date.items():
+            # Historical reports → no future forecast
+            semantic["planned_summary_by_iso_week"] = {}
 
-            try:
-                d = pd.to_datetime(day)
-                iso_year, iso_week, _ = d.isocalendar()
-                week_key = f"{iso_year}-W{iso_week:02d}"
-            except Exception:
-                continue
+        else:
 
-            # ❌ Skip current microcycle week
-            if week_key == current_week_key:
-                continue
+            planned_by_week = {}
 
-            planned_by_week.setdefault(week_key, []).extend(events)
+            for day, events in planned_by_date.items():
 
-        planned_summary_by_iso_week = {
-            week: {
-                "total_events": len(events),
-                "total_duration_minutes": sum((e.get("duration_minutes") or 0) for e in events),
-                "total_load": sum((e.get("icu_training_load") or 0) for e in events),
-                "categories": sorted({e.get("category") for e in events if e.get("category")}),
+                try:
+                    d = pd.to_datetime(day)
+                    iso_year, iso_week, _ = d.isocalendar()
+                    week_key = f"{iso_year}-W{iso_week:02d}"
+                except Exception:
+                    continue
+
+                # Skip the current microcycle week
+                if week_key == current_week_key:
+                    continue
+
+                planned_by_week.setdefault(week_key, []).extend(events)
+
+            planned_summary_by_iso_week = {
+                week: {
+                    "total_events": len(events),
+                    "total_duration_minutes": sum((e.get("duration_minutes") or 0) for e in events),
+                    "total_load": sum((e.get("icu_training_load") or 0) for e in events),
+                    "categories": sorted({e.get("category") for e in events if e.get("category")}),
+                }
+                for week, events in planned_by_week.items()
             }
-            for week, events in planned_by_week.items()
-        }
 
-        semantic["planned_summary_by_iso_week"] = planned_summary_by_iso_week
+            semantic["planned_summary_by_iso_week"] = dict(
+                sorted(planned_summary_by_iso_week.items())
+            )
+
         semantic["planned_events"] = planned_events
         semantic["planned_summary_by_date"] = planned_summary_by_date
 
@@ -2883,7 +2900,7 @@ def build_semantic_json(context):
             iso = pd.Timestamp.now(tz=tz).isocalendar()
             iso_monday = pd.Timestamp.fromisocalendar(iso.year, iso.week, 1).date()
 
-        if today >= iso_monday: ### omg check this later in week if report_end.date() >= iso_monday:
+        if today >= iso_monday: ### THIS IS CORRECT AS WE DONT OUPTE MICROCYCLE FOR HISTORICAL
 
                 current_ISO_weekly_microcycle = {
                     "week_iso": None,
