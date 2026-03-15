@@ -255,7 +255,8 @@ RENDERER_PROFILES = {
             "actions": "high",
             "events": "medium",
             "wellness": "medium",
-            "adaptation": "high"
+            "adaptation": "high",
+            "performance_intelligence.training_state": "high"
         },
 
         "events_rule": {
@@ -440,7 +441,8 @@ RENDERER_PROFILES = {
             "phases_summary": "high",
             "trend_metrics": "high",
             "metrics": "medium",
-            "adaptation": "high"
+            "adaptation": "high",
+            "performance_intelligence.training_state": "high"
         },
 
         "framing": {
