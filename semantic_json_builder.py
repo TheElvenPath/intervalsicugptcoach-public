@@ -2277,6 +2277,16 @@ def build_semantic_json(context):
                 planned_by_date.setdefault(start, []).append(event)
 
 
+        planned_summary_by_date = {
+            day: {
+                "total_events": len(events),
+                "total_duration": sum((e.get("duration_minutes") or 0) for e in events),
+                "total_load": sum((e.get("icu_training_load") or 0) for e in events),
+                "categories": sorted({e.get("category") for e in events if e.get("category")}),
+            }
+            for day, events in planned_by_date.items()
+        }
+
         # ---------------------------------------------------------
         # Determine current ISO week (microcycle already covered)
         # ---------------------------------------------------------
@@ -2291,6 +2301,10 @@ def build_semantic_json(context):
 
         current_iso_year, current_iso_week, _ = report_end.isocalendar()
         current_week_key = f"{current_iso_year}-W{current_iso_week:02d}"
+
+
+
+        
         # ---------------------------------------------------------
         # 📊 PLANNED SUMMARY — ISO WEEK (Future Weeks Only)
         # ---------------------------------------------------------
@@ -2950,11 +2964,8 @@ def build_semantic_json(context):
                             compliance_val = float(compliance)
                         except Exception:
                             compliance_val = None
-
-                        if compliance_val is not None and compliance_val > 0:
-                            planned_equivalent = actual / (compliance_val / 100.0)
-                        else:
-                            planned_equivalent = actual
+                        
+                        planned_equivalent = actual
 
                         weekly_target += planned_equivalent
 
