@@ -245,6 +245,10 @@ RENDERER_PROFILES = {
             "planned_summary_by_date": "forbid",
             "planned_summary_by_iso_week": "full",
             "actions": "full",
+            "actions.adaptive_summary": "full",
+            "actions.state_action": "full",
+            "actions.system_guidance": "full",
+            "actions.reflection": "full",
             "future_actions": "full",
             "insights": "forbid",
             "insight_view": "summary"
