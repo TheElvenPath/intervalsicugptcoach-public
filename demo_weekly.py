@@ -7,7 +7,7 @@ DEMO_REPORT = {
       "framework": "V5.1 Unified Reporting Framework",
       "version": "v16.17",
       "methodology": {
-        "source": "Unified Coaching Reference (Intervals + Seiler + Banister + Treff)",
+        "source": "Unified Coaching Reference (Intervals + Seiler + Banister + Treff) ",
         "summary": "Data-driven endurance coaching blending objective load metrics (TSS, CTL, ATL, HRV, VO\u2082max) with subjective readiness (RPE, mood, recovery). Implements evidence-based frameworks for phase-specific training adaptation.",
         "principles": [
           "Seiler 3-Zone Polarisation",

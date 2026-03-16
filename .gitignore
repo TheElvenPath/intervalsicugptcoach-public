@@ -16,7 +16,6 @@ Thumbs.db
 *.tmp
 *.js
 *.json
-!demo_weekly.json
 *.toml
 /docs/devandtest.md 
 /report.py
