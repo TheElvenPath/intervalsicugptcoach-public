@@ -342,7 +342,7 @@ QUESTION_TEMPLATES = {
 "Is training stimulus no longer driving measurable improvement?",
 "Is a change in training stimulus required to progress further?"
 ]
-}
+},
 
 # ------------------------------------------------
 # ADAPTATION STABILITY

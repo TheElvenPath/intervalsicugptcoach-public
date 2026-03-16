@@ -2598,22 +2598,6 @@ def build_semantic_json(context):
         semantic["future_actions"] = []
         debug(context, "[SEMANTIC] ⚠️ No future actions found for semantic JSON.")
 
-
-    # ---------------------------------------------------------
-    # 🧭 COACHING ACTIONS (Tier-2 guidance)
-    # ---------------------------------------------------------
-
-    actions = list(context.get("actions", []) or [])
-
-    signals = detect_signals(semantic)
-    question = generate_question(semantic, signals)
-
-    if question:
-        actions.append({
-            "type": "reflection",
-            "question": question
-        })
-
     # ---------------------------------------------------------
     # 🧠 Performance Intelligence (Tier-3)
     # ---------------------------------------------------------
@@ -2880,6 +2864,21 @@ def build_semantic_json(context):
             "model": "Energy System Progression Engine",
             "system_state": system_state,
             "message": system_guidance
+        })
+
+    # ---------------------------------------------------------
+    # 🧭 Closing Reflection (Tier-2 guidance)
+    # ---------------------------------------------------------
+
+    signals = detect_signals(semantic)
+    question = generate_question(semantic, signals)
+
+    if question:
+        semantic.setdefault("actions", [])
+        semantic["actions"].append({
+            "type": "reflection",
+            "source": "montis_question_engine",
+            "question": question
         })
 
     # ---------------------------------------------------------
