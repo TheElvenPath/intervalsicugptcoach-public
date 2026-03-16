@@ -2791,7 +2791,7 @@ def build_semantic_json(context):
     # ---------------------------------------------------------
     # 🧭 Tier-3 State → Primary Action
     # ---------------------------------------------------------
-
+    training_state = context.get("training_state")
     if training_state:
 
         primary_action = training_state.get("recommendation")
