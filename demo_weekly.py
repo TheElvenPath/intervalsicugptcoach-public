@@ -26,15 +26,15 @@ DEMO_WEEKLY = {
         "timezone": "Europe/Zurich",
         "athlete": {
           "identity": {
-            "id": "1914741",
-            "name": "Clive King",
-            "firstname": "Clive",
-            "lastname": "King",
+            "id": "i1234567",
+            "name": "Joe Bloggs",
+            "firstname": "Joe",
+            "lastname": "Bloggs",
             "sex": "M",
-            "dob": "1965-02-19",
-            "country": "Switzerland",
-            "city": "Jongny",
-            "timezone": "Europe/Zurich",
+            "dob": "1970-01-01",
+            "country": "France",
+            "city": "Paris",
+            "timezone": "Europe/Paris",
             "profile_image": "https://storage.googleapis.com/intervals-icu-images/profile_pics/2eaed503-0e10-40a4-b7dc-b63768fecbef"
           },
           "profile": {
@@ -1365,7 +1365,7 @@ DEMO_WEEKLY = {
         {
           "id": "i131987034",
           "start_date_local": "2026-03-14T16:10:15",
-          "name": "otto walk",
+          "name": "Dog walk",
           "type": "Hike",
           "activity_id": "i131987034",
           "activity_link": "https://intervals.icu/activities/i131987034",
@@ -1391,7 +1391,7 @@ DEMO_WEEKLY = {
         {
           "id": "i132108891",
           "start_date_local": "2026-03-15T08:19:57",
-          "name": "Otto walk",
+          "name": "Dog walk",
           "type": "Hike",
           "activity_id": "i132108891",
           "activity_link": "https://intervals.icu/activities/i132108891",
