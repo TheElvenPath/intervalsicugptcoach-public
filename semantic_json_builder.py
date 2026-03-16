@@ -2878,6 +2878,7 @@ def build_semantic_json(context):
         semantic["actions"].append({
             "type": "reflection",
             "source": "montis_question_engine",
+            "signal": dominant_signal(signals),
             "question": question
         })
 
