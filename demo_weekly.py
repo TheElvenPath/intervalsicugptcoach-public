@@ -1,5 +1,5 @@
 
-DEMO_REPORT = {
+DEMO_WEEKLY = {
   "status": "ok",
   "message": "Weekly report",
   "semantic_graph": {
