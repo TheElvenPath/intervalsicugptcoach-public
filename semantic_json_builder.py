@@ -2930,8 +2930,8 @@ def build_semantic_json(context):
             today_iso  = today.isocalendar()
             report_iso = report_end.isocalendar()
 
-            # Prevent historical weeks from showing a microcycle
-            if (report_iso.year, report_iso.week) <= (today_iso.year, today_iso.week):
+            # Allow microcycle if report is recent (within 6 days)
+            if report_end >= (today - timedelta(days=6)):
 
                 iso = today_iso
 
