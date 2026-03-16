@@ -215,7 +215,7 @@
             ],
             "hrv_available": true,
             "hrv_source": "garmin",
-            "weight_sync": "null",
+            "weight_sync": null,
             "resting_hr": 41
           },
           "training_environment": {
@@ -1377,8 +1377,8 @@
         "feel": 3.0,
         "rpe_emoji": "3\ufe0f\u20e3",
         "feel_emoji": "\ud83d\ude10",
-        "wbal_engagement": "null",
-        "wbal_pattern": "null",
+        "wbal_engagement": null,
+        "wbal_pattern": null,
         "wbal_depth_pct": 0.0,
         "event_efficiency": "unknown",
         "event_efficiency_value": null
@@ -1407,8 +1407,8 @@
         "feel": 3.0,
         "rpe_emoji": "3\ufe0f\u20e3",
         "feel_emoji": "\ud83d\ude10",
-        "wbal_engagement": "null",
-        "wbal_pattern": "null",
+        "wbal_engagement": null,
+        "wbal_pattern": null,
         "wbal_depth_pct": 0.0,
         "event_efficiency": "unknown",
         "event_efficiency_value": null
@@ -1669,7 +1669,7 @@
         },
         "injury": {
           "value": 1.0,
-          "label": "null"
+          "label": null
         },
         "hydration": {
           "value": 2.0,
