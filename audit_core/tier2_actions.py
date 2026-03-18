@@ -183,6 +183,8 @@ def detect_phases(context, events):
         }
 
         # --- Primary thresholds
+        d = 0.0 if (d is None or (isinstance(d, float) and np.isnan(d))) else float(d)
+
         for phase, bounds in phase_thresholds.items():
             if bounds["trend_min"] <= d <= bounds["trend_max"]:
                 if acwr <= bounds.get("acwr_max", 9) and lvi >= bounds.get("lvi_min", 0):
@@ -368,7 +370,9 @@ def evaluate_actions(context):
 
 
     # ---------------- Fatigue Trend ----------------
-    ft = context.get("FatigueTrend", 0.0)
+    ft = context.get("FatigueTrend")
+    if ft is None:
+        ft = 0.0
 
     ft_state = (
         context.get("metrics", {})
@@ -388,7 +392,8 @@ def evaluate_actions(context):
     # ---------------- Benchmark / FatMax ----------------
     if context.get("weeks_since_last_FTP", 0) >= 6:
         metric_signals.append("🔄 Retest FTP/LT1 for updated benchmarks.")
-    if abs(context.get("FatMaxDeviation", 1.0)) <= 0.05 and decoup <= 0.05:
+    decoup = context.get("Decoupling")
+    if decoup is not None and abs(context.get("FatMaxDeviation", 1.0)) <= 0.05 and decoup <= 0.05:
         metric_signals.append("✅ FatMax calibration verified (±5 %).")
 
     # ---------------- UI Flag ----------------
