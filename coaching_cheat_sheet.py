@@ -11,7 +11,7 @@ CHEAT_SHEET = {}
 CHEAT_SHEET["meta"] = {
     "framework": "V5.1 Unified Reporting Framework",
     "version": "v16.17",
-    "last_updated": "2026-02-05",
+    "last_updated": "2026-03-18",
     "source": "Unified Coaching Reference (Intervals + Seiler + Banister + Treff)"
 }
 
@@ -25,8 +25,9 @@ CHEAT_SHEET["thresholds"] = {
         "red": (4000, 8000)
     },
     "FatigueTrend": {
-        "green": (-10, 10),   # balanced / stable
-        "amber": (10, 99),  # accumulating fatigue (> +10%)
+        "green": (-10, 10),      # balanced / stable
+        "amber": (-99, -10),     # recovering / unloading
+        "red": (10, 99),         # accumulating fatigue
     },
     "StressTolerance": {
         "green": (0.8, 1.2),
@@ -41,7 +42,11 @@ CHEAT_SHEET["thresholds"] = {
     "GR": {"green": (0.5, 2.0), "amber": (0.3, 3.0)},         # Glucose Ratio
     "MES": {"green": (20, 100), "amber": (10, 120)},          # Metabolic Efficiency Score
     "ACWR_Risk": {"green": (0, 1), "amber": (1, 1)},          # Placeholder to silence undefined
-    "ZQI": {"green": (5, 15), "amber": (3, 20)},               #% now
+    "ZQI": {
+        "green": (5, 15),
+        "amber": (3, 5),
+        "red": (0, 3)
+    },
     "Durability": {"green": (0.9, 1.2),"amber": (0.7, 0.9),"red": (0.0, 0.7)},
     "IFDrift": {"green": (0.0, 0.05), "amber": (0.05, 0.10), "red": (0.10, 1.0)},
     "Lactate": {"lt1_mmol": 2.0,"lt2_mmol": 4.0,"corr_threshold": 0.6},
@@ -96,18 +101,18 @@ CHEAT_SHEET["thresholds"] = {
         "red": (-100.0, -2.0)
     },
     # --- Performance Intelligence ---
-    "mean_depletion_pct_7d": {"green":(0.2,0.45),"amber":(0.45,0.7)},
+    #"mean_depletion_pct_7d": {"green":(0.2,0.45),"amber":(0.45,0.7)},
     "moderate_depletion_sessions_7d": {
         "green": (0, 3),
         "amber": (4, 6),
         "red": (7, 10)
     },
     "high_depletion_sessions_7d": {"green":(0,2),"amber":(3,4)},
-    "mean_depletion_pct_90d": {"green":(0.15,0.35),"amber":(0.35,0.55)},
+    #"mean_depletion_pct_90d": {"green":(0.15,0.35),"amber":(0.35,0.55)},
     "high_depletion_sessions_90d": {"green":(0,6),"amber":(6,10)},
-    "mean_decoupling_7d": {"green":(0,5),"amber":(5,8)},
+    #"mean_decoupling_7d": {"green":(0,5),"amber":(5,8)},
     "high_drift_sessions_7d": {"green":(0,2),"amber":(3,4)},
-    "mean_decoupling_90d": {"green":(0,4),"amber":(4,7)},
+    #"mean_decoupling_90d": {"green":(0,4),"amber":(4,7)},
     "high_drift_sessions_90d": {"green":(0,10),"amber":(10,20)},
     "rolling_joules_above_ftp_7d": {
         "green": (0,150000),

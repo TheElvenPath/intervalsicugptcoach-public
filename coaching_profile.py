@@ -913,7 +913,9 @@ COACH_PROFILE = {
                 "aggressive": "1.3–1.5",
                 "overload": ">1.5"
             },
+            "related_metrics": ["ATL", "CTL", "TSS_7d"]
         },
+
         "Monotony": {
             "framework": "Foster 2001",
             "formula": "Mean_7d / SD_7d",
@@ -922,7 +924,9 @@ COACH_PROFILE = {
                 "moderate": "2.1–2.5",
                 "high": ">2.5"
             },
+            "related_metrics": ["TSS_7d"]
         },
+
         "Strain": {
             "framework": "Modified Foster 2001 (TSS-based)",
             "formula": "Monotony × ΣTSS_7d",
@@ -931,8 +935,10 @@ COACH_PROFILE = {
                 "moderate": "2000–3000",
                 "high": "3000–4000",
                 "very_high": ">4000"
-            }
+            },
+            "related_metrics": ["Monotony", "TSS_7d"]
         },
+
         "FatigueTrend": {
             "framework": "Banister EWMA Delta",
             "formula": "(Mean_7d - Mean_28d) / Mean_28d × 100",
@@ -943,8 +949,10 @@ COACH_PROFILE = {
                 "accumulating": "20–40",
                 "extreme_accumulation": ">40",
                 "recovering": "<-20"
-            }
+            },
+            "related_metrics": ["ATL", "CTL"]
         },
+
         "StressTolerance": {
             "framework": "Banister Capacity-Adjusted Load Ratio",
             "formula": "ΣTSS_7d / (CTL × 7)",
@@ -954,7 +962,9 @@ COACH_PROFILE = {
                 "aggressive": "1.2–1.4",
                 "overreach_risk": ">1.4"
             },
+            "related_metrics": ["CTL", "TSS_7d"]
         },
+
         "FatigueResistance": {
             "framework": "Durability / Endurance Resilience Model",
             "formula": "EndurancePower / ThresholdPower",
@@ -965,7 +975,9 @@ COACH_PROFILE = {
                 "high": "1.1–1.2",
                 "extreme": ">1.2"
             },
+            "related_metrics": ["ThresholdPower"]
         },
+
         "EfficiencyFactor": {
             "framework": "Aerobic Efficiency Index",
             "formula": "Power / HeartRate",
@@ -976,7 +988,9 @@ COACH_PROFILE = {
                 "high": "2.2–2.5",
                 "extreme": ">2.5"
             },
+            "related_metrics": ["HeartRate", "Power"]
         },
+
         "LoadVariabilityIndex": {
             "framework": "Foster Load Variability (Inverse Monotony)",
             "formula": "1 - (Monotony / 5)",
@@ -984,7 +998,8 @@ COACH_PROFILE = {
                 "optimal": "0.7–1.0",
                 "moderate": "0.4–0.69",
                 "low": "<0.4"
-            }
+            },
+            "related_metrics": ["Monotony"]
         },
         "FatOxidationIndex": {
             "framework": "San Millán Zone 2 Model",
@@ -1004,7 +1019,9 @@ COACH_PROFILE = {
                 "moderate": "0.50–0.59",
                 "low": "<0.50"
             },
+            "related_metrics": ["IF"]
         },
+
         "FOxI": {
             "framework": "Internal Derived Metric",
             "formula": "FatOxEfficiency × 100",
@@ -1013,8 +1030,9 @@ COACH_PROFILE = {
                 "moderate": "50–69",
                 "low": "<50"
             },
-            "placement": "Training Quality section"
+            "related_metrics": ["FatOxEfficiency"]
         },
+
         "CUR": {
             "framework": "Internal Derived Metric",
             "formula": "100 - FOxI",
@@ -1025,8 +1043,9 @@ COACH_PROFILE = {
                 "low_carb_bias": "<20",
                 "high_carb_bias": ">80"
             },
-            "placement": "Training Quality section"
+            "related_metrics": ["FOxI", "GR"]
         },
+
         "GR": {
             "framework": "Internal Derived Metric",
             "formula": "IF × 2.4",
@@ -1036,8 +1055,9 @@ COACH_PROFILE = {
                 "high": ">2.1",
                 "low": "<1.2"
             },
-            "placement": "Metabolic section"
+            "related_metrics": ["IF"]
         },
+
         "MES": {
             "framework": "Internal Derived Metric",
             "formula": "(FatOxEfficiency × 60) / GR",
@@ -1046,17 +1066,17 @@ COACH_PROFILE = {
                 "moderate": "10–19",
                 "low": "<10"
             },
-            "placement": "Metabolic section"
+            "related_metrics": ["FatOxEfficiency", "GR"]
         },
         "ZQI": {
-            "framework": "Seiler Intensity Distribution",
-            "formula": "Z3+ time (%) from 3-zone collapsed model",
+            "framework": "Seiler Intensity Distribution (power-zone mapped)",
+            "formula": "% time in Z4–Z7 (proxy for Seiler Z3 high-intensity)",
             "criteria": {
                 "low": "<5",
                 "optimal": "5–15",
                 "high": "15–25",
                 "excessive": ">25"
-            },
+            }
         },
         "DurabilityIndex": {
             "framework": "Sandbakk Durability",
@@ -1191,8 +1211,10 @@ COACH_PROFILE = {
                 "optimal": ">=60",
                 "moderate": "40–59",
                 "low": "<40"
-            }
+            },
+            "related_metrics": ["RestingHR", "HRVBalance", "HRVTrend", "SleepQuality"]
         },
+
         "RestingHR": {
             "framework": "Cardiac Recovery Model",
             "formula": "Resting HR (bpm)",
@@ -1200,8 +1222,10 @@ COACH_PROFILE = {
                 "optimal": "32–60",
                 "moderate": "61–70",
                 "high": ">70"
-            }
+            },
+            "related_metrics": ["HRV"]
         },
+
         "RestingHRDelta": {
             "framework": "Cardiac Recovery Trend",
             "formula": "Δ7–28 day Resting HR",
@@ -1209,8 +1233,10 @@ COACH_PROFILE = {
                 "optimal": "-2–2",
                 "moderate": "2–5",
                 "high": ">5"
-            }
+            },
+            "related_metrics": ["RestingHR"]
         },
+
         "SleepQuality": {
             "framework": "Sleep Hygiene & Recovery Model",
             "formula": "Average Sleep Score (14 days)",
@@ -1218,8 +1244,10 @@ COACH_PROFILE = {
                 "optimal": "80–100",
                 "moderate": "65–79",
                 "low": "<65"
-            }
+            },
+            "related_metrics": ["HRV"]
         },
+
         "HRVBalance": {
             "framework": "Autonomic Recovery Model",
             "formula": "Latest HRV / Mean HRV",
@@ -1227,8 +1255,10 @@ COACH_PROFILE = {
                 "optimal": "1.0–1.3",
                 "moderate": "0.9–0.99",
                 "low": "<0.9"
-            }
+            },
+            "related_metrics": ["HRV"]
         },
+
         "HRVStability": {
             "framework": "Variability Index",
             "formula": "1 - (std / mean) (14d)",
@@ -1236,8 +1266,10 @@ COACH_PROFILE = {
                 "optimal": ">=0.85",
                 "moderate": "0.7–0.84",
                 "low": "<0.7"
-            }
+            },
+            "related_metrics": ["HRV"]
         },
+
         "HRVTrend": {
             "framework": "Short-Term HRV Trend",
             "formula": "Linear slope (7d)",
@@ -1245,7 +1277,8 @@ COACH_PROFILE = {
                 "optimal": ">=0",
                 "moderate": "-2–-0.01",
                 "low": "<-2"
-            }
+            },
+            "related_metrics": ["HRV"]
         },
         "vo2_reserve_ratio": {
             "framework": "Critical Power / VO₂ Reserve Model",
@@ -1305,6 +1338,141 @@ COACH_PROFILE = {
                 "Helps determine whether current training load is being productively absorbed "
                 "or whether recovery capacity is being exceeded."
             )
+        },
+        # ---------------------------------------------------------
+        # 🧠 Performance Intelligence — Directional Metrics (NO thresholds)
+        # ---------------------------------------------------------
+
+        "mean_depletion_pct_7d": {
+            "framework": "W′ Depletion & Repeatability Model (WDRM)",
+            "formula": "Mean W′ depletion across sessions (7d)",
+            "criteria": {
+                "low": "<0.2 — minimal anaerobic strain",
+                "moderate": "0.2–0.45 — controlled anaerobic contribution",
+                "high": ">0.45 — repeated deep depletion"
+            },
+            "interpretation": "Average depth of anaerobic reserve usage across recent sessions.",
+            "coaching_implication": "Higher values reflect repeated supra-threshold stress and increased recovery demand."
+        },
+
+        "mean_depletion_pct_90d": {
+            "framework": "W′ Depletion & Repeatability Model (WDRM)",
+            "formula": "Mean W′ depletion across sessions (90d)",
+            "criteria": {
+                "low": "<0.15 — minimal anaerobic reliance",
+                "moderate": "0.15–0.35 — balanced long-term profile",
+                "high": ">0.35 — sustained anaerobic bias"
+            },
+            "interpretation": "Long-term average depth of anaerobic reserve usage.",
+            "coaching_implication": "Indicates whether training is predominantly aerobic or consistently drawing on anaerobic reserves."
+        },
+
+        "max_depletion_pct_7d": {
+            "framework": "W′ Depletion & Repeatability Model (WDRM)",
+            "formula": "Max W′ depletion observed (7d)",
+            "criteria": {
+                "low": "<0.3 — shallow depletion",
+                "moderate": "0.3–0.6 — meaningful anaerobic stimulus",
+                "high": ">0.6 — deep depletion event"
+            },
+            "interpretation": "Peak anaerobic depletion reached in recent sessions.",
+            "coaching_implication": "High values indicate maximal anaerobic efforts requiring adequate recovery."
+        },
+
+        "mean_decoupling_7d": {
+            "framework": "Intensity Stability & Durability Model (ISDM)",
+            "formula": "Mean HR–Power decoupling (%) (7d)",
+            "criteria": {
+                "stable": "<5 — strong durability",
+                "moderate": "5–8 — emerging fatigue",
+                "high": ">8 — durability limitation"
+            },
+            "interpretation": "Reflects cardiovascular drift under fatigue.",
+            "coaching_implication": "Higher values indicate reduced durability and aerobic efficiency under load."
+        },
+
+        "mean_decoupling_90d": {
+            "framework": "Intensity Stability & Durability Model (ISDM)",
+            "formula": "Mean HR–Power decoupling (%) (90d)",
+            "criteria": {
+                "stable": "<4 — strong aerobic durability",
+                "moderate": "4–7 — mild drift accumulation",
+                "high": ">7 — persistent durability limitation"
+            },
+            "interpretation": "Long-term durability profile under sustained load.",
+            "coaching_implication": "Higher values indicate systemic durability limitations or insufficient aerobic base."
+        },
+
+        "max_decoupling_7d": {
+            "framework": "Intensity Stability & Durability Model (ISDM)",
+            "formula": "Max HR–Power decoupling (%) (7d)",
+            "criteria": {
+                "low": "<6 — stable session",
+                "moderate": "6–10 — moderate drift",
+                "high": ">10 — significant durability stress"
+            },
+            "interpretation": "Peak durability stress observed in recent sessions.",
+            "coaching_implication": "High values suggest fatigue-driven decoupling and reduced aerobic control."
+        },
+
+        "total_joules_above_ftp_7d": {
+            "framework": "W′ / High-Intensity Load",
+            "formula": "Total work above FTP (7d)",
+            "criteria": {
+                "low": "<100kJ — low anaerobic stimulus",
+                "moderate": "100–250kJ — structured intensity",
+                "high": ">250kJ — heavy anaerobic load"
+            },
+            "interpretation": "Total accumulated supra-threshold work.",
+            "coaching_implication": "Higher values increase recovery demand and neuromuscular strain."
+        },
+
+        "mean_if_7d": {
+            "framework": "Neural Density Load Index (NDLI)",
+            "formula": "Mean Intensity Factor (7d)",
+            "criteria": {
+                "low": "<0.65 — low intensity bias",
+                "moderate": "0.65–0.8 — endurance mix",
+                "high": ">0.8 — intensity heavy"
+            },
+            "interpretation": "Average session intensity across the week.",
+            "coaching_implication": "Higher values reflect greater intensity density and recovery demand."
+        },
+
+        "mean_efficiency_factor_7d": {
+            "framework": "Neural Density Load Index (NDLI)",
+            "formula": "Mean Efficiency Factor (7d)",
+            "criteria": {
+                "low": "<1.7 — low aerobic efficiency",
+                "moderate": "1.7–2.1 — stable efficiency",
+                "high": ">2.1 — strong aerobic efficiency"
+            },
+            "interpretation": "Relationship between power output and heart rate.",
+            "coaching_implication": "Higher values indicate improved aerobic efficiency and conditioning."
+        },
+
+        "mean_variability_index_7d": {
+            "framework": "Neural Density Load Index (NDLI)",
+            "formula": "Mean Variability Index (7d)",
+            "criteria": {
+                "steady": "<1.05 — steady pacing",
+                "moderate": "1.05–1.15 — mixed intensity",
+                "high": ">1.15 — stochastic / variable load"
+            },
+            "interpretation": "Reflects variability of power output within sessions.",
+            "coaching_implication": "Higher values indicate stochastic efforts and increased neuromuscular demand."
+        },
+
+        "long_sessions_7d": {
+            "framework": "Durability Exposure",
+            "formula": "Count of long endurance sessions (7d)",
+            "criteria": {
+                "low": "0 — no long sessions",
+                "moderate": "1–2 — adequate durability stimulus",
+                "high": "3+ — high endurance demand"
+            },
+            "interpretation": "Exposure to prolonged endurance stress.",
+            "coaching_implication": "Supports durability development but increases cumulative fatigue."
         },
     },
     "metadata": {

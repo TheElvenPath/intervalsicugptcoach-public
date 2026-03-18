@@ -368,13 +368,23 @@ def evaluate_actions(context):
 
 
     # ---------------- Fatigue Trend ----------------
-    ft_range = heur["fatigue_delta_green"]
     ft = context.get("FatigueTrend", 0.0)
-    if ft < ft_range[0]:
-        metric_signals.append(f"⚠ FatigueTrend {ft:.2f} — recovery phase, maintain steady load.")
-    elif ft > ft_range[1]:
-        metric_signals.append(f"✅ FatigueTrend {ft:.2f} — rising fatigue, monitor intensity.")
 
+    ft_state = (
+        context.get("metrics", {})
+        .get("FatigueTrend", {})
+        .get("semantic_state")
+    )
+
+    if ft_state:
+        if ft_state in ("recovering", "moderate_low"):
+            metric_signals.append(f"⚠ FatigueTrend {ft:.2f} — recovery phase, maintain steady load.")
+
+        elif ft_state in ("moderate_high", "accumulating", "extreme_accumulation"):
+            metric_signals.append(f"⚠ FatigueTrend {ft:.2f} — accumulating fatigue, monitor intensity.")
+
+        elif ft_state == "balanced":
+            metric_signals.append(f"✅ FatigueTrend {ft:.2f} — balanced load.")
     # ---------------- Benchmark / FatMax ----------------
     if context.get("weeks_since_last_FTP", 0) >= 6:
         metric_signals.append("🔄 Retest FTP/LT1 for updated benchmarks.")

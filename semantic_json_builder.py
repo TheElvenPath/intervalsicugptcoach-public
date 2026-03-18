@@ -191,6 +191,9 @@ def semantic_block_for_metric(name, value, context):
 
     metric_name = str(name).strip()
 
+    # 🔥 NEW: pull derived metric context
+    derived_info = context.get("derived_info", {})
+
     # --- Canonical resolution (for context + coaching only) ---
     canonical_map = CHEAT_SHEET.get("metric_groups", {})
     canonical_name = canonical_map.get(metric_name, metric_name)
@@ -199,18 +202,23 @@ def semantic_block_for_metric(name, value, context):
     base_thresholds = copy.deepcopy(
         CHEAT_SHEET["thresholds"].get(metric_name, {})
     )
+
     # --- Phase overrides (only if defined per metric) ---
     phase_overrides = CHEAT_SHEET.get("phase_thresholds", {}).get(metric_name, {})
 
     profile_desc = COACH_PROFILE["markers"].get(metric_name, {})
 
+    # 🔥 UPDATED: merge priority (Tier → Cheat Sheet → Profile)
     interpretation = (
-        CHEAT_SHEET["context"].get(canonical_name)
+        derived_info.get("interpretation")
+        or derived_info.get("notes")
+        or CHEAT_SHEET["context"].get(canonical_name)
         or profile_desc.get("interpretation")
     )
 
     coaching_link = (
-        CHEAT_SHEET["coaching_links"].get(canonical_name)
+        derived_info.get("coaching_implication")
+        or CHEAT_SHEET["coaching_links"].get(canonical_name)
         or profile_desc.get("coaching_implication")
     )
 
@@ -221,7 +229,7 @@ def semantic_block_for_metric(name, value, context):
         or context.get("phase_name")
         or ""
     ).lower()
-
+    semantic_state = "unclassified"
     classification = "unknown"
     active_thresholds = {}
 
@@ -243,7 +251,47 @@ def semantic_block_for_metric(name, value, context):
 
             if not active_thresholds:
                 debug(context, f"[THRESHOLDS][{metric_name}] EMPTY THRESHOLDS")
-                classification = "informational"
+                # 🧠 CRITERIA FALLBACK
+                criteria = profile_desc.get("criteria", {})
+
+                semantic_state = None
+
+                if criteria:
+                    try:
+                        for key, rule in criteria.items():
+                            rule_clean = rule.replace("–", "-")
+
+                            if "<" in rule_clean:
+                                limit = float(rule_clean.split("<")[1].split()[0])
+                                if v < limit:
+                                    semantic_state = key
+                                    break
+
+                            elif ">" in rule_clean:
+                                limit = float(rule_clean.split(">")[1].split()[0])
+                                if v > limit:
+                                    semantic_state = key
+                                    break
+
+                            elif "-" in rule_clean:
+                                low, high = rule_clean.split("-")
+                                low = float(low)
+                                high = float(high.split()[0])
+
+                                if low <= v <= high:
+                                    semantic_state = key
+                                    break
+
+                        # 🔥 KEY: NO traffic light mapping
+                        classification = "informational"
+
+                    except Exception as e:
+                        debug(context, f"[CRITERIA][{metric_name}] ERROR", str(e))
+                        classification = "informational"
+                        semantic_state = "unclassified"
+                else:
+                    classification = "informational"
+                    semantic_state = "unclassified"
             else:
                 green = active_thresholds.get("green")
                 amber = active_thresholds.get("amber")
@@ -261,11 +309,16 @@ def semantic_block_for_metric(name, value, context):
                 elif red and red[0] <= v <= red[1]:
                     classification = "red"
                 else:
-                    # handle upper overflow above green band
-                    if green and v > green[1]:
-                        classification = "amber"
+                    # 🔥 FIX: directional overflow handling
+                    if green:
+                        if v < green[0]:
+                            classification = "amber" if amber else "informational"
+                        elif v > green[1]:
+                            classification = "amber" if amber else "informational"
+                        else:
+                            classification = "informational"
                     else:
-                        classification = "red"
+                        classification = "informational"
 
                 debug(context, f"[THRESHOLDS][{metric_name}] Classification → {classification}")
 
@@ -273,21 +326,26 @@ def semantic_block_for_metric(name, value, context):
         debug(context, f"[THRESHOLDS][{metric_name}] ERROR", str(e))
         classification = "unknown"
 
+    if metric_name == "FatigueTrend":
+        classification= "informational"
+        active_thresholds = {}
+
     return {
         "name": metric_name,
         "display_name": display_name,
         "value": convert_to_str(value),
-        "framework": profile_desc.get("framework") or "Unknown",
+        "framework": profile_desc.get("framework") or derived_info.get("framework") or "Unknown",
         "formula": profile_desc.get("formula"),
+        "criteria": profile_desc.get("criteria", {}),
+        "semantic_state": semantic_state,
         "thresholds": active_thresholds,
         "phase_context": phase,
         "classification": classification,
         "metric_confidence": resolve_metric_confidence(canonical_name, context, CHEAT_SHEET),
         "interpretation": interpretation,
         "coaching_implication": coaching_link,
-        "related_metrics": profile_desc.get("criteria", {}),
+        "related_metrics": profile_desc.get("related_metrics", [])
     }
-
 
 
 
@@ -2456,96 +2514,27 @@ def build_semantic_json(context):
     # DERIVED METRICS
     # ---------------------------------------------------------
     for metric_name, info in context.get("derived_metrics", {}).items():
-        semantic["metrics"][metric_name] = {
-            "name": metric_name,
-            "value": handle_missing_data(info.get("value"), 0),
-            "classification": info.get("classification", "unknown"),
-            "interpretation": info.get("interpretation", ""),
-            "coaching_implication": info.get("coaching_implication", ""),
-            "related_metrics": info.get("related_metrics", {}),
+
+        merged_context = {
+            **context,
+            "derived_info": info
         }
-    # ------------------------------------------------------------------
-    # 📊 Load-related metrics (cheat-sheet aligned)
-    # ------------------------------------------------------------------
-    try:
-        metric_keys = ["ACWR", "Monotony", "Strain", "FatigueTrend", "ZQI"]
 
-        semantic.setdefault("metrics", {})
+        block = semantic_block_for_metric(
+            metric_name,
+            info.get("value"),
+            merged_context
+        )
 
-        for key in metric_keys:
-            val = context.get(key)
-            if val is None:
-                debug(context, f"[SEMANTIC] ⚠️ {key}: no value in context")
-                continue
+        # 🔴 CRITICAL: re-inject derived intelligence (ONLY if present)
+        if info.get("interpretation"):
+            block["interpretation"] = info["interpretation"]
 
-            profile_def = COACH_PROFILE.get("markers", {}).get(key, {})
-            thresholds = CHEAT_SHEET.get("thresholds", {}).get(key, {})
+        if info.get("coaching_implication"):
+            block["coaching_implication"] = info["coaching_implication"]
 
-            criteria = profile_def.get("criteria", thresholds)
-            notes = (
-                profile_def.get("interpretation")
-                or CHEAT_SHEET.get("context", {}).get(key)
-                or ""
-            )
-            framework = profile_def.get("framework", "physiological")
-
-            icon, state = classify_marker(val, key, context)
-
-            semantic["metrics"][key] = {
-                "value": round(float(val), 3) if isinstance(val, (int, float)) else val,
-                "criteria": criteria,
-                "state": state,
-                "icon": icon,
-                "framework": framework,
-                "notes": notes,
-            }
-
-            debug(context, f"[SEMANTIC] {key}: {val} → {state} ({framework})")
-
-    except Exception as e:
-        debug(context, f"[SEMANTIC] ⚠️ Load metric integration failed: {e}")
-
-    # ------------------------------------------------------------------
-    # 🧠 Metabolic & Recovery Metrics (cheat-sheet aligned)
-    # ------------------------------------------------------------------
-    try:
-        metric_keys = ["FOxI", "MES", "StressTolerance"]
-
-        semantic.setdefault("metrics", {})
-
-        for key in metric_keys:
-            val = context.get(key)
-            if val is None:
-                debug(context, f"[SEMANTIC] ⚠️ {key}: no value in context")
-                continue
-
-            profile_def = COACH_PROFILE.get("markers", {}).get(key, {})
-            thresholds = CHEAT_SHEET.get("thresholds", {}).get(key, {})
-            criteria = profile_def.get("criteria", thresholds)
-
-            notes = (
-                profile_def.get("interpretation")
-                or CHEAT_SHEET.get("context", {}).get(key)
-                or ""
-            )
-            framework = profile_def.get("framework", "physiological")
-
-            icon, state = classify_marker(val, key, context)
-
-            semantic["metrics"][key] = {
-                "value": round(float(val), 3) if isinstance(val, (int, float)) else val,
-                "criteria": criteria,
-                "state": state,
-                "icon": icon,
-                "framework": framework,
-                "notes": notes,
-            }
-
-            debug(context, f"[SEMANTIC] {key}: {val} → {state} ({framework})")
-
-    except Exception as e:
-        debug(context, f"[SEMANTIC] ⚠️ Metabolic/Recovery metric integration failed: {e}")
-
+        semantic["metrics"][metric_name] = block
+        
     # ---------------------------------------------------------
     # Annotate context windows per metric
     # ---------------------------------------------------------
@@ -2579,23 +2568,6 @@ def build_semantic_json(context):
     for name, metric in semantic["metrics"].items():
         metric["context_window"] = metric_windows.get(name, "unknown")
 
-
-
-    # ---------------------------------------------------------
-    # SECONDARY METRICS
-    # ---------------------------------------------------------
-    secondary_keys = [
-        "FatOxEfficiency", "FOxI", "CUR", "GR", "MES",
-        "StressTolerance", "ZQI", "Polarisation"
-    ]
-
-    for k in secondary_keys:
-        if k in context and k not in semantic["metrics"]:
-            semantic["metrics"][k] = semantic_block_for_metric(
-                k, context.get(k), context
-            )
-
-  
     # ---------------------------------------------------------
     # 🧮 CTL / ATL / TSB RESOLUTION (AUTHORITATIVE + FALLBACK)
     # ---------------------------------------------------------

@@ -157,7 +157,7 @@ def compute_wellness_coverage(df_well, context=None):
 
 def compute_zone_intensity(df, context=None):
     """
-    Zone Quality Index (ZQI) — percentage of total training time spent in high-intensity zones (Z5–Z7).
+    Sieler aligned Zone Quality Index (ZQI) — percentage of total training time spent in high-intensity zones (Z4–Z7).
     Correctly scaled to 0–100% (not ×100 again) and includes detailed debug logging.
     """
     import pandas as pd, numpy as np
@@ -179,10 +179,10 @@ def compute_zone_intensity(df, context=None):
         debug(context, "[ZQI] ⚠️ All zone values zero or missing.")
         return 0.0
 
-    # Sum high-intensity zones (Z5–Z7)
+    # Sum high-intensity zones (Z4–Z7)
     high_time = float(sum(
         zdf[c].sum() for c in zdf.columns
-        if any(tag in c.lower() for tag in ("z5", "z6", "z7"))
+        if any(tag in c.lower() for tag in ("z4", "z5", "z6", "z7"))
     ))
 
     # Compute ratio and percent
@@ -193,7 +193,7 @@ def compute_zone_intensity(df, context=None):
     debug(context, (
         f"[ZQI] High-intensity computation:\n"
         f"       → Detected zone cols={zcols}\n"
-        f"       → High (Z5-Z7)={high_time:.2f}s, Total={total_time:.2f}s\n"
+        f"       → High (Z4-Z7)={high_time:.2f}s, Total={total_time:.2f}s\n"
         f"       → Ratio={zqi_ratio:.4f} → ZQI={zqi_percent:.1f}%"
     ))
 
@@ -287,7 +287,7 @@ def classify_marker(value, marker, context=None):
         "FatOx": "FatOxEfficiency",
         "FatOxidation": "FatOxEfficiency",
         "Recovery": "LoadVariabilityIndex",
-        "fatigue_trend": "FatigureTrend",
+        "fatigue_trend": "FatigueTrend",
         "FatigueTrend": "FatigueTrend"
     }
     marker = marker_aliases.get(marker, marker)
@@ -811,7 +811,7 @@ def compute_derived_metrics(df_events, context):
         if zones:
             total = sum(float(v) for v in zones.values())
             if total > 0:
-                high = sum(float(zones.get(z, 0)) for z in ["power_z5","power_z6","power_z7","hr_z5","hr_z6","hr_z7"])
+                high = sum(float(zones.get(z, 0)) for z in ["power_z4","power_z5","power_z6","power_z7","hr_z4","hr_z5","hr_z6","hr_z7"])
                 zqi = round(high / total * 100, 1)
                 debug(context, f"[ZQI] 🩵 Recomputed from zone distributions → {zqi}% (High={high:.1f} / Total={total:.1f})")
                 context["ZQI"] = zqi
