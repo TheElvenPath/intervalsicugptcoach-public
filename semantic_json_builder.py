@@ -227,8 +227,11 @@ def semantic_block_for_metric(name, value, context):
     phase = (
         context.get("current_phase")
         or context.get("phase_name")
-        or ""
-    ).lower()
+    )
+
+    if phase:
+        phase = phase.lower()
+
     semantic_state = "unclassified"
     classification = "unknown"
     active_thresholds = {}
@@ -254,7 +257,7 @@ def semantic_block_for_metric(name, value, context):
                 # 🧠 CRITERIA FALLBACK
                 criteria = profile_desc.get("criteria", {})
 
-                semantic_state = None
+                semantic_state = "unclassified"
 
                 if criteria:
                     try:
