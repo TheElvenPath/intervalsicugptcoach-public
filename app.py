@@ -538,28 +538,28 @@ def _run_full_audit(range: str, output_format="markdown", prefetch_context=None,
     if buffer:
         with redirect_stdout(buffer):
             if prefetch_context:
-                report, compliance = run_report(
+                report, compliance, *_ = run_report(
                     reportType=range,
                     output_format=output_format,
                     include_coaching_metrics=True,
                     **prefetch_context
                 )
             else:
-                report, compliance = run_report(
+                report, compliance, *_ = run_report(
                     reportType=range,
                     output_format=output_format,
                     include_coaching_metrics=True
                 )
     else:
         if prefetch_context:
-            report, compliance = run_report(
+            report, compliance, *_ = run_report(
                 reportType=range,
                 output_format=output_format,
                 include_coaching_metrics=True,
                 **prefetch_context
             )
         else:
-            report, compliance = run_report(
+            report, compliance, *_ = run_report(
                 reportType=range,
                 output_format=output_format,
                 include_coaching_metrics=True
@@ -906,7 +906,7 @@ async def run_audit_with_data(
 
             # now run the unified audit (SAFE WRAPPED)
             try:
-                report, compliance = run_report(
+                report, compliance, *_ = run_report(
                     reportType=report_range,
                     output_format=fmt,
                     include_coaching_metrics=True,
