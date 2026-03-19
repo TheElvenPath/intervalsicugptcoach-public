@@ -1,6 +1,6 @@
 #ADE V1.0
 
-ADE_VERSION = "ade_v1"
+ADE_VERSION = "ade_v1.1"
 
 
 def run_adaptive_decision_engine(context):

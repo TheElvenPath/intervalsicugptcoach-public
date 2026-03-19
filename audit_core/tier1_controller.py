@@ -1028,11 +1028,46 @@ def run_tier1_controller(df_master, wellness, context):
             .dt.tz_localize(None)
             .dt.normalize()
         )
+        today = pd.Timestamp.now().tz_localize(None).normalize()
+        report_type = context.get("report_type")
 
-        window_start = rest_df["date"].min()
-        today = pd.Timestamp.now().normalize()
+        if report_type == "weekly":
+            window_days = 6
+            rest_df = df_master.copy()
+
+        elif report_type == "wellness":
+            window_days = 41
+            rest_df = context.get("df_light", df_master).copy()
+
+        elif report_type == "season":
+            window_days = 89
+            rest_df = context.get("df_light", df_master).copy()
+
+        elif report_type == "summary":
+            rest_df = context.get("df_light", df_master).copy()
+
+        else:
+            window_days = 6
+            rest_df = df_master.copy()
+
+        # ------------------------------------------------------------
+        # ✅ NORMALIZE DATES FIRST (fixes your error)
+        # ------------------------------------------------------------
+        rest_df["date"] = (
+            pd.to_datetime(rest_df["start_date_local"], errors="coerce")
+            .dt.tz_localize(None)
+            .dt.normalize()
+        )
+
+        # ------------------------------------------------------------
+        # Window logic
+        # ------------------------------------------------------------
+        if report_type == "summary":
+            window_start = rest_df["date"].min()
+        else:
+            window_start = today - pd.Timedelta(days=window_days)
+
         date_range = pd.date_range(window_start, today, freq="D")
-
         # --- Aggregate daily load ---
         if "icu_training_load" in rest_df.columns:
             debug(context, "[T1-REST] Using icu_training_load as primary load source.")
@@ -1050,7 +1085,7 @@ def run_tier1_controller(df_master, wellness, context):
             )
         else:
             debug(context, "[T1-REST] ❌ No valid load column found (icu_training_load/TSS).")
-            daily_load = pd.Series(dtype=float, index=date_range)
+            daily_load = pd.Series(0, index=date_range)
 
         debug(context, f"[T1-REST] Daily load sample (last 7 days): {daily_load.tail(7).to_dict()}")
 
@@ -1115,7 +1150,6 @@ def run_tier1_controller(df_master, wellness, context):
         wellness_metrics = {
             "rest_hr": rest_hr,
             "hrv_trend": hrv_trend,
-            "rest_days": rest_days
         }
 
         context["wellness_metrics"] = wellness_metrics
