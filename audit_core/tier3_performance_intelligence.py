@@ -526,6 +526,13 @@ def compute_nutrition_balance(context):
     elif carbs_delta > 1.5:
         status = "overfuelled"
 
+    if len(valid_days) >= 5:
+        confidence = "high"
+    elif len(valid_days) >= 3:
+        confidence = "moderate"
+    else:
+        confidence = "low"
+
     balance = {
         "carbs_gkg_actual": round(carbs_gkg, 2),
         "protein_gkg_actual": round(protein_gkg, 2),
@@ -534,7 +541,7 @@ def compute_nutrition_balance(context):
         "protein_delta": round(protein_delta, 2),
         "fat_delta": round(fat_delta, 2),
         "status": status,
-        "confidence": "moderate"
+        "confidence": "confidence"
     }
 
     context["nutrition_balance"] = balance

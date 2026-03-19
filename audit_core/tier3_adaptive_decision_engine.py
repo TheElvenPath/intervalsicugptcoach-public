@@ -39,18 +39,24 @@ def run_adaptive_decision_engine(context):
     nutrition_conf = nutrition.get("confidence")
 
     # --------------------------------------------------
-    # Nutrition = supplementary signal only
+    # Nutrition = supplementary signal only (graded)
     # --------------------------------------------------
 
     nutrition_note = None
 
-    if nutrition_conf == "moderate":
+    if nutrition_conf in ("moderate", "high"):
 
-        if nutrition_status == "underfuelled":
-            nutrition_note = "Energy intake appears below demand; monitor fuelling."
+        if nutrition_status == "severely_underfuelled":
+            nutrition_note = "Carbohydrate intake is far below demand for current load; fuelling gap likely limiting adaptation."
+
+        elif nutrition_status == "underfuelled":
+            nutrition_note = "Carbohydrate intake is below demand; consider increasing fuelling to match training load."
 
         elif nutrition_status == "overfuelled":
-            nutrition_note = "Energy intake exceeds current demand."
+            nutrition_note = "Energy intake exceeds current demand; monitor balance relative to load."
+
+        elif nutrition_status == "balanced":
+            nutrition_note = "Energy intake aligns with current training demand."
 
     # DO NOT change:
     # - directive
