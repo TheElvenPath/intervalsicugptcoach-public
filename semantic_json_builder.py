@@ -2693,6 +2693,31 @@ def build_semantic_json(context):
 
         semantic["performance_intelligence"]["acute"] = wrap_pi_block(acute_pi, "7d")
         semantic["performance_intelligence"]["chronic"] = wrap_pi_block(chronic_pi, "90d")
+       
+        # -----------------------------------------------------
+        # Load Distribution (from T1)
+        # -----------------------------------------------------
+
+        load_dist = context.get("load_distribution") or {}
+
+        if load_dist:
+
+            semantic.setdefault("performance_intelligence", {})
+
+            semantic["performance_intelligence"]["load_distribution"] = {
+                "rest_days": load_dist.get("rest_days"),
+                "context_window": {
+                    "weekly": "7d",
+                    "wellness": "42d",
+                    "season": "90d",
+                    "summary": "full"
+                }.get(context.get("report_type"), "unknown")
+            }
+
+            debug(
+                context,
+                f"[SEMANTIC] Injected load_distribution → rest_days={load_dist.get('rest_days')}"
+            )
 
         # -----------------------------------------------------
         # 2️⃣ Inject Interpretation → Action Layer

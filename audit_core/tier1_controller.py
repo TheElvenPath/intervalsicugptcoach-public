@@ -1151,7 +1151,10 @@ def run_tier1_controller(df_master, wellness, context):
             "rest_hr": rest_hr,
             "hrv_trend": hrv_trend,
         }
-
+        context["load_distribution"] = {
+        "rest_days": rest_days
+        }
+        
         context["wellness_metrics"] = wellness_metrics
         context.setdefault("wellness_summary", {}).update(wellness_metrics)
 
