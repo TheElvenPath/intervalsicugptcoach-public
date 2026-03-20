@@ -1449,7 +1449,7 @@ def handle_audit_halt(e, report_range, buffer=None, header=None, context=None):
     period_str = None
 
     if context:
-        athlete = context.get("athlete") or context.get("athleteProfile") or {}
+        athlete = context.get("athleteProfile") or context.get("athlete") or {}
         athlete_name = athlete.get("name")
         athlete_id = athlete.get("id")
 
@@ -1481,6 +1481,13 @@ def handle_audit_halt(e, report_range, buffer=None, header=None, context=None):
         code,
         str(e)
     )
+
+    if context and context.get("debug_counts"):
+        logger.info(
+            "[HALT_DEBUG] report_type=%s counts=%s",
+            report_range,
+            context.get("debug_counts")
+        )
 
     if severity == "soft":
         return load_demo_response(
