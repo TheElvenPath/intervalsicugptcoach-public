@@ -918,17 +918,11 @@ async def run_audit_with_data(
 
             # Abort only if NO activity data at all
             if light_empty and full_empty:
-
-                resp = load_demo_response(
+                return load_demo_response(
                     report_range,
-                    reason="NO_ACTIVITIES_RANGE"
+                    reason="NO_ACTIVITIES_RANGE",
+                    debug_counts=debug_counts
                 )
-
-                body = json.loads(resp.body)
-                body["debug_counts"] = debug_counts
-                resp.body = json.dumps(body).encode("utf-8")
-
-                return resp
             # now run the unified audit (SAFE WRAPPED)
             try:
                 report, compliance, *_ = run_report(
@@ -1376,7 +1370,7 @@ def data_quality_audit(ctx: dict) -> dict:
         "strava_stub_detected": strava_stub_detected
     }
 
-def load_demo_response(report_range: str, reason: str, detail: str | None = None):
+def load_demo_response(report_range: str, reason: str, detail: str | None = None, debug_counts=None):
 
     sys.stderr.write("\n🧪 DEMO RESPONSE GENERATED\n")
     sys.stderr.write(f"Report: {report_range}\n")
@@ -1433,6 +1427,7 @@ DEMO MODE NOTICE:
         "output_format": "semantic_json",
         "semantic_graph": demo_sg,
         "compliance": {},
+        "debug_counts": debug_counts,
         "logs": ""
     }
 
@@ -1487,19 +1482,13 @@ def handle_audit_halt(e, report_range, buffer=None, header=None, context=None):
         str(e)
     )
 
-    # 🟡 Soft → demo
     if severity == "soft":
-        resp = load_demo_response(
+        return load_demo_response(
             report_range,
             reason=code,
-            detail=str(e)
+            detail=str(e),
+            debug_counts=context.get("debug_counts") if context else None
         )
-
-        body = json.loads(resp.body)
-        body["debug_counts"] = context.get("debug_counts") if context else None
-        resp.body = json.dumps(body).encode("utf-8")
-
-        return resp
 
     # 🔴 Hard but demo-allowed (auth cases)
     if code in ["OAUTH_NOT_CONFIGURED", "ATHLETE_PROFILE_INVALID"]:
