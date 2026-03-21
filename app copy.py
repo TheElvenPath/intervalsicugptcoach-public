@@ -890,7 +890,7 @@ async def run_audit_with_data(
             # ---------------------------------------------------------
             # LIGHT exists but FULL missing (only critical for weekly/season)
             # ---------------------------------------------------------
-            if report_range in ("weekly") and not light_empty and full_empty:
+            if report_range == "weekly" and not light_empty and full_empty:
 
                 last_date = None
 
@@ -920,16 +920,20 @@ async def run_audit_with_data(
                         f"Detailed activity data could not be retrieved."
                         f"'run a weekly demo report' for an example"
                     )
-                return {
+                return JSONResponse({
                     "status": "ok",
                     "message": msg,
+                    "report_type": report_range,
+                    "output_format": "semantic_json",
                     "semantic_graph": {
                         "meta": {
                             "report_type": report_range,
                             "note": "insufficient_data"
                         }
-                    }
-                }
+                    },
+                    "compliance": {},
+                    "logs": ""
+                })
 
             # Abort only if NO activity data at all
             if light_empty and full_empty:
