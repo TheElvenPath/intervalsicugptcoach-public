@@ -890,7 +890,7 @@ async def run_audit_with_data(
             # ---------------------------------------------------------
             # LIGHT exists but FULL missing (only critical for weekly/season)
             # ---------------------------------------------------------
-            if report_range in ("weekly", "season") and not light_empty and full_empty:
+            if report_range in ("weekly") and not light_empty and full_empty:
 
                 last_date = None
 
@@ -910,18 +910,26 @@ async def run_audit_with_data(
                     suggested_start = (last_date - pd.Timedelta(days=7)).strftime("%Y-%m-%d")
 
                     msg = (
-                        f"No weekly period activities detected, detailed data could not be retrieved. "
+                        f"No weekly period activities detected, weekly detailed data could not be retrieved. "
                         f"Last activity I see is {last_date_str}. "
-                        f"Create a weekly report for {suggested_start}."
+                        f"'Run a weekly report starting {suggested_start}'."
+                        f"or 'run a weekly demo report' for an example"
                     )
                 else:
-                    msg = "Detailed activity data could not be retrieved."
-
-                raise AuditHalt(
-                    msg,
-                    code="FULL_DATA_UNAVAILABLE",
-                    severity="soft"
-                )
+                    msg = ( 
+                        f"Detailed activity data could not be retrieved."
+                        f"'run a weekly demo report' for an example"
+                    )
+                return {
+                    "status": "ok",
+                    "message": msg,
+                    "semantic_graph": {
+                        "meta": {
+                            "report_type": report_range,
+                            "note": "insufficient_data"
+                        }
+                    }
+                }
 
             # Abort only if NO activity data at all
             if light_empty and full_empty:
