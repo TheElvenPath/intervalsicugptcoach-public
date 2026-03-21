@@ -921,24 +921,24 @@ async def run_audit_with_data(
                         f"'run a weekly demo report' for an example"
                     )
 
-                    logger.info("[EARLY EXIT] %s", msg)
+                logger.info("[EARLY EXIT] %s", msg)
 
-                    if buffer:
-                        buffer.write(f"[EARLY EXIT] {msg}\n")
+                if buffer:
+                    buffer.write(f"[EARLY EXIT] {msg}\n")
 
-                    return JSONResponse({
-                    "status": "ok",
-                    "error_type": "Weekly detailed activity data could not be retrieved",
-                    "severity": "hard",
-                    "message": msg,
-                    "report_type": report_range,
-                    "output_format": "semantic_json",
-                    "semantic_graph": {
-                        "meta": {}
-                    },
-                    "compliance": {},
-                    "logs": ""
-                })
+                return JSONResponse({
+                "status": "ok",
+                "error_type": "Weekly detailed activity data could not be retrieved",
+                "severity": "hard",
+                "message": msg,
+                "report_type": report_range,
+                "output_format": "semantic_json",
+                "semantic_graph": {
+                    "meta": {}
+                },
+                "compliance": {},
+                "logs": ""
+            })
 
             # Abort only if NO activity data at all
             if light_empty and full_empty:
