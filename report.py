@@ -546,8 +546,10 @@ def generate_full_report(
             log_output = data.get("logs", "")
             semantic = data.get("semantic_graph", {})
             full_output = {
-                "status": "ok",
-                "message": f"{report_type.title()} report (prefetched)",
+                "status": data.get("status", "ok"),
+                "message": data.get("message", f"{report_type.title()} report (prefetched)"),
+                "error_type": data.get("error_type"),
+                "severity": data.get("severity"),
                 "semantic_graph": semantic,
                 "logs": log_output,
             }

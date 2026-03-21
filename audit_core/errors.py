@@ -23,7 +23,7 @@ class AuditHalt(Exception):
         }
 
     def to_ok_dict(self, report_type=None):
-        """✅ New: used for graceful early exits (no demo, no error)"""
+        """ used for graceful early exits (no demo, no error)"""
         return {
             "status": "ok",
             "message": self._friendly_message(),
