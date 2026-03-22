@@ -1510,12 +1510,12 @@ def handle_audit_halt(e, report_range, buffer=None, header=None, context=None):
         )
 
     if severity == "soft":
-        return JSONResponse({
-            "status": "partial",
-            "report_type": report_range,
-            "message": str(e),
-            "note": "Insufficient physiological history (e.g. CTL/ATL). Report generated with limited fidelity."
-        })
+        return load_demo_response(
+            report_range,
+            reason=code,
+            detail=str(e),
+            debug_counts=context.get("debug_counts") if context else None
+        )
 
     if code in ["OAUTH_NOT_CONFIGURED", "ATHLETE_PROFILE_INVALID"]:
         demo = load_demo_response(report_range, reason=code)
