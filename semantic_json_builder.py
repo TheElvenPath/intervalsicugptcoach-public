@@ -4059,6 +4059,7 @@ def build_system_prompt_from_header(report_type: str, header: dict) -> str:
     emphasis = report_profile.get("emphasis", {})
     framing = report_profile.get("framing", {})
     closing_cfg = report_profile.get("closing_note", {})
+    post_render = report_profile.get("post_render", {})
 
     # --------------------------------------------------
     # Optional blocks (existing)
@@ -4220,6 +4221,27 @@ def build_system_prompt_from_header(report_type: str, header: dict) -> str:
             closing_note_block += "\n- The six sentences MUST follow this structure:"
             for s in sentence_structure:
                 closing_note_block += f"\n  {s}"
+    #-----------------------------------------------------------------
+    post_render_block = ""
+
+    post_cfg = renderer_profile.get("post_render", {}).get("explore_deeper", {})
+
+    if post_cfg.get("enabled"):
+        commands = post_cfg.get("commands", [])
+        placement = post_cfg.get("placement", "after_report")
+        style = post_cfg.get("style", "command_suggestions")
+
+        post_render_block = dedent(f"""
+        POST-RENDER INTERACTION:
+        - After the full report is rendered, present follow-up commands to allow deeper inspection.
+        - These commands MUST be shown after the closing reflection section.
+        - The commands MUST be rendered as short, copyable user prompts.
+        - Do NOT add explanation, narrative, or coaching around these commands.
+        - Do NOT modify or infer command text.
+
+        COMMANDS:
+        {chr(10).join([f'- "{cmd}"' for cmd in commands])}
+        """).strip()
     #-----------------------------------------------------------------
     coaching_block = ""
     if coaching_enabled and coaching_max > 0:
@@ -4396,8 +4418,9 @@ def build_system_prompt_from_header(report_type: str, header: dict) -> str:
     {closing_note_block}
 
     {question_block}
-    
 
+    {post_render_block}
+    
     """).strip()
 
     return prompt

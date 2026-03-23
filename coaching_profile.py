@@ -398,6 +398,19 @@ RENDERER_PROFILES = {
             ],
             "intent_rule": "Assess whether acute load and recovery state align with immediate training intent.",
             "max_sentences": 4
+        },
+        "post_render": {
+            "explore_deeper": {
+                "enabled": True,
+                "style": "command_suggestions",
+                "placement": "after_report",
+                "commands": [
+                    "show full physiology_response",
+                    "show full performance_intelligence",
+                    "show full adaptation",
+                    "show full adaptive_decisions"
+                ]
+            }
         }
     },
 
