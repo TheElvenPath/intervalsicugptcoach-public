@@ -158,7 +158,7 @@ PRUNE_RULES = {
     },
 
     "wellness": {
-        "meta.athlete.context": [
+        "meta": [
             "events",
             "planned_events",
         ],
