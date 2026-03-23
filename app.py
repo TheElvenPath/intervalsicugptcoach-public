@@ -935,6 +935,7 @@ async def run_audit_with_data(
                     "message": "No activity data found for this period. Run a weekly demo report to see what you are missing.",
                     "next_step": "run a weekly demo report"
                 }, status_code=200)
+                
             # now run the unified audit (SAFE WRAPPED)
             try:
                 report, compliance, *_ = run_report(
