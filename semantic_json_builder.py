@@ -4224,12 +4224,10 @@ def build_system_prompt_from_header(report_type: str, header: dict) -> str:
     #-----------------------------------------------------------------
     post_render_block = ""
 
-    post_cfg = renderer_profile.get("post_render", {}).get("explore_deeper", {})
+    post_cfg = report_profile.get("post_render", {}).get("explore_deeper", {})
 
     if post_cfg.get("enabled"):
         commands = post_cfg.get("commands", [])
-        placement = post_cfg.get("placement", "after_report")
-        style = post_cfg.get("style", "command_suggestions")
 
         post_render_block = dedent(f"""
         POST-RENDER INTERACTION:
