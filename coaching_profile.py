@@ -37,9 +37,6 @@ REPORT_CONTRACT = {
         "planned_summary_by_iso_week",
         "future_forecast",
         "future_actions",
-
-        # hidden narrative (not rendered)
-        "insights"
     ],
 
 
@@ -71,9 +68,6 @@ REPORT_CONTRACT = {
         "planned_summary_by_iso_week",
         "future_forecast",
         "future_actions",
-
-        # hidden narrative
-        "insights"
     ],
 
 
