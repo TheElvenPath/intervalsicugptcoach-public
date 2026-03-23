@@ -4237,7 +4237,7 @@ def build_system_prompt_from_header(report_type: str, header: dict) -> str:
         - Do NOT add explanation, narrative, or coaching around these commands.
         - Do NOT modify or infer command text.
 
-        COMMANDS:
+        Suggested follow up questions:
         {chr(10).join([f'- "{cmd}"' for cmd in commands])}
         """).strip()
     #-----------------------------------------------------------------
