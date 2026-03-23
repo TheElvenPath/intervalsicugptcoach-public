@@ -274,7 +274,8 @@ RENDERER_PROFILES = {
             "If energy_system_progression exists, summarise direction using system_status + adaptation_state.",
             "Prioritise ESPE signals over repeating metric definitions.",
             "Render power anchors as [<power> W](link) when activity_link exists, else plain.",
-            "Title current_ISO_weekly_microcycle as 'Current ISO Week ## (Mon-Sun)'."
+            "Title current_ISO_weekly_microcycle as 'Current ISO Week ## (Mon-Sun)'.",
+            "If a section is marked full, render every entity and field exactly as present in the semantic data"
         ],
         "allowed_enrichment": [
             "Restate semantic interpretation fields.",
@@ -355,8 +356,7 @@ RENDERER_PROFILES = {
                 "Icons are additive only (no replacement/suppression of values or rows).",
                 "Append rpe_emoji + feel_emoji to TSS.",
                 "If activity_link exists, render as [name](link) with icons before link.",
-                "Render a single legend line directly below the table.",
-                "If a section is marked full, render every entity and field exactly as present in the semantic data"
+                "Render a single legend line directly below the table."
             ]
         },
 
