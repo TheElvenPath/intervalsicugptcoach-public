@@ -546,6 +546,19 @@ RENDERER_PROFILES = {
             ],
             "intent_rule": "Determine whether the training block reflects expansion, consolidation, or plateau.",
             "max_sentences": 6
+        },
+        "post_render": {
+            "explore_deeper": {
+                "enabled": True,
+                "style": "command_suggestions",
+                "placement": "after_report",
+                "commands": [
+                    "show full physiology_response",
+                    "show full performance_intelligence",
+                    "show full adaptation",
+                    "show full adaptive_decisions"
+                ]
+            }
         }
     },
 
