@@ -33,14 +33,12 @@ REPORT_CONTRACT = {
         # 🎯 ADAPTIVE DECISIONS
         "actions",
         "planned_events",
-        "planned_summary_by_date",
         "current_ISO_weekly_microcycle",
         "planned_summary_by_iso_week",
         "future_forecast",
         "future_actions",
 
         # hidden narrative (not rendered)
-        "phases",
         "insights"
     ],
 
@@ -65,7 +63,6 @@ REPORT_CONTRACT = {
         # 📈 ADAPTATION
         "energy_system_progression",
         "physiology",
-        "phases",
         "phases_summary",
 
         # 🎯 ADAPTIVE DECISIONS
@@ -112,6 +109,52 @@ REPORT_CONTRACT = {
         "performance_intelligence"
     ]
 }
+
+# ─────────────────────────────────────────────
+# PRUNE RULES (exact current manual reductions) INSIDE CONTRACT TYPE
+# ─────────────────────────────────────────────
+
+PRUNE_RULES = {
+    "weekly": {
+        "wellness": [
+            "hrv_series"
+        ],
+        "meta": [
+            "phases_summary"
+        ],
+        "meta.athlete.context": [
+            "platforms",
+            "wellness_features",
+            "equipment_summary",
+            "activity_scope",
+            "training_environment",
+        ],
+    },
+
+    "season": {
+        "wellness": [
+            "hrv_series"
+        ],
+        "meta.athlete.context": [
+            "platforms",
+            "wellness_features",
+            "equipment_summary",
+            "activity_scope",
+            "training_environment",
+        ],
+    },
+
+    "summary": {
+        "meta.athlete.context": [
+            "platforms",
+            "wellness_features",
+            "equipment_summary",
+            "activity_scope",
+            "training_environment",
+        ],
+    },
+}
+
 
 RENDERER_PROFILES = {
 
@@ -205,23 +248,22 @@ RENDERER_PROFILES = {
             "placement": "after_data"
         },
         "interpretation_rules": [
-            "Interpretations may be descriptive or conditional, not predictive.",
-            "If semantic.training_volume exists, render it under the header 'Training Volume' with three stacked metrics: Hours, Training Load (TSS), Distance.",
-            "If semantic.wbal_summary.temporal_pattern exists, render a one-line anaerobic load timeline using block symbols (▂ ▃ ▇) mapped to none/low/moderate/high.",
-            "If semantic.daily_load exists, render it as a compact monoblock map timeline with weekday labels, relative load blocks, and numeric TSS values aligned underneath. Do NOT render daily_load as a list or table.",
-            "If semantic.daily_load exists AND semantic.wellness.CTL and semantic.wellness.ATL are present, a second symbolic fatigue-pressure row MAY be rendered using ↑ ↓ — symbols based ONLY on the sign of (ATL − CTL). No magnitude, thresholds, or new calculations are permitted.",
-            "All rows in the daily load timeline MUST use a fixed-width column per day to ensure vertical alignment across labels, blocks, symbols, and numeric values.",
-            "If session-level signal icons are rendered in the EVENTS table, a single legend line MUST be rendered once per report directly below the EVENTS section header.",
-            "If zone distribution data exists (e.g. zone_dist_power, zone_dist_hr, zone_dist_fused), render zone distribution as fixed-width ASCII proportional bars (one bar per zone), with the exact percentage shown. Bars are presentational only and do not constitute derived metrics.",
-            "If semantic.zones.lactate_calibration exists and lactate.available is true, render a Lactate Calibration subsection summarising mean mmol/L, latest mmol/L, sample count, and inferred LT1 power. This is descriptive only and must not derive new values.",
-            "If performance_intelligence exists, render three subsections: Anaerobic Repeatability (WDRM), Durability (ISDM), Neural Density (NDLI). Use provided values only. Do NOT recompute or merge with other metrics.",
-            "If high_dep_sessions > 0 and high_drift_sessions > 0 in the same week, describe this as high neuromuscular + metabolic strain overlap.",
-            "Interpretation may combine signals across sections when they describe the same physiological process (e.g. fatigue, adaptation, durability).",
-            "When energy_system_progression exists, generate at least one sentence summarising the current adaptation direction using system_status and adaptation_state.",
-            "Insights SHOULD prioritise adaptation signals (ESPE) before repeating metric definitions.",
-            "When activity_link exists inside energy_system_progression.power_curve_anchors.values, the corresponding power value MUST be rendered as a Markdown link using the format: [<power> W](activity_link).",
-            "If activity_link is missing, the power value MUST be rendered normally without a link.",
-            "Ensure current_ISO_weekly_microcycle is totled as 'Current ISO Week ## (Mon-Sun)'",
+            "Interpretations must be descriptive/conditional, not predictive.",
+            "Render training_volume as: Hours | TSS | Distance when present.",
+            "Render wbal_summary.temporal_pattern as a 1-line block timeline (▂ ▃ ▇ → none/low/moderate/high).",
+            "Render daily_load as fixed-width timeline (labels, blocks, TSS aligned). NEVER list/table.",
+            "If daily_load + CTL + ATL exist, add fatigue row (↑ ↓ —) using sign(ATL−CTL) only.",
+            "Daily_load rows must use fixed-width columns for alignment.",
+            "EVENTS icons require a single legend line under the section header.",
+            "Render zone distributions as fixed-width ASCII bars with exact % (no derived metrics).",
+            "If lactate_calibration.available, show mean, latest, samples, LT1 (no derivation).",
+            "Render performance_intelligence as WDRM / ISDM / NDLI only (no recompute/merge).",
+            "If high_dep_sessions>0 AND high_drift_sessions>0 → note neuromuscular+metabolic overlap.",
+            "Cross-section interpretation allowed when describing same physiology.",
+            "If energy_system_progression exists, summarise direction using system_status + adaptation_state.",
+            "Prioritise ESPE signals over repeating metric definitions.",
+            "Render power anchors as [<power> W](link) when activity_link exists, else plain.",
+            "Title current_ISO_weekly_microcycle as 'Current ISO Week ## (Mon-Sun)'."
         ],
         "allowed_enrichment": [
             "Restate semantic interpretation fields.",
@@ -293,20 +335,16 @@ RENDERER_PROFILES = {
             ],
 
             "rules": [
-                "The events section MUST be rendered as a Markdown table.",
-                "EVERY event in the semantic JSON MUST appear as exactly one row.",
-                "The events section MUST NOT be summarised, renamed, grouped, or rewritten.",
-                "Bullet points, highlights, or narrative descriptions of events are FORBIDDEN.",
-                "Coaching sentences for events, if enabled, MUST appear AFTER the table.",
-                "The EVENTS table MUST use the defined column order.",
-                "In the EVENTS table, session-level signal icons MAY be rendered within the Activity column as a prefix using the canonical mapping derived ONLY from existing semantic fields.",
-                "Icons represent independent session signals and MAY appear together for a single event.",
-                "Add rpe_emoji and feel_emoji to the right of TSS value tightly coupled.",
-                "When multiple icons apply, they MUST be rendered together in the defined fixed order.",
-                "Icons are visual aliases only and must not replace numeric values, suppress other applicable icons, or reduce table rows.",
-                "When `activity_link` exists, the Activity column MUST render the activity name as a Markdown link: [name](activity_link).",
-                "Icons MUST appear before the link inside the same Activity cell.",
-                "Show icon legends underneath the table tightly coupled."
+            "Render EVENTS as a Markdown table only.",
+            "1 event = 1 row; no omissions.",
+            "No summarising, grouping, renaming, or narrative text.",
+            "Coaching sentences (if any) appear AFTER the table.",
+            "Use fixed column order.",
+            "Icons: prefix in Activity column from semantic fields; multiple allowed; fixed order.",
+            "Icons are additive only (no replacement/suppression of values or rows).",
+            "Append rpe_emoji + feel_emoji to TSS.",
+            "If activity_link exists, render as [name](link) with icons before link.",
+            "Render a single legend line directly below the table."
             ]
         },
 

@@ -33,7 +33,7 @@ from datetime import datetime, date, timezone, timedelta
 import pandas as pd
 from math import isnan
 from coaching_cheat_sheet import CHEAT_SHEET
-from coaching_profile import COACH_PROFILE, REPORT_HEADERS, REPORT_RESOLUTION, REPORT_CONTRACT
+from coaching_profile import COACH_PROFILE, REPORT_HEADERS, REPORT_RESOLUTION, REPORT_CONTRACT, PRUNE_RULES
 from audit_core.utils import debug
 import numpy as np
 from math import isnan
@@ -585,31 +585,6 @@ def build_insights(semantic):
                     if fat > 5
                     else "Load appears manageable."
             }
-
-    # --------------------------------------------------
-    # Energy System Progression (Tier-3 interpretation)
-    # Weekly reports only for now
-    # --------------------------------------------------
-
-    if report_type in ("season", "weekly"):
-
-        espe = semantic.get("energy_system_progression", {})
-        sports = espe.get("sports", {})
-
-        if isinstance(sports, dict) and sports:
-
-            insights["energy_system_progression"] = {}
-
-            for sport, sport_data in sports.items():
-
-                insights["energy_system_progression"][sport] = {
-                    "window": sport_data.get("curve_window", {}).get("comparison"),
-                    "basis": "Power-duration curve progression",
-                    "system_status": sport_data.get("system_status"),
-                    "adaptation_state": sport_data.get("adaptation_state"),
-                    "adaptation_bias": sport_data.get("adaptation_bias"),
-                }
-
 
     if report_type == "wellness":
 
@@ -1273,9 +1248,6 @@ def build_semantic_json(context):
     # --- Mark summary reports as image-ready for ChatGPT ---
     if report_type == "summary":
         semantic["meta"]["summary_card_ready"] = True
-        debug(context, "[SEMANTIC] Marked summary report as summary_card_ready=True")
-    else:
-        semantic["meta"]["summary_card_ready"] = False
     
     # ---------------------------------------------------------
     # WELLNESS BLOCK
@@ -3971,38 +3943,51 @@ def build_insight_view(semantic):
     }
 
 
-
-
 def apply_report_type_contract(semantic: dict) -> dict:
     """
-    Enforce report-type-specific semantic exposure (URF v5.1).
+    Enforce report-type-specific semantic exposure (URF v5.1)
+    + apply nested prune rules (PRUNE_RULES)
 
-    Responsibilities:
-    - Filter top-level semantic keys according to REPORT_CONTRACT
-    - Attach renderer instructions as DATA (not enforced here)
-
-    NOTE:
-    - renderer_instructions must be promoted to a system-role message
-      at the ChatGPT call site.
+    Single execution point.
     """
+
     report_type = semantic.get("meta", {}).get("report_type", "weekly")
 
-    # --- Enrich meta with header + resolution
+    # ── Enrich meta
     semantic["meta"]["report_header"] = REPORT_HEADERS.get(report_type, {})
     semantic["meta"]["resolution"] = REPORT_RESOLUTION.get(report_type, {})
     semantic["header"] = semantic["meta"]["report_header"]
 
-    # --- Apply contract filtering
+    # ── Top-level filtering (contract)
     allowed_keys = REPORT_CONTRACT.get(report_type, semantic.keys())
     filtered = {k: v for k, v in semantic.items() if k in allowed_keys}
 
-    # --- Attach renderer instructions (DATA ONLY)
+    # ─────────────────────────────────────────────
+    # 🔥 APPLY PRUNE RULES (inline, no helper)
+    # ─────────────────────────────────────────────
+    prune_map = PRUNE_RULES.get(report_type, {})
+
+    for path, keys in prune_map.items():
+        ref = filtered
+
+        # walk dot path safely
+        for part in path.split("."):
+            if not isinstance(ref, dict):
+                ref = None
+                break
+            ref = ref.get(part)
+
+        if isinstance(ref, dict):
+            for k in keys:
+                ref.pop(k, None)
+
+    # ── Renderer instructions (DATA ONLY)
     filtered["renderer_instructions"] = build_system_prompt_from_header(
         report_type,
         REPORT_HEADERS.get(report_type, {})
     )
 
-    # --- Optional contract drift detection
+    # ── Contract drift detection
     unexpected = set(semantic.keys()) - set(allowed_keys)
     if unexpected:
         from audit_core.utils import debug
