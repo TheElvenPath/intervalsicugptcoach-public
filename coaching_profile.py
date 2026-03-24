@@ -128,6 +128,7 @@ REPORT_CONTRACT = {
 
         # ⚙️ PERFORMANCE INTELLIGENCE
         "performance_summary",
+        "performance_intelligence",
 
         # 📈 ADAPTATION
         "phases",
