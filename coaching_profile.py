@@ -379,7 +379,7 @@ RENDERER_PROFILES = {
             "operational_state MUST be rendered as the primary state indicator (first column).",
             "All original semantic values MUST still be represented (no omission).",
             "Do NOT summarise or drop metrics — only change layout.",
-            "If screen width is constrained, render rows as stacked blocks instead of tables",
+            "If a table has more than 4 columns, split it into multiple tables (max 4 columns each)."
         ],
         "allowed_enrichment": [
             "Restate semantic interpretation fields.",
