@@ -369,6 +369,7 @@ RENDERER_PROFILES = {
             #ADAPTATION
             "energy_system_progression MUST be rendered as a single compact adaptation table before suppression.",
             "Table MUST include key systems (aerobic, threshold, vo2, anaerobic) and overall phase/adaptation_state.",
+            "lactate_calibration when available MUST be rendered as a single compact adaptation table before suppression.",
             "Do NOT render narrative or subsection breakdown when table is present.",
             #PERFORMANCE INTELLIGENCE
             "performance_intelligence MUST be rendered as compact dashboard tables (no narrative).",
