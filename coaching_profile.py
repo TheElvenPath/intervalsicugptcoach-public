@@ -32,7 +32,7 @@ REPORT_CONTRACT = {
 
         # 🎯 ADAPTIVE DECISIONS
         "actions",
-        "planned_events",
+        #"planned_events",
         "current_ISO_weekly_microcycle",
         "planned_summary_by_iso_week",
         "future_forecast",
@@ -231,8 +231,8 @@ RENDERER_PROFILES = {
 
             "adaptive_decisions": [
                 "actions",
-                "planned_events",
-                "planned_summary_by_date",
+                #"planned_events",
+                #"planned_summary_by_date",
                 "current_ISO_weekly_microcycle",
                 "planned_summary_by_iso_week",
                 "future_forecast",
@@ -289,8 +289,8 @@ RENDERER_PROFILES = {
             "physiology": "full",
             "wellness": "summary",
             "phases": "forbid",
-            "planned_events": "full",
-            "planned_summary_by_date": "forbid",
+            #"planned_events": "full",
+            #"planned_summary_by_date": "forbid",
             "planned_summary_by_iso_week": "full",
             "actions": "full",
             "actions.0.adaptive_summary": "full",
@@ -355,11 +355,11 @@ RENDERER_PROFILES = {
         },
 
         "planned_events_rule": [
-            "The planned_events section MUST be rendered as a Markdown table.",
-            "EVERY planned event for the current ISO week in the semantic JSON MUST appear as exactly one row.",
-            "Planned events for future ISO weeks can be summarised",
-            "Narrative descriptions of planned events are FORBIDDEN.",
-            "Coaching sentences for planned_events, if enabled, MUST appear AFTER the table."
+        #    "The planned_events section MUST be rendered as a Markdown table.",
+        #    "EVERY planned event for the current ISO week in the semantic JSON MUST appear as exactly one row.",
+        #    "Planned events for future ISO weeks can be summarised",
+        #    "Narrative descriptions of planned events are FORBIDDEN.",
+        #    "Coaching sentences for planned_events, if enabled, MUST appear AFTER the table."
         ],
 
         "framing": {

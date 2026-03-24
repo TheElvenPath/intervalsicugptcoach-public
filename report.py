@@ -632,7 +632,6 @@ def generate_full_report(
                     "status": "ok",
                     "message": f"{report_type.title()} report generated",
                     "semantic_graph": semantic_output,
-                    "summary": summary,
                     "_debug": {
                         "tokens": token_count
                     }
