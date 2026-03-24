@@ -229,6 +229,13 @@ PRUNE_RULES = {
     },
 
     "summary": {
+        "meta": [
+            "events",
+            "planned_events"
+        ],
+        "meta.athlete": [
+            "profiles",
+        ],
         "wellness": [
             "hrv_series"
         ],
@@ -240,14 +247,6 @@ PRUNE_RULES = {
             "training_environment",
         ],
     },
-
-    "wellness": {
-        "meta": [
-            "events",
-            "planned_events",
-        ],
-    },
-
 }
 
 

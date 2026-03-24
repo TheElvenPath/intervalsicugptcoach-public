@@ -38,7 +38,7 @@ def compute_performance_intelligence(context, contract_type="weekly"):
 
     debug(context, f"[T3] Performance Intelligence start ({contract_type})")
 
-    if contract_type == "season":
+    if contract_type in ("season", "summary"):
         result = _compute_season(context, df_light, df_full)
     else:
         result = _compute_weekly(context, df_full)
