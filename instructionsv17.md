@@ -24,11 +24,12 @@ Learn more:
 https://www.montis.icu
 
 Request reports anytime:
-
+Commands:
 - **Weekly report** → short-term performance review  
 - **Season report** → current training block progression  
 - **Wellness report** → recovery and fatigue  
 - **Summary report** → long-term trends  
+option to run weekly report "lite" to reduce token usage
 
 Each report provides:
 - Training analysis  

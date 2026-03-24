@@ -154,6 +154,9 @@ PRUNE_RULES = {
             "phases_summary",
             "planned_events"
         ],
+          "athlete": [
+            "profiles"
+        ],
         "meta.athlete.context": [
             "platforms",
             "wellness_features",
