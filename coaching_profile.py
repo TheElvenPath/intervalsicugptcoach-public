@@ -374,6 +374,8 @@ RENDERER_PROFILES = {
             "performance_intelligence MUST be rendered as compact dashboard tables (no narrative).",
             "WDRM, ISDM, and NDLI MUST NOT be rendered as separate sections when sufficient data exists.",
             "They MUST be projected into a SYSTEM STATE table and a LOAD SIGNATURE table.",
+            "performance_intelligence MUST include operational_state in the SYSTEM STATE table.",
+            "operational_state MUST be rendered as the primary state indicator (first column).",
             "All original semantic values MUST still be represented (no omission).",
             "Do NOT summarise or drop metrics — only change layout.",
         ],
