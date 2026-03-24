@@ -402,7 +402,8 @@ RENDERER_PROFILES = {
                     "show full physiology_response",
                     "show full performance_intelligence",
                     "show full adaptation",
-                    "show full adaptive_decisions"
+                    "show full adaptive_decisions",
+                    "show planned events"
                 ]
             }
         }
