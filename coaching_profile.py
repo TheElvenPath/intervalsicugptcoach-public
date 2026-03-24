@@ -658,6 +658,7 @@ RENDERER_PROFILES = {
     # ==============================================================
     # Wellness report (URF v5.2 — SIGNAL-FIRST, MULTI-LAYER RECOVERY)
     # ==============================================================
+    
     "wellness": {
 
         "stack_structure": {
@@ -671,7 +672,8 @@ RENDERER_PROFILES = {
             ],
 
             "performance_intelligence": [
-                "performance_intelligence"
+                "performance_intelligence",
+                "performance_intelligence.nutrition"
             ]
         },
 
