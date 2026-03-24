@@ -622,7 +622,7 @@ def root():
 def run_audit(
     range: str = Query("weekly"),
     format: str = Query("markdown"),
-    demo: bool = Query(False)
+    demo: bool = Query(False),
     lite: bool = Query(False)
 ):
     if demo:
@@ -666,7 +666,7 @@ def run_audit(
 async def run_audit_with_data(
     request: Request,
     demo: bool = Query(False),
-    debug: bool = Query(False)
+    debug: bool = Query(False),
     lite: bool = Query(False)
 ):
     debug_counts = {
