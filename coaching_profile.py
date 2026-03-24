@@ -914,7 +914,6 @@ RENDERER_PROFILES = {
         },
         
         "emphasis": {
-            "phases": "high",
             "phases_summary": "high",
             "performance_summary": "high",
             "metrics": "low"
