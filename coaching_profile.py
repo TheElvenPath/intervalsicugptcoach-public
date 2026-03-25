@@ -592,6 +592,31 @@ RENDERER_PROFILES = {
             "When energy_system_progression exists, generate at least one sentence summarising the current adaptation direction using system_status and adaptation_state.",
             "Insights SHOULD prioritise adaptation signals (ESPE) before repeating metric definitions.",
             "Ensure current_ISO_weekly_microcycle is totled as 'Current ISO Week ## (Mon-Sun)'",
+            #ADAPTIVE DECISIONS
+            "Render adaptive_decisions as compact dashboard tables (no narrative).",
+            "adaptive_decisions MUST be rendered as STATE and OPERATIONS tables.",
+            "STATE MUST NOT exceed 4 columns per table.",
+            "STATE MUST be split into multiple tables when more than 4 fields are present.",
+            "STATE tables MUST follow this fixed grouping:",
+            "STATE TABLE 1: directive, state, load_trend, risk_flag.",
+            "STATE TABLE 2: adaptation_focus, key_constraint, next_action, dominant_signal.",
+            "OPERATIONS table MUST contain week_delta, planned_load (current → next), and 14 day forecast summary (CTL / TSB / fatigue_class).",
+            "Do NOT render state_action, system_guidance, or reflection as separate sections.",
+            "Do NOT render paragraph explanations for adaptive_decisions.",
+            #ADAPTATION
+            "energy_system_progression MUST be rendered as compact adaptation table(s)",
+            "Table MUST include key systems (aerobic, threshold, vo2, anaerobic) and overall phase/adaptation_state.",
+            "lactate_calibration when available MUST be rendered as a single compact adaptation table before suppression.",
+            "Do NOT render narrative or subsection breakdown when table is present.",
+            #PERFORMANCE INTELLIGENCE
+            "performance_intelligence MUST be rendered as compact dashboard tables (may be split if too wide).",
+            "WDRM, ISDM, and NDLI MUST NOT be rendered as separate sections when sufficient data exists.",
+            "They MUST be projected into a SYSTEM STATE table and a LOAD SIGNATURE table.",
+            "performance_intelligence MUST include operational_state in the SYSTEM STATE table.",
+            "operational_state MUST be rendered as the primary state indicator (first column).",
+            "All original semantic values MUST still be represented (no omission).",
+            "Do NOT summarise or drop metrics — only change layout.",
+            "If a table has more than 4 columns, split it into multiple tables (max 4 columns each)."
         ],
         "allowed_enrichment": [
             "Restate phase descriptors already present in semantic data."
