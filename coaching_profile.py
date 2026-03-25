@@ -795,6 +795,7 @@ RENDERER_PROFILES = {
         "section_handling": {
             "meta": "full",
             "wellness": "full",
+            "wellness.recovery_markers": "table_summary",
             "hrv_daily": "forbid",
             "performance_intelligence": "headine",
             "performance_intelligence.nutrition": "full",
