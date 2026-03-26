@@ -779,9 +779,12 @@ def run_tier1_controller(df_master, wellness, context):
         visible_events.to_json(orient="records", double_precision=2)
     )
 
-    required_keys = ["weeklyEventLogBlock", "tier1_visibleTotals"]
-    if not all(k in context for k in required_keys) or len(context["weeklyEventLogBlock"]) == 0:
-        raise AuditHalt("❌ Tier-1: missing or empty event data before render")
+    if report_type == "weekly":
+
+        required_keys = ["weeklyEventLogBlock", "tier1_visibleTotals"]
+
+        if not all(k in context for k in required_keys) or len(context["weeklyEventLogBlock"]) == 0:
+            raise AuditHalt("❌ Tier-1: missing or empty event data before render")
 
     # Confirm audit completion
     context["auditFinal"] = True
