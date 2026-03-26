@@ -614,12 +614,6 @@ def run_report(
         context["df_events"] = df_scope.copy()
         debug(context, f"[SYNC] df_events replaced with df_scope ({len(df_scope)} rows)")
 
-    # --- Ensure totals exist even if enforcement failed ---
-    if not context.get("totalHours") or not context.get("totalTss"):
-        context["totalHours"] = df_scope["moving_time"].sum() / 3600
-        context["totalTss"] = df_scope["icu_training_load"].sum()
-        debug(context, "[T2-FIX] Derived totals directly from df_scope")
-
     # --- Make full Tier-0 data available to Tier-2 derived metrics ---
     if "activities_light" in context and isinstance(context["activities_light"], list):
         context["df_event_only_full"] = context["activities_light"]
