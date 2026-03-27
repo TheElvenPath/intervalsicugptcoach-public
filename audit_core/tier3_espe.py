@@ -637,7 +637,10 @@ def _valid_curve_block(
         debug(context, f"[ESPE] missing curve block for {sport}")
         return False
 
-    required = ["1m", "5m", "20m", "60m"]
+    if sport == "Run":
+        required = ["5m", "20m"]
+    else:
+        required = ["1m", "5m", "20m", "60m"]
 
     current = data.get("current", {})
     previous = data.get("previous", {})

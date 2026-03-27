@@ -332,15 +332,23 @@ def run_report(
     # ============================================================
     # 🔒 LOCK Tier-0 90-day dataset (authoritative for Tier-3)
     # ============================================================
-    if "df_light_full" in context and isinstance(context["df_light_full"], pd.DataFrame):
-        context["_df_light_90d"] = context["df_light_full"].copy()
-        debug(context, "[LOCK] Stored df_light_full as canonical 90-day dataset")
-    elif "df_light" in context and isinstance(context["df_light"], pd.DataFrame):
-        context["_df_light_90d"] = context["df_light"].copy()
-        debug(context, "[LOCK] Stored df_light as canonical 90-day dataset")
+    df90 = None
+
+    if isinstance(context.get("df_light_full"), pd.DataFrame) and not context["df_light_full"].empty:
+        df90 = context["df_light_full"]
+
+    elif isinstance(context.get("df_light"), pd.DataFrame) and not context["df_light"].empty:
+        df90 = context["df_light"]
+
+    elif isinstance(context.get("activities_light"), list) and len(context["activities_light"]) > 0:
+        df90 = pd.DataFrame(context["activities_light"])
+
+    if isinstance(df90, pd.DataFrame):
+        context["_df_light_90d"] = df90.copy(deep=True)
+        debug(context, f"[LOCK] Stored canonical 90d dataset ({len(df90)} rows)")
     else:
         context["_df_light_90d"] = pd.DataFrame()
-        debug(context, "[LOCK-WARN] No 90-day dataset available to lock")
+        debug(context, "[LOCK-WARN] No valid 90d dataset → empty fallback")
 
     # --- Preserve existing full fetch if prefetch already covered it ---
     if context.get("prefetch_done") and context.get("snapshot_7d_json"):
@@ -631,26 +639,30 @@ def run_report(
     # ============================================================
     # RESTORE canonical 90-day dataset (AUTHORITATIVE)
     # ============================================================
-    if "_df_light_90d" not in context or not isinstance(context["_df_light_90d"], pd.DataFrame):
-        raise RuntimeError("FATAL: _df_light_90d missing — Tier-2 pipeline corrupted")
+    df90 = context.get("_df_light_90d")
 
+    if not isinstance(df90, pd.DataFrame) or df90.empty:
+
+        debug(context, "[RECOVER] _df_light_90d missing → attempting rebuild")
+
+        if isinstance(context.get("df_light"), pd.DataFrame) and not context["df_light"].empty:
+            df90 = context["df_light"]
+
+        elif isinstance(context.get("activities_light"), list) and context["activities_light"]:
+            df90 = pd.DataFrame(context["activities_light"])
+
+        elif isinstance(context.get("df_master"), pd.DataFrame) and not context["df_master"].empty:
+            df90 = context["df_master"]
+
+        else:
+            debug(context, "[FATAL] Cannot recover 90d dataset")
+            raise RuntimeError("FATAL: _df_light_90d missing — unrecoverable")
+
+        context["_df_light_90d"] = df90.copy(deep=True)
+        debug(context, f"[RECOVER] Rebuilt _df_light_90d ({len(df90)} rows)")
+
+    # Always rebind
     context["df_light"] = context["_df_light_90d"]
-    debug(context, f"[EXT-PRE] df_light rows={len(context['df_light'])}")
-
-    debug(
-        context,
-        "[SMOKING-GUN] df_light rows=%s load_sum=%s cols=%s"
-        % (
-            0 if context.get("df_light") is None else len(context["df_light"]),
-            context["df_light"]["icu_training_load"].sum()
-            if isinstance(context.get("df_light"), pd.DataFrame)
-            and "icu_training_load" in context["df_light"]
-            else "MISSING",
-            list(context["df_light"].columns)
-            if isinstance(context.get("df_light"), pd.DataFrame)
-            else type(context.get("df_light")),
-        )
-    )
 
     # ============================================================
     # AUTHORITATIVE CTL / ATL / TSB (Intervals ICU)
