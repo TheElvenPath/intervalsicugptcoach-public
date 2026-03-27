@@ -317,13 +317,18 @@ def normalize_prefetched_context(data):
 
                 curve_list = payload.get("list")
 
-                if not curve_list or len(curve_list) < 2:
-                    debug(context, f"[NORM] ⚠ power_curve payload missing windows for {sport}")
+                if not curve_list:
+                    debug(context, f"[NORM] ⚠ no power_curve data for {sport}")
                     continue
 
-                prev = curve_list[0]
-                curr = curve_list[1]
-
+                if len(curve_list) == 1:
+                    debug(context, f"[NORM] ⚠ single window only for {sport} — using fallback")
+                    prev = curve_list[0]
+                    curr = curve_list[0]
+                else:
+                    prev = curve_list[0]
+                    curr = curve_list[1]
+                    
                 normalized_curves[sport] = {
                     "previous": {
                         "5s": extract_anchor(prev, 5),
