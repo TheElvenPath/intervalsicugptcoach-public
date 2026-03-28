@@ -1,25 +1,4 @@
 # What Next Questions V1.1
-## TOOL FUNCTIONS
-Run Weekly Report → runWeeklyReportV2 → weekly performance review 
-Run Season Report → runSeasonReportV2 → training block progression
-Run Wellness Report → runWellnessReportV2 → recovery and fatigue status
-Run Summary Report → runSummaryReportV2 → long-term trends
-Analyse Activity {id} or {date} → getOneDayFullActivityV1 → full activity breakdown
-Get Activity by Date → getOneDayFullActivityV1 → activities for a given day
-Get Power Curves → getPowerCurvesExtV1 → power curve modelling
-Get HR Curves → getHRCurvesV1 → heart rate curves
-Get Power-HR Curve → getPowerHRCurveV1 → power vs heart rate relationship
-Get Pace Curves → getPaceCurvesExtV1 → pace profiling
-Get MMP Model → getMMPModelV1 → maximal mean power model
-Get Training Plan → getAthleteTrainingPlanV1 → structured training plan
-Get Wellness Data → getOneDayWellnessV1 → HRV, fatigue, recovery
-Read Calendar → readCalendarV1 → planned workouts and events
-Get Planned Events → readCalendarV1 → planned workouts and events
-Write Calendar → writeCalendarV1 → create or update workouts
-Delete Calendar → deleteCalendarV1 → remove workouts or events
-Get Athlete Profile → getAthleteProfileV1 → athlete configuration
-Get Coached Athletes -> getCoachedAthletesV1 -> list coached athletes if available (needs special setup, contact Montis owner)
-Send Message to Coach → sendChatMessageV1 → send message to chat/athlete/activity
 
 ## Activity Analysis
 analyze last activity

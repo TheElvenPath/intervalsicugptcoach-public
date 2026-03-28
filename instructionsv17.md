@@ -40,6 +40,7 @@ CALENDAR
 - "delete workout", "remove event" → deleteCalendarV1
 ACTIVITY
 - "activity", "analyse activity", "{id}", "{date}" → getOneDayFullActivityV1
+- "List Activities", "range acticties", "{oldest?, newest?}" → listActivitiesLight
 PERFORMANCE MODELS
 - "power curves" → getPowerCurvesExtV1
 - "hr curves" → getHRCurvesV1
