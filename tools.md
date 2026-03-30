@@ -1,5 +1,44 @@
 ## Montis TOOL FUNCTIONS and parameters
 
+CRITICAL:
+- "run" is NOT a callable function
+- "run" is ONLY valid inside:
+  - runWeeklyReportV2
+  - runSeasonReportV2
+  - runWellnessReportV2
+  - runSummaryReportV2
+- Any other use of "run" is INVALID
+MAPPINGS:
+REPORTS
+- "weekly report" → runWeeklyReportV2
+- "season report" → runSeasonReportV2
+- "wellness report" → runWellnessReportV2
+- "summary report" → runSummaryReportV2
+CALENDAR
+- "planned events", "calendar", "schedule" → readCalendarV1
+- "write workout", "add workout", "plan workout" → writeCalendarV1
+- "delete workout", "remove event" → deleteCalendarV1
+ACTIVITY
+- "activity", "analyse activity", "{id}", "{date}" → getOneDayFullActivityV1
+- "List Activities", "range acticties", "{oldest?, newest?}" → listActivitiesLight
+PERFORMANCE MODELS
+- "power curves" → getPowerCurvesExtV1
+- "hr curves" → getHRCurvesV1
+- "power hr curve" → getPowerHRCurveV1
+- "pace curves" → getPaceCurvesExtV1
+- "mmp model" → getMMPModelV1
+ATHLETE / DATA
+- "training plan" → getAthleteTrainingPlanV1
+- "wellness data" → getOneDayWellnessV1
+- "athlete profile" → getAthleteProfileV1
+- "coached athletes" → getCoachedAthletesV1
+COMMUNICATION
+- "send message", "send to coach" → sendChatMessageV1
+FORBIDDEN:
+- Calling "run" directly
+- Inventing or approximating function names
+- Selecting tools outside this mapping
+
 Weekly Report → runWeeklyReportV2 → params: test?, lite?, start?, athleteID? → weekly performance review 
 Season Report → runSeasonReportV2 → params: lite?, athleteID? → training block progression
 Wellness Report → runWellnessReportV2 → params: athleteID? → recovery and fatigue status
@@ -30,7 +69,7 @@ Data Quality Report → runDataQualityReportV1 → params: athleteID? → check 
 Fields for listActivitiesLight
 
      // --- Field alias map (handles ChatGPT and API variances) ---
-    const fieldAliases = {
+
     // ───── Core training metrics ─────
     "tss": "icu_training_load",
     "load": "icu_training_load",
@@ -166,4 +205,3 @@ Fields for listActivitiesLight
     "notes": "description",              // full dataset only
     "comment": "description",
     "description": "description"
-    };

@@ -3240,30 +3240,30 @@ def build_semantic_json(context):
                             if pd.notna(paired_id):
                                 consumed_plan_ids.add(int(float(paired_id)))
                     # -------------------------------------------------
-                    # remaining calendar sessions
+                    # remaining calendar sessions / future only from today
                     # -------------------------------------------------
+
+                    planned_remaining = 0.0
 
                     for ce in calendar_events:
 
                         ce_date = pd.to_datetime(ce.get("start_date_local"), errors="coerce")
-
                         if pd.isna(ce_date):
                             continue
 
                         ce_date = ce_date.date()
 
-                        if monday.date() <= ce_date <= sunday.date():
+                        # ✅ ONLY FUTURE (or today if you want)
+                        if ce_date < today.date():
+                            continue
 
-                            ce_id = ce.get("id")
+                        # skip if executed (paired)
+                        ce_id = ce.get("id")
+                        if ce_id in consumed_plan_ids:
+                            continue
 
-                            # skip if this planned session was already executed
-                            if ce_id in consumed_plan_ids:
-                                continue
-
-                            load = float(ce.get("icu_training_load", 0) or 0)
-
-                            weekly_target += load
-                            planned_remaining += load
+                        load = float(ce.get("icu_training_load", 0) or 0)
+                        planned_remaining += load
 
 
                     # -------------------------------------------------
