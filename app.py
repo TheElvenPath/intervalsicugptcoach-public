@@ -152,6 +152,14 @@ def normalize_prefetched_context(data):
 
         #debug(context, f"[RAW FULL SAMPLE] {str(data.get('activities_full', [{}])[0])[:5000]}")
 
+        # support identity-based payloads (Intervals format)
+        if not athlete.get("id"):
+            identity = data.get("identity") or athlete.get("identity")
+            if isinstance(identity, dict) and identity.get("id"):
+                athlete["id"] = identity.get("id")
+                athlete["name"] = identity.get("name", athlete.get("name"))
+                athlete["timezone"] = identity.get("timezone", athlete.get("timezone"))
+
         # 🔒 CONTRACT INVARIANT — athlete must have an id
         if not isinstance(athlete, dict):
             raise AuditHalt(
