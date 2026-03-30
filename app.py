@@ -993,19 +993,19 @@ async def run_audit_with_data(
             )
 
             report_header = {
-                "athlete": context.get("athleteProfile", {}).get("name", "Unknown Athlete"),
+                "athlete_name": context.get("athleteProfile", {}).get("name", "Unknown Athlete"),
+                "athlete_id": context.get("athleteProfile", {}).get("id"),
                 "report_type": report_range,
                 "timezone": context.get("timezone", "Europe/Zurich"),
                 "date_range": date_range,
             }
 
             logger.info(
-                "[EXEC] report_header injected (post-run) → %s | report_type=%s | athlete=%s",
+                "[EXEC] report_header injected (post-run) → %s | report_type=%s | athlete_id=%s",
                 report_header,
                 report_range,
-                report_header.get("athlete", "unknown")
+                report_header.get("athlete_id", "unknown")
             )
-
             logs = buffer.getvalue() if buffer else ""
 
             if fmt in ("json","semantic"):
