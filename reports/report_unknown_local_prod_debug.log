@@ -1,0 +1,876 @@
+[23:27:01] [ORCH] Registered prefetched datasets: ['light', 'wellness', 'athlete', 'calendar']
+[23:27:01] [T0-LIGHT] Using range oldest=2026-03-23 newest=2026-03-30
+[23:27:02] [T0-LIGHT] Retrieved 3 activities
+[23:27:02] [T0-LIGHT-COLS] rows=3 cols=['id', 'start_date_local', 'type', 'icu_ignore_time', 'icu_pm_cp', 'icu_pm_w_prime', 'icu_pm_p_max', 'icu_pm_ftp', 'icu_pm_ftp_secs', 'icu_pm_ftp_watts', 'icu_ignore_power', 'icu_rolling_cp', 'icu_rolling_w_prime', 'icu_rolling_p_max', 'icu_rolling_ftp', 'icu_rolling_ftp_delta', 'icu_training_load', 'icu_atl', 'icu_ctl', 'ss_p_max', 'ss_w_prime', 'ss_cp', 'paired_event_id', 'icu_ftp', 'icu_joules', 'icu_recording_time', 'elapsed_time', 'icu_weighted_avg_watts', 'carbs_used', 'name', 'description', 'start_date', 'distance', 'icu_distance', 'moving_time', 'coasting_time', 'total_elevation_gain', 'total_elevation_loss', 'timezone', 'trainer', 'sub_type', 'commute', 'race', 'max_speed', 'average_speed', 'device_watts', 'has_heartrate', 'max_heartrate', 'average_heartrate', 'average_cadence', 'calories', 'average_temp', 'min_temp', 'max_temp', 'avg_lr_balance', 'gap', 'gap_model', 'use_elevation_correction', 'gear', 'perceived_exertion', 'device_name', 'power_meter', 'power_meter_serial', 'power_meter_battery', 'crank_length', 'external_id', 'file_sport_index', 'file_type', 'icu_athlete_id', 'created', 'icu_sync_date', 'analyzed', 'icu_w_prime', 'p_max', 'threshold_pace', 'icu_hr_zones', 'pace_zones', 'lthr', 'icu_resting_hr', 'icu_weight', 'icu_power_zones', 'icu_sweet_spot_min', 'icu_sweet_spot_max', 'icu_power_spike_threshold', 'trimp', 'icu_warmup_time', 'icu_cooldown_time', 'icu_chat_id', 'icu_ignore_hr', 'ignore_velocity', 'ignore_pace', 'ignore_parts', 'icu_training_load_data', 'interval_summary', 'skyline_chart_bytes', 'stream_types', 'has_weather', 'has_segments', 'power_field_names', 'power_field', 'icu_zone_times', 'icu_hr_zone_times', 'pace_zone_times', 'gap_zone_times', 'use_gap_zone_times', 'custom_zones', 'tiz_order', 'polarization_index', 'icu_achievements', 'icu_intervals_edited', 'lock_intervals', 'icu_lap_count', 'icu_joules_above_ftp', 'icu_max_wbal_depletion', 'icu_hrr', 'icu_sync_error', 'icu_color', 'icu_power_hr_z2', 'icu_power_hr_z2_mins', 'icu_cadence_z2', 'icu_rpe', 'feel', 'kg_lifted', 'decoupling', 'icu_median_time_delta', 'p30s_exponent', 'workout_shift_secs', 'strava_id', 'lengths', 'pool_length', 'compliance', 'coach_tick', 'source', 'oauth_client_id', 'oauth_client_name', 'average_altitude', 'min_altitude', 'max_altitude', 'power_load', 'hr_load', 'pace_load', 'hr_load_type', 'pace_load_type', 'tags', 'attachments', 'recording_stops', 'average_weather_temp', 'min_weather_temp', 'max_weather_temp', 'average_feels_like', 'min_feels_like', 'max_feels_like', 'average_wind_speed', 'average_wind_gust', 'prevailing_wind_deg', 'headwind_percent', 'tailwind_percent', 'average_clouds', 'max_rain', 'max_snow', 'carbs_ingested', 'route_id', 'pace', 'athlete_max_hr', 'group', 'icu_intensity', 'icu_efficiency_factor', 'icu_power_hr', 'session_rpe', 'average_stride', 'icu_average_watts', 'icu_variability_index', 'strain_score'] missing_lactate=['HrtLndLt1', 'HrtLndLt1p']
+[23:27:02] [T0-PATCH] Injected df_light as activities_full for Tier-2 enrichment (3 rows, 173 columns)
+[23:27:02] [T0-RESOLVE] Using prefetched 'athlete' dataset
+[23:27:02] [CHECK] athlete name = TheElvenPath
+[23:27:02] [T0-FETCH] Canonical activity fetch for report_type=weekly
+[23:27:02] [T0-RESOLVE] Fetching 'full' dataset
+[23:27:03] [T0] Deduplicated 0 activities
+[23:27:03] [T0] Zone columns expanded (full dataset)
+[23:27:03] [T0-FETCH] Full 7-day fetch complete: 3 activities.
+[23:27:03] [T0-FIX] source_df undefined — using df_light as fallback (season mode).
+[23:27:03] [T0] snapshot_7d_json set (weekly, 3 rows)
+[23:27:03] [T0-RESOLVE] Using prefetched 'wellness' dataset
+[23:27:03] [T0] Loaded cached wellness (43 rows)
+[23:27:03] [T0] Stored wellness in context (43 rows)
+[23:27:03] [T0 WARN] Failed to align wellness range: 'date'
+[23:27:03] [DEBUG] wellness raw: <class 'pandas.DataFrame'> 43
+[23:27:03] [DEBUG] wellness columns (sample 10/46): ['id', 'ctl', 'atl', 'rampRate', 'ctlLoad', 'atlLoad', 'sportInfo', 'updated', 'weight', 'restingHR', 'hrv', 'hrvSDNN', 'menstrualPhase', 'menstrualPhasePredicted', 'kcalConsumed', 'sleepSecs', 'sleepScore', 'sleepQuality', 'avgSleepingHR', 'soreness', 'fatigue', 'stress', 'mood', 'motivation', 'injury', 'spO2', 'systolic', 'diastolic', 'hydration', 'hydrationVolume', 'readiness', 'baevskySI', 'bloodGlucose', 'lactate', 'bodyFat', 'abdomen', 'vo2max', 'comments', 'steps', 'respiration', 'carbohydrates', 'protein', 'fatTotal', 'locked', 'tempWeight', 'tempRestingHR']
+[23:27:03] [DEBUG] wellness head:
+            id        ctl        atl  ...  locked  tempWeight  tempRestingHR
+0  2026-02-16  36.966980  68.453354  ...    None       False          False
+1  2026-02-17  36.826588  63.467484  ...    None        True          False
+2  2026-02-18  37.748272  65.135840  ...    None        True          False
+3  2026-02-19  38.860027  67.780200  ...    None       False          False
+4  2026-02-20  37.945717  58.757156  ...    None       False          False
+
+[5 rows x 46 columns]
+[23:27:03] [T0] Diagnostic only: 3 rows fetched, moving_time present=True
+[23:27:03] [T0] Pre-audit complete: activities=3, wellness_rows=43
+[23:27:03] [T0] Stored wellness for Tier-1 (43 rows)
+[23:27:03] [T0] Created 7d snapshot for weekly (3 rows)
+[23:27:03] [T0-RESOLVE] Fetching 'power_curve' dataset
+[23:27:06] [T0-FINAL] snapshot_7d_json forced (string) from df_light_slice (3 rows)
+[23:27:06] [LOCK] Preserved raw df_light_full for lactate
+[23:27:06] [LOCK] Stored canonical 90d dataset (3 rows)
+[23:27:06] [T0-FULL] Prefetch contained full window — skipping redundant re-fetch.
+[23:27:06] [T0-FULL] Reusing prefetch df_master with 3 rows.
+[23:27:06] [T0-FULL] Preserved wellness in context (43 rows)
+[23:27:06] [T1] Running Tier-1 controller (weekly mode)
+[23:27:06] [T1] Running Tier-1 controller (weekly mode)
+[23:27:06] [T1] Using merged df_raw_activities (3 rows) as base dataset.
+[23:27:06] [DEBUG-T1-COLUMNS] sample type=<class 'pandas.DataFrame'> content=['id', 'start_date_local', 'type', 'icu_ignore_time', 'icu_pm_cp', 'icu_pm_w_prime', 'icu_pm_p_max',
+[23:27:06] [T1] Wellness dataset detected — kept separate from activities.
+[23:27:06] [T1] Duplicate columns detected in df_well after normalization — removing
+[23:27:06] [T1-REST] Starting rest day calculation from df_master.
+[23:27:06] [T1-REST] Using icu_training_load as primary load source.
+[23:27:06] [T1-REST] Daily load sample (last 7 days): {Timestamp('2026-03-24 00:00:00'): 32, Timestamp('2026-03-25 00:00:00'): 0, Timestamp('2026-03-26 00:00:00'): 0, Timestamp('2026-03-27 00:00:00'): 169, Timestamp('2026-03-28 00:00:00'): 0, Timestamp('2026-03-29 00:00:00'): 0, Timestamp('2026-03-30 00:00:00'): 44}
+[23:27:06] [T1-REST] Exported daily_load into context (7 days)
+[23:27:06] [T1-READINESS] readiness column summary: exists=True, non-null count=0, values=[]
+[23:27:06] [T1-WELLNESS-LATEST] CTL=44.853546 ATL=40.96221 TSB=3.8913360000000026
+[23:27:06] [DEBUG-T1] Sanity check before Step 6b — rows in df_master: 3
+[23:27:06] [DEBUG-T1] Starting zone distribution extraction...
+[23:27:06] [ZONES-RAW] Columns before zone dist (sample 10/200): ['id', 'start_date_local', 'type', 'icu_ignore_time', 'icu_pm_cp', 'icu_pm_w_prime', 'icu_pm_p_max', 'icu_pm_ftp', 'icu_pm_ftp_secs', 'icu_pm_ftp_watts']
+[23:27:06] [ZONES-RAW] icu_power_zones sample: [[55, 75, 90, 105, 120, 150, 999], [55, 75, 90, 105, 120, 150, 999], None]
+[23:27:06] [ZONES-RAW] 'icu_zone_times' column not found in df_master.
+[23:27:06] [DEBUG-T1] Missing values: icu_power_zones: 1, icu_zone_times: 0
+[23:27:06] [DEBUG-T1] First few rows of icu_power_zones: 0    [55, 75, 90, 105, 120, 150, 999]
+1    [55, 75, 90, 105, 120, 150, 999]
+2                                None
+Name: icu_power_zones, dtype: object
+[23:27:06] [DEBUG-T1] First few rows of icu_zone_times: n/a
+[23:27:06] [DEBUG-T1] Missing values in icu_power_zones: 1
+[23:27:06] [DEBUG-T1] After fillna, icu_power_zones sample: 0    [55, 75, 90, 105, 120, 150, 999]
+1    [55, 75, 90, 105, 120, 150, 999]
+2                                 0.0
+Name: icu_power_zones, dtype: object
+[23:27:06] [DEBUG-ZONES] Power cols=['icu_power_zones', 'power_z1', 'power_z2', 'power_z3', 'power_z4', 'power_z5', 'power_z6', 'power_z7', 'power_z8']
+[23:27:06] [DEBUG-ZONES] HR cols=['hr_z1', 'hr_z2', 'hr_z3', 'hr_z4', 'hr_z5', 'hr_z6', 'hr_z7', 'icu_hr_zones']
+[23:27:06] [DEBUG-ZONES] Pace cols=['gap_zone_times', 'pace_zone_times', 'pace_zones']
+[23:27:06] [DEBUG-ZONES] Swim cols=[]
+[23:27:06] [ZONE-DEBUG] df_master columns (sample 10/215): ['id', 'start_date_local', 'type', 'icu_ignore_time', 'icu_pm_cp', 'icu_pm_w_prime', 'icu_pm_p_max', 'icu_pm_ftp', 'icu_pm_ftp_secs', 'icu_pm_ftp_watts']
+[23:27:06] [DEBUG-ZONES] FULL power dataset:
+ power_z1  power_z2  power_z3  power_z4  power_z5  power_z6  power_z7  power_z8
+     21.0    3584.0       0.0       0.0       0.0       0.0       0.0       0.0
+   5290.0    4047.0    1854.0    1017.0     254.0     134.0      50.0    1255.0
+      0.0       0.0       0.0       0.0       0.0       0.0       0.0       0.0
+[23:27:06] [DEBUG-ZONES] Processed subset:
+   power_z1  power_z2  power_z3  ...  power_z6  power_z7  power_z8
+0      21.0    3584.0       0.0  ...       0.0       0.0       0.0
+1    5290.0    4047.0    1854.0  ...     134.0      50.0    1255.0
+2       0.0       0.0       0.0  ...       0.0       0.0       0.0
+
+[3 rows x 8 columns]
+[23:27:06] [DEBUG-ZONES] FULL hr dataset:
+ hr_z1  hr_z2  hr_z3  hr_z4  hr_z5  hr_z6  hr_z7
+1084.0 2521.0    0.0    0.0    0.0    0.0    0.0
+3124.0 5313.0 2258.0 1809.0   98.0   44.0    0.0
+[23:27:06] [DEBUG-ZONES] Processed subset:
+    hr_z1   hr_z2   hr_z3   hr_z4  hr_z5  hr_z6  hr_z7
+0  1084.0  2521.0     0.0     0.0    0.0    0.0    0.0
+1  3124.0  5313.0  2258.0  1809.0   98.0   44.0    0.0
+[23:27:06] [DEBUG-ZONES] FULL pace dataset:
+Empty DataFrame
+Columns: []
+Index: [0, 1, 2]
+[23:27:06] [DEBUG-ZONES] Processed subset:
+Empty DataFrame
+Columns: []
+Index: [0, 1, 2]
+[23:27:06] [ZONE-CONTEXT] Added zones for ride
+[23:27:06] [ZONE-CONTEXT] Added zones for run
+[23:27:06] [ZONE-CONTEXT] Added zones for swim
+[23:27:06] [ZONE-FINAL] icu_power_zones=[55, 75, 90, 105, 120, 150, 999]
+[23:27:06] [ZONE-FINAL] icu_hr_zones=[140, 156, 163, 174, 179, 184, 188]
+[23:27:06] [ZONE-FINAL] power_dist={'z1': 30.3, 'z2': 43.6, 'z3': 10.6, 'z4': 5.8, 'z5': 1.5, 'z6': 0.8, 'z7': 0.3, 'z8': 7.2}
+[23:27:06] [ZONE-FINAL] hr_dist={'z1': 25.9, 'z2': 48.2, 'z3': 13.9, 'z4': 11.1, 'z5': 0.6, 'z6': 0.3, 'z7': 0.0}
+[23:27:06] [T1-ZONE] Completed zone dist extraction (scope=7d)
+[23:27:06]   power: {'z1': 30.3, 'z2': 43.6, 'z3': 10.6, 'z4': 5.8, 'z5': 1.5, 'z6': 0.8, 'z7': 0.3, 'z8': 7.2}
+[23:27:06]   hr:    {'z1': 25.9, 'z2': 48.2, 'z3': 13.9, 'z4': 11.1, 'z5': 0.6, 'z6': 0.3, 'z7': 0.0}
+[23:27:06] [DEBUG-OUTLIER] Starting detection on 3 rows
+[23:27:06] [DEBUG-T1] Outlier events detected: 0
+[23:27:06] [DEBUG-OUTLIER] mean TSS=81.7, std=75.9, threshold=113.8
+[23:27:06] [DEBUG-OUTLIER] min/max TSS: 32 / 169
+[23:27:06] [PRESERVE] Stored df_master as _df_scope_full (3 rows, 200 cols)
+[23:27:06] [CHECK] zone columns in df_events (before enforce): ['timezone', 'analyzed', 'icu_hr_zones', 'pace_zones', 'icu_power_zones', 'pace_zone_times', 'gap_zone_times', 'use_gap_zone_times', 'custom_zones', 'tiz_order', 'polarization_index', 'icu_power_hr_z2', 'icu_power_hr_z2_mins', 'icu_cadence_z2', 'power_z1', 'power_z2', 'power_z3', 'power_z4', 'power_z5', 'power_z6', 'power_z7', 'power_z8', 'hr_z1', 'hr_z2', 'hr_z3', 'hr_z4', 'hr_z5', 'hr_z6', 'hr_z7']
+[23:27:06] origin counts:
+ origin
+event    3
+Name: count, dtype: int64
+[23:27:06] moving_time stats:
+ count        3.000000
+mean      6261.666667
+std       5554.866725
+min       2534.000000
+25%       3069.500000
+50%       3605.000000
+75%       8125.500000
+max      12646.000000
+Name: moving_time, dtype: float64
+[23:27:06] [T2] Retaining Tier-1 totals as validated canonical snapshot.
+[23:27:06] [DEBUG-T2] injected lightweight df_event_only preview (3 rows); full dataset retained only in memory (not serialized)
+[23:27:06] [T2] Locked canonical totals — Hours=0, TSS=245, Dist=0 km
+[23:27:06] [CHECK] zone columns in df_events (after enforce): ['timezone', 'analyzed', 'icu_hr_zones', 'pace_zones', 'icu_power_zones', 'pace_zone_times', 'gap_zone_times', 'use_gap_zone_times', 'custom_zones', 'tiz_order', 'polarization_index', 'icu_power_hr_z2', 'icu_power_hr_z2_mins', 'icu_cadence_z2', 'power_z1', 'power_z2', 'power_z3', 'power_z4', 'power_z5', 'power_z6', 'power_z7', 'power_z8', 'hr_z1', 'hr_z2', 'hr_z3', 'hr_z4', 'hr_z5', 'hr_z6', 'hr_z7']
+[23:27:06] [SYNC] Totals from enforcement hours=0, tss=245
+[23:27:06] [T2] Preserved event-only totals for renderer binding.
+[23:27:06] [CHK] tier0_snapshotTotals_7d = {'hours': np.float64(5.218055555555556), 'distance': np.float64(114.05197), 'tss': np.int64(245), 'count': 3, 'source': 'Tier-0 lightweight 28-day dataset'}
+[23:27:06] [CHK] tier2_enforced_totals = {'hours': np.float64(5.218055555555556), 'distance': np.float64(114.05197), 'tss': np.int64(245), 'count': 3, 'source': 'Tier-0 lightweight 28-day dataset', 'avg_if': np.float64(67.8), 'avg_hr': 145, 'vo2max': None, 'validated': True}
+[23:27:06] [CHK] tier2_eventTotals = None
+[23:27:06] [CHK] tier2_eventTotals_eventOnly = {'hours': np.float64(5.218055555555556), 'distance': np.float64(114.05197), 'tss': np.int64(245), 'count': 3, 'source': 'Tier-0 lightweight 28-day dataset', 'avg_if': np.float64(67.8), 'avg_hr': 145, 'vo2max': None, 'validated': True}
+[23:27:06] [T2] Normal precision: full fetch succeeded or 7d slice validated.
+[23:27:06] [SYNC] df_events replaced with df_scope (3 rows)
+[23:27:06] [CHECK] zone columns in df_events: ['timezone', 'analyzed', 'icu_hr_zones', 'pace_zones', 'icu_power_zones', 'icu_zone_times', 'icu_hr_zone_times', 'pace_zone_times', 'gap_zone_times', 'use_gap_zone_times', 'custom_zones', 'tiz_order', 'polarization_index', 'icu_power_hr_z2', 'icu_power_hr_z2_mins', 'icu_cadence_z2']
+[23:27:06] [T2-VERIFY-IN] df_events type=<class 'pandas.DataFrame'> len=3
+[23:27:06] [T2-VERIFY-IN] df_events cols=['id', 'start_date_local', 'type', 'icu_ignore_time', 'icu_pm_cp', 'icu_pm_w_prime', 'icu_pm_p_max', 'icu_pm_ftp', 'icu_pm_ftp_secs', 'icu_pm_ftp_watts']
+[23:27:06] [T2] Starting derived metric computation on 3 events.
+[23:27:06] [T2] Columns available: ['id', 'start_date_local', 'type', 'icu_ignore_time', 'icu_pm_cp', 'icu_pm_w_prime', 'icu_pm_p_max', 'icu_pm_ftp', 'icu_pm_ftp_secs', 'icu_pm_ftp_watts', 'icu_ignore_power', 'icu_rolling_cp', 'icu_rolling_w_prime', 'icu_rolling_p_max', 'icu_rolling_ftp', 'icu_rolling_ftp_delta', 'icu_training_load', 'icu_atl', 'icu_ctl', 'ss_p_max', 'ss_w_prime', 'ss_cp', 'paired_event_id', 'icu_ftp', 'icu_joules', 'icu_recording_time', 'elapsed_time', 'icu_weighted_avg_watts', 'carbs_used', 'name', 'description', 'start_date', 'distance', 'icu_distance', 'moving_time', 'coasting_time', 'total_elevation_gain', 'total_elevation_loss', 'timezone', 'trainer', 'sub_type', 'commute', 'race', 'max_speed', 'average_speed', 'device_watts', 'has_heartrate', 'max_heartrate', 'average_heartrate', 'average_cadence', 'calories', 'average_temp', 'min_temp', 'max_temp', 'avg_lr_balance', 'gap', 'gap_model', 'use_elevation_correction', 'gear', 'perceived_exertion', 'device_name', 'power_meter', 'power_meter_serial', 'power_meter_battery', 'crank_length', 'external_id', 'file_sport_index', 'file_type', 'icu_athlete_id', 'created', 'icu_sync_date', 'analyzed', 'icu_w_prime', 'p_max', 'threshold_pace', 'icu_hr_zones', 'pace_zones', 'lthr', 'icu_resting_hr', 'icu_weight', 'icu_power_zones', 'icu_sweet_spot_min', 'icu_sweet_spot_max', 'icu_power_spike_threshold', 'trimp', 'icu_warmup_time', 'icu_cooldown_time', 'icu_chat_id', 'icu_ignore_hr', 'ignore_velocity', 'ignore_pace', 'ignore_parts', 'icu_training_load_data', 'interval_summary', 'skyline_chart_bytes', 'stream_types', 'has_weather', 'has_segments', 'power_field_names', 'power_field', 'icu_zone_times', 'icu_hr_zone_times', 'pace_zone_times', 'gap_zone_times', 'use_gap_zone_times', 'custom_zones', 'tiz_order', 'polarization_index', 'icu_achievements', 'icu_intervals_edited', 'lock_intervals', 'icu_lap_count', 'icu_joules_above_ftp', 'icu_max_wbal_depletion', 'icu_hrr', 'icu_sync_error', 'icu_color', 'icu_power_hr_z2', 'icu_power_hr_z2_mins', 'icu_cadence_z2', 'icu_rpe', 'feel', 'kg_lifted', 'decoupling', 'icu_median_time_delta', 'p30s_exponent', 'workout_shift_secs', 'strava_id', 'lengths', 'pool_length', 'compliance', 'coach_tick', 'source', 'oauth_client_id', 'oauth_client_name', 'average_altitude', 'min_altitude', 'max_altitude', 'power_load', 'hr_load', 'pace_load', 'hr_load_type', 'pace_load_type', 'tags', 'attachments', 'recording_stops', 'average_weather_temp', 'min_weather_temp', 'max_weather_temp', 'average_feels_like', 'min_feels_like', 'max_feels_like', 'average_wind_speed', 'average_wind_gust', 'prevailing_wind_deg', 'headwind_percent', 'tailwind_percent', 'average_clouds', 'max_rain', 'max_snow', 'carbs_ingested', 'route_id', 'pace', 'athlete_max_hr', 'group', 'icu_intensity', 'icu_efficiency_factor', 'icu_power_hr', 'session_rpe', 'average_stride', 'icu_average_watts', 'icu_variability_index', 'strain_score']
+[23:27:06] [DERIVED] Using _df_scope_full (rows=3, cols=200)
+[23:27:06] [T2-HRV] HRV candidates detected: ['hrv', 'hrvsdnn']
+[23:27:06] [T2-HRV] Defaulted HRV source to Garmin (detected native HRV data).
+[23:27:06] [T2-HRV] Normalised HRV column ready (source=garmin, available=True, non-null=43)
+[23:27:06] [T2] Daily aggregated load (rows=3):
+[23:27:06] [T2]       date  icu_training_load
+2026-03-24                 32
+2026-03-27                169
+2026-03-30                 44
+[23:27:06] [T2] df_daily stored in context (3 rows)
+[23:27:06] [DERIVED] ACWR computed=1.0 (acute=81.62, chronic=81.88)
+[23:27:06] [T2] Monotony/Strain input (7d padded): [ 32.   0.   0. 169.   0.   0.  44.]
+[23:27:06] [T2] Mean load=35.00, Std=61.84
+[23:27:06] [DERIVED] Monotony=0.57, Strain=139.6
+[23:27:06] [T2] FatigueTrend using df_light (len=3)
+[23:27:06] [T2-FUSED] Injected _fused_* columns from raw zones
+[23:27:06] [T2-FUSED] df_events shape=(3, 215)
+[23:27:06] [T2-FUSED] df_events cols sample: ['id', 'start_date_local', 'type', 'icu_ignore_time', 'icu_pm_cp', 'icu_pm_w_prime', 'icu_pm_p_max', 'icu_pm_ftp', 'icu_pm_ftp_secs', 'icu_pm_ftp_watts', 'icu_ignore_power', 'icu_rolling_cp', 'icu_rolling_w_prime', 'icu_rolling_p_max', 'icu_rolling_ftp', 'icu_rolling_ftp_delta', 'icu_training_load', 'icu_atl', 'icu_ctl', 'ss_p_max', 'ss_w_prime', 'ss_cp', 'paired_event_id', 'icu_ftp', 'icu_joules', 'icu_recording_time', 'elapsed_time', 'icu_weighted_avg_watts', 'carbs_used', 'name']
+[23:27:06] [T2-FUSED] Unique types before fusion: ['VirtualRide', 'Ride', 'Elliptical']
+[23:27:06] [T2-FUSED] sport_groups available: ['Ride', 'Run', 'Swim', 'Ski', 'Row', 'Excluded']
+[23:27:06] [T2-FUSED] Row 0: source=power, has_power=True, has_hr=True
+[23:27:06] [T2-FUSED] Row 1: source=power, has_power=True, has_hr=True
+[23:27:06] [DERIVED] ZQI (initial)=9.4
+[23:27:06] [DERIVED] Polarisation=0.565 | TreffPI=2.531
+[23:27:06] [LACTATE] HrtLndLt1 not in df_light columns
+[23:27:06] [DERIVED] IF_proxy=0.677, FatOxEff=0.609, Polarisation=0.565, PolarisationIndex=2.531, MES=22.6, LVI=0.886
+[23:27:06] [CLASSIFY] FatigueTrend: no data
+[23:27:06] [CLASSIFY] Polarisation: skipped (multi-dimensional metric)
+[23:27:06] [CLASSIFY] PolarisationIndex: skipped (multi-dimensional metric)
+[23:27:06] [SUMMARY] ACWR=1.0, Monotony=0.57, Strain=139.6, FatOxEff=0.609, ZQI=9.4, StressTol=0.78
+[23:27:06] [T2-ACTIONS] Derived metrics integrated
+[23:27:06] [LOAD-ICU] CTL=44.853546 ATL=40.96221 TSB=3.8913360000000026
+[23:27:06] [EXT-LOAD] Using injected load_metrics CTL=44.853546 ATL=40.96221 TSB=3.8913360000000026
+[23:27:06] [EXT] Extended metrics assembled (ICU authoritative load)
+[23:27:06] [EXT-POST] extended=False adaptation=False trend=False corr=False
+[23:27:06] [T3-PI] Starting Performance Intelligence module…
+[23:27:06] [T3] Performance Intelligence start (weekly)
+[23:27:06] [T3] Weekly FULL rows: 3
+[23:27:06] [T3][WDRM] Anaerobic Repeatability (7d) max_dep_pct=0.4709760030351892 mean_dep_pct=0.2354880015175946 high_dep_sessions=0 joules_above_ftp=44410.0
+[23:27:06] [T3][ISDM] Durability (7d) mean_decoupling=9.59179355 max_decoupling=18.853348 high_drift_sessions=1 long_sessions=1
+[23:27:06] [T3][NDLI] Neural Density (7d) rolling_joules=44410.0 high_intensity_days=1 mean_if=0.6768155933333334
+[23:27:06] [T3 OUTPUT KEYS] ['anaerobic_repeatability', 'model_diagnostics', 'durability', 'neural_density']
+[23:27:06] [T3][NUTRITION] Starting demand model
+[23:27:06] [T3][NUTRITION] Evaluating balance
+[23:27:06] [T3][NUTRITION] weight=85.0
+[23:27:06] [T3-PI] Completed: keys=['anaerobic_repeatability', 'model_diagnostics', 'durability', 'neural_density']
+[23:27:06] [T3-ESPE] Starting Energy System Progression Engine…
+[23:27:06] [T3-ESPE] No power_curve block present — skipping
+[23:27:06] [T3] Starting Tier-3 Future Forecast module …
+[23:27:06] [PREFETCH] Using prefetched 'calendar' (7 records)
+[23:27:06] [T3] Summary: {
+  "start_date": "2026-03-30",
+  "end_date": "2026-04-05",
+  "horizon_days": 6,
+  "CTL_future": 50.42,
+  "ATL_future": 67.46,
+  "TSB_future": -17.04,
+  "load_trend": "increasing",
+  "fatigue_class": "productive_fatigue"
+}
+[23:27:06] [T3] Future action: Productive training fatigue
+[23:27:06] [T3] Future forecast added: CTL_future=50.42, ATL_future=67.46, TSB_future=-17.04
+[23:27:06] [T3] Starting Tier-3 ADE ...
+[23:27:06] [PATCH-LOCK] Preserved load_metrics before validator: {'CTL': {'value': 44.853546, 'status': 'icu'}, 'ATL': {'value': 40.96221, 'status': 'icu'}, 'TSB': {'value': 3.8913360000000026, 'status': 'icu'}}
+[23:27:06] [SYNC] Canonical totals restored from Tier-2 enforced totals.
+[23:27:06] [RENDER-READY] Totals source=tier2_enforced_totals | hours=5.218055555555556 | tss=245 | distance=114.05197
+[23:27:06] [FINALIZER] First and only render pass permitted.
+[23:27:06] [PRE-SEMANTIC] extended=False adaptation=False trend=False corr=False
+[23:27:06] [PHASES] ---- Phase detection start (v17.9) ----
+[23:27:06] [PHASES] ---- Phase detection end ----
+[23:27:06] [CHECKPOINT] Keys in context before semantic build: ['activities_light', 'wellness', 'athlete', 'calendar', 'render_summary', 'include_coaching_metrics', 'postRenderAudit', 'debug_mode', 'report_type', 'debug_trace', 'semantic_mode', 'prefetched', 'athleteProfile', 'timezone', 'reportMode', 'athlete_now', 'athlete_today', 'range', 'prefetch_done', 'df_light', 'df_light_full', 'activities_full', 'df_light_slice', 'snapshot_7d_json', 'tier0_snapshotTotals_7d', 'report_mode', 'window_start', 'window_end', 'espe_curves', 'df_master', 'df_raw_activities', 'auditPartial', 'auditFinal', 'window_summary', 'power_curve', 'df_light_raw', '_df_light_90d', 'chunk_mode', 'light_days', 'full_days', 'knowledge', 'tier1_visibleTotals', 'weeklyEventLogBlock', 'df_events', 'wellness_summary', 'df_daily', 'daily_load', 'load_distribution', 'wellness_metrics', 'subjective_metrics', 'df_wellness', 'dailyMerged', 'ctl', 'atl', 'tsb', 'load_metrics', 'zone_dist_power', 'zone_dist_hr', 'zone_dist_pace', 'zone_dist_swim', 'zones', 'icu_zones', 'icu_power_zones', 'icu_hr_zones', 'icu_pace_zones', 'zone_dist_power_7d', 'zone_dist_hr_7d', 'zone_dist_pace_7d', 'zone_scope', 'outliers', '_df_scope_full', 'tier2_enforced_totals', 'eventTotals', 'df_event_only_preview', 'event_count', 'trace', 'locked_totalHours', 'locked_totalTss', 'locked_totalDistance', 'totalHours', 'totalTss', 'tier2_eventTotals_eventOnly', 'auditPrecision', 'fetch_status', 'hrv_source', 'hrv_available', 'wellness_coverage', 'HRV', 'zone_dist_fused', 'polarisation_sport', 'zone_dist_combined', 'Polarisation', 'PolarisationIndex', 'lactate_summary', 'hr_only_mode', 'power_data_present', 'if_proxy_used', 'derived_warnings', 'ACWR', 'Monotony', 'Strain', 'FatigueTrend', 'ZQI', 'FatOxEfficiency', 'FOxI', 'CUR', 'GR', 'MES', 'StressTolerance', 'derived_metrics', '_deload_state', 'ui_flag', 'actions', 'metric_signals', 'zones_calibration_source', 'zones_calibration_reason', 'performance_intelligence', 'PI_VERSION', 'operational_state', 'operational_state_context', 'training_state', 'nutrition_balance', 'future_forecast', 'actions_future', 'adaptive_decision', '_locked_load_metrics', 'render_mode', 'totalDistance', 'FINALIZER_LOCKED_GLOBAL', 'summary_all', 'summary_cycling', 'enforce_render_source', 'allow_intent_inference', 'phases']
+[23:27:06] [CHECKPOINT] zone_dist_power exists: True
+[23:27:06] [CHECKPOINT] zone_dist_fused exists: True
+[23:27:06] [SEMANTIC-FORCE] Using preserved _df_scope_full (3 rows, 200 cols)
+[23:27:10] [THRESHOLDS][Polarisation_fused] Using BASE thresholds {'red': (0.0, 0.64), 'green': (0.8, 3.0), 'amber': (0.65, 0.8)}
+[23:27:10] [THRESHOLDS][Polarisation_fused] Value 0.565
+[23:27:10] [THRESHOLDS][Polarisation_fused] Bands green=(0.8, 3.0) amber=(0.65, 0.8) red=(0.0, 0.64)
+[23:27:10] [SEMANTIC] Polarisation_fused=0.565
+[23:27:10] [THRESHOLDS][Polarisation_combined] Using BASE thresholds {'red': (0.0, 0.59), 'green': (0.78, 3.0), 'amber': (0.6, 0.78)}
+[23:27:10] [THRESHOLDS][Polarisation_combined] Value 2.531
+[23:27:10] [THRESHOLDS][Polarisation_combined] Bands green=(0.78, 3.0) amber=(0.6, 0.78) red=(0.0, 0.59)
+[23:27:10] [SEMANTIC] Polarisation_combined=2.531
+[23:27:10] [SEMANTIC] No personalized_z2 data available in context
+[23:27:10] [DEBUG-EVENTS] sample type=<class 'pandas.DataFrame'> rows=3 cols_sample=['id', 'start_date_local', 'type', 'icu_ignore_time', 'icu_pm_cp', 'icu_pm_w_prime', 'icu_pm_p_max',
+[23:27:10] [SEMANTIC] EVENTS: populated semantic.events with 3 entries
+[23:27:10] [WEEKLY] Using df_ref with 3 rows for weekly aggregation
+[23:27:10] [WEEKLY-TRACE] df_src rows=3, total distance=114.1 km, hours=5.2, tss=245
+[23:27:10] [WEEKLY-TRACE] df_week rows=2, grouped distance=114.1 km, hours=5.2, tss=245
+[23:27:10] [PREFETCH] Using prefetched 'calendar' (7 records)
+[23:27:10] [T3] Summary: {
+  "start_date": "2026-03-30",
+  "end_date": "2026-04-05",
+  "horizon_days": 6,
+  "CTL_future": 50.42,
+  "ATL_future": 67.46,
+  "TSB_future": -17.04,
+  "load_trend": "increasing",
+  "fatigue_class": "productive_fatigue"
+}
+[23:27:10] [T3] Future action: Productive training fatigue
+[23:27:10] [THRESHOLDS][ACWR] Using BASE thresholds {'green': (0.8, 1.3), 'amber': (0.6, 1.5)}
+[23:27:10] [THRESHOLDS][ACWR] Value 1.0
+[23:27:10] [THRESHOLDS][ACWR] Bands green=(0.8, 1.3) amber=(0.6, 1.5) red=None
+[23:27:10] [THRESHOLDS][Monotony] Using BASE thresholds {'green': (1.0, 2.0), 'amber': (0.8, 2.5)}
+[23:27:10] [THRESHOLDS][Monotony] Value 0.57
+[23:27:10] [THRESHOLDS][Monotony] Bands green=(1.0, 2.0) amber=(0.8, 2.5) red=None
+[23:27:10] [THRESHOLDS][Strain] Using BASE thresholds {'green': (0, 2500), 'amber': (2500, 4000), 'red': (4000, 8000)}
+[23:27:10] [THRESHOLDS][Strain] Value 139.6
+[23:27:10] [THRESHOLDS][Strain] Bands green=(0, 2500) amber=(2500, 4000) red=(4000, 8000)
+[23:27:10] [THRESHOLDS][ZQI] Using BASE thresholds {'green': (5, 15), 'amber': (3, 5), 'red': (0, 3)}
+[23:27:10] [THRESHOLDS][ZQI] Value 9.4
+[23:27:10] [THRESHOLDS][ZQI] Bands green=(5, 15) amber=(3, 5) red=(0, 3)
+[23:27:10] [THRESHOLDS][FatOxEfficiency] Using BASE thresholds {'green': (0.4, 0.8), 'amber': (0.3, 0.9)}
+[23:27:10] [THRESHOLDS][FatOxEfficiency] Value 0.609
+[23:27:10] [THRESHOLDS][FatOxEfficiency] Bands green=(0.4, 0.8) amber=(0.3, 0.9) red=None
+[23:27:10] [THRESHOLDS][Polarisation] Using BASE thresholds {'red': (0.0, 0.65), 'amber': (0.65, 0.85), 'green': (0.85, 3.0)}
+[23:27:10] [THRESHOLDS][Polarisation] Value 0.565
+[23:27:10] [THRESHOLDS][Polarisation] Bands green=(0.85, 3.0) amber=(0.65, 0.85) red=(0.0, 0.65)
+[23:27:10] [THRESHOLDS][PolarisationIndex] Using BASE thresholds {'red': (0.0, 1.5), 'amber': (1.5, 2.0), 'green': (2.0, 4.0)}
+[23:27:10] [THRESHOLDS][PolarisationIndex] Value 2.531
+[23:27:10] [THRESHOLDS][PolarisationIndex] Bands green=(2.0, 4.0) amber=(1.5, 2.0) red=(0.0, 1.5)
+[23:27:10] [THRESHOLDS][FOxI] Using BASE thresholds {'green': (30, 80), 'amber': (20, 90)}
+[23:27:10] [THRESHOLDS][FOxI] Value 60.9
+[23:27:10] [THRESHOLDS][FOxI] Bands green=(30, 80) amber=(20, 90) red=None
+[23:27:10] [THRESHOLDS][CUR] Using BASE thresholds {'green': (30, 70), 'amber': (20, 80)}
+[23:27:10] [THRESHOLDS][CUR] Value 39.1
+[23:27:10] [THRESHOLDS][CUR] Bands green=(30, 70) amber=(20, 80) red=None
+[23:27:10] [THRESHOLDS][GR] Using BASE thresholds {'green': (0.5, 2.0), 'amber': (0.3, 3.0)}
+[23:27:10] [THRESHOLDS][GR] Value 1.62
+[23:27:10] [THRESHOLDS][GR] Bands green=(0.5, 2.0) amber=(0.3, 3.0) red=None
+[23:27:10] [THRESHOLDS][MES] Using BASE thresholds {'green': (20, 100), 'amber': (10, 120)}
+[23:27:10] [THRESHOLDS][MES] Value 22.6
+[23:27:10] [THRESHOLDS][MES] Bands green=(20, 100) amber=(10, 120) red=None
+[23:27:10] [THRESHOLDS][StressTolerance] Using BASE thresholds {'green': (0.8, 1.2), 'amber': (0.6, 1.4), 'red': (1.4, 3.0)}
+[23:27:10] [THRESHOLDS][StressTolerance] Value 0.78
+[23:27:10] [THRESHOLDS][StressTolerance] Bands green=(0.8, 1.2) amber=(0.6, 1.4) red=(1.4, 3.0)
+[23:27:10] [SEM] CTL/ATL/TSB sourced from wellness_summary fallback
+[23:27:10] [THRESHOLDS][max_depletion_pct_7d] Using BASE thresholds {}
+[23:27:10] [THRESHOLDS][max_depletion_pct_7d] Value 0.4709760030351892
+[23:27:10] [THRESHOLDS][max_depletion_pct_7d] EMPTY THRESHOLDS
+[23:27:10] [THRESHOLDS][mean_depletion_pct_7d] Using BASE thresholds {}
+[23:27:10] [THRESHOLDS][mean_depletion_pct_7d] Value 0.2354880015175946
+[23:27:10] [THRESHOLDS][mean_depletion_pct_7d] EMPTY THRESHOLDS
+[23:27:10] [THRESHOLDS][moderate_depletion_sessions_7d] Using BASE thresholds {'green': (0, 3), 'amber': (4, 6), 'red': (7, 10)}
+[23:27:10] [THRESHOLDS][moderate_depletion_sessions_7d] Value 0.0
+[23:27:10] [THRESHOLDS][moderate_depletion_sessions_7d] Bands green=(0, 3) amber=(4, 6) red=(7, 10)
+[23:27:10] [THRESHOLDS][high_depletion_sessions_7d] Using BASE thresholds {'green': (0, 2), 'amber': (3, 4)}
+[23:27:10] [THRESHOLDS][high_depletion_sessions_7d] Value 0.0
+[23:27:10] [THRESHOLDS][high_depletion_sessions_7d] Bands green=(0, 2) amber=(3, 4) red=None
+[23:27:10] [THRESHOLDS][total_joules_above_ftp_7d] Using BASE thresholds {}
+[23:27:10] [THRESHOLDS][total_joules_above_ftp_7d] Value 44410.0
+[23:27:10] [THRESHOLDS][total_joules_above_ftp_7d] EMPTY THRESHOLDS
+[23:27:10] [CRITERIA][total_joules_above_ftp_7d] ERROR could not convert string to float: '100kJ'
+[23:27:10] [THRESHOLDS][w_prime_divergence_7d] Using BASE thresholds {'green': (-0.1, 0.15), 'amber': (0.15, 0.3), 'red': (0.3, 1.0)}
+[23:27:10] [THRESHOLDS][w_prime_divergence_7d] Value -0.06451199848240538
+[23:27:10] [THRESHOLDS][w_prime_divergence_7d] Bands green=(-0.1, 0.15) amber=(0.15, 0.3) red=(0.3, 1.0)
+[23:27:10] [THRESHOLDS][mean_decoupling_7d] Using BASE thresholds {}
+[23:27:10] [THRESHOLDS][mean_decoupling_7d] Value 9.59179355
+[23:27:10] [THRESHOLDS][mean_decoupling_7d] EMPTY THRESHOLDS
+[23:27:10] [THRESHOLDS][max_decoupling_7d] Using BASE thresholds {}
+[23:27:10] [THRESHOLDS][max_decoupling_7d] Value 18.853348
+[23:27:10] [THRESHOLDS][max_decoupling_7d] EMPTY THRESHOLDS
+[23:27:10] [THRESHOLDS][high_drift_sessions_7d] Using BASE thresholds {'green': (0, 2), 'amber': (3, 4)}
+[23:27:10] [THRESHOLDS][high_drift_sessions_7d] Value 1.0
+[23:27:10] [THRESHOLDS][high_drift_sessions_7d] Bands green=(0, 2) amber=(3, 4) red=None
+[23:27:10] [THRESHOLDS][long_sessions_7d] Using BASE thresholds {}
+[23:27:10] [THRESHOLDS][long_sessions_7d] Value 1.0
+[23:27:10] [THRESHOLDS][long_sessions_7d] EMPTY THRESHOLDS
+[23:27:10] [THRESHOLDS][rolling_joules_above_ftp_7d] Using BASE thresholds {'green': (0, 150000), 'amber': (150000, 250000), 'red': (250000, 1000000)}
+[23:27:10] [THRESHOLDS][rolling_joules_above_ftp_7d] Value 44410.0
+[23:27:10] [THRESHOLDS][rolling_joules_above_ftp_7d] Bands green=(0, 150000) amber=(150000, 250000) red=(250000, 1000000)
+[23:27:10] [THRESHOLDS][high_intensity_days_7d] Using BASE thresholds {'green': (0, 2), 'amber': (3, 4), 'red': (5, 7)}
+[23:27:10] [THRESHOLDS][high_intensity_days_7d] Value 1.0
+[23:27:10] [THRESHOLDS][high_intensity_days_7d] Bands green=(0, 2) amber=(3, 4) red=(5, 7)
+[23:27:10] [THRESHOLDS][mean_if_7d] Using BASE thresholds {}
+[23:27:10] [THRESHOLDS][mean_if_7d] Value 0.6768155933333334
+[23:27:10] [THRESHOLDS][mean_if_7d] EMPTY THRESHOLDS
+[23:27:10] [THRESHOLDS][mean_efficiency_factor_7d] Using BASE thresholds {}
+[23:27:10] [THRESHOLDS][mean_efficiency_factor_7d] Value 1.2305674
+[23:27:10] [THRESHOLDS][mean_efficiency_factor_7d] EMPTY THRESHOLDS
+[23:27:10] [THRESHOLDS][mean_variability_index_7d] Using BASE thresholds {}
+[23:27:10] [THRESHOLDS][mean_variability_index_7d] Value 1.1443662
+[23:27:10] [THRESHOLDS][mean_variability_index_7d] EMPTY THRESHOLDS
+[23:27:10] [SEMANTIC] energy_system_progression not present
+[23:27:10] [MICROCYCLE-CALENDAR] events=7
+[23:27:10] [MICROCYCLE-CALENDAR] id=101355940 date=2026-03-30T00:00:00 load=45 name=Z2 Re-entry Ride
+[23:27:10] [MICROCYCLE-CALENDAR] id=101355945 date=2026-03-31T00:00:00 load=68 name=Climbing Sweet Spot
+[23:27:10] [MICROCYCLE-CALENDAR] id=101355951 date=2026-04-01T00:00:00 load=86 name=Z2 Endurance
+[23:27:10] [MICROCYCLE-CALENDAR] id=101355959 date=2026-04-02T00:00:00 load=108 name=Over Under Climbing
+[23:27:10] [MICROCYCLE-CALENDAR] id=101355965 date=2026-04-03T00:00:00 load=28 name=Recovery Ride
+[23:27:10] [MICROCYCLE-CALENDAR] id=101355972 date=2026-04-04T00:00:00 load=196 name=Long Ride Controlled Hills
+[23:27:10] [MICROCYCLE-CALENDAR] id=101355977 date=2026-04-05T00:00:00 load=33 name=Recovery Spin
+[23:27:10] [MICROCYCLE] {'week_iso': '2026-W14', 'weekly_target_tss': 45.0, 'completed_tss': 44.0, 'planned_remaining_tss': 519.0, 'projected_total_tss': 563.0, 'delta_to_target': 518.0, 'basis': 'The microcycle is based on the current ISO week (Monday to Sunday) and includes planned and completed with compliance,', 'completed_hours': 1.0, 'projected_hours': 12.48}
+[23:27:10] [THRESHOLDS][FOxI] Using BASE thresholds {'green': (30, 80), 'amber': (20, 90)}
+[23:27:10] [THRESHOLDS][FOxI] Value 60.9
+[23:27:10] [THRESHOLDS][FOxI] Bands green=(30, 80) amber=(20, 90) red=None
+[23:27:10] [THRESHOLDS][ACWR] Using BASE thresholds {'green': (0.8, 1.3), 'amber': (0.6, 1.5)}
+[23:27:10] [THRESHOLDS][ACWR] Value 1.0
+[23:27:10] [THRESHOLDS][ACWR] Bands green=(0.8, 1.3) amber=(0.6, 1.5) red=None
+[23:33:46] [ORCH] report_type locked → weekly
+[23:33:46] [T1] ✅ Registered prefetched calendar (7 events)
+[23:33:46] [ORCH] Bound prefetched athlete → athlete / athleteProfile
+[23:33:46] [ORCH] Bound & normalized prefetched athlete → athleteProfile (Tier-0)
+[23:33:46] [ORCH] Registered prefetched datasets: ['light', 'wellness', 'athlete', 'calendar']
+[23:33:46] 🧭 Running Weekly Report (auditFinal=True, render_mode=full+metrics)
+[23:33:46] [T0] Config → light=90d full=7d chunk=False
+[23:33:46] [RUN_REPORT] Using default computed window 2026-03-23 → 2026-03-30
+[23:33:46] [T0-FULL] Executing Tier-0 canonical path → 2026-03-23 → 2026-03-30
+[23:33:46] [T0] report_type resolved → weekly
+[23:33:46] [T0] Using controller-provided window → 2026-03-23 → 2026-03-30
+[23:33:46] [T0-LIGHT] Using range oldest=2026-03-23 newest=2026-03-30
+[23:33:46] [T0-LIGHT] Fetching lightweight dataset → https://intervals.icu/api/v1/athlete/0/activities_t0light?oldest=2026-03-23&newest=2026-03-30&fields=id,name,type,sport_type,start_date_local,distance,moving_time,icu_training_load,icu_atl,icu_ctl,icu_intensity,average_heartrate,VO2MaxGarmin,HrtLndLt1,HrtLndLt1p,icu_pm_w_prime,icu_max_wbal_depletion,icu_joules_above_ftp,decoupling,icu_w_prime,icu_rolling_w_prime,icu_efficiency_factor,icu_variability_index,polarization_index
+[23:33:47] [T0-LIGHT] Retrieved 3 activities
+[23:33:47] [T0-LIGHT-COLS] rows=3 cols=['id', 'start_date_local', 'type', 'icu_ignore_time', 'icu_pm_cp', 'icu_pm_w_prime', 'icu_pm_p_max', 'icu_pm_ftp', 'icu_pm_ftp_secs', 'icu_pm_ftp_watts', 'icu_ignore_power', 'icu_rolling_cp', 'icu_rolling_w_prime', 'icu_rolling_p_max', 'icu_rolling_ftp', 'icu_rolling_ftp_delta', 'icu_training_load', 'icu_atl', 'icu_ctl', 'ss_p_max', 'ss_w_prime', 'ss_cp', 'paired_event_id', 'icu_ftp', 'icu_joules', 'icu_recording_time', 'elapsed_time', 'icu_weighted_avg_watts', 'carbs_used', 'name', 'description', 'start_date', 'distance', 'icu_distance', 'moving_time', 'coasting_time', 'total_elevation_gain', 'total_elevation_loss', 'timezone', 'trainer', 'sub_type', 'commute', 'race', 'max_speed', 'average_speed', 'device_watts', 'has_heartrate', 'max_heartrate', 'average_heartrate', 'average_cadence', 'calories', 'average_temp', 'min_temp', 'max_temp', 'avg_lr_balance', 'gap', 'gap_model', 'use_elevation_correction', 'gear', 'perceived_exertion', 'device_name', 'power_meter', 'power_meter_serial', 'power_meter_battery', 'crank_length', 'external_id', 'file_sport_index', 'file_type', 'icu_athlete_id', 'created', 'icu_sync_date', 'analyzed', 'icu_w_prime', 'p_max', 'threshold_pace', 'icu_hr_zones', 'pace_zones', 'lthr', 'icu_resting_hr', 'icu_weight', 'icu_power_zones', 'icu_sweet_spot_min', 'icu_sweet_spot_max', 'icu_power_spike_threshold', 'trimp', 'icu_warmup_time', 'icu_cooldown_time', 'icu_chat_id', 'icu_ignore_hr', 'ignore_velocity', 'ignore_pace', 'ignore_parts', 'icu_training_load_data', 'interval_summary', 'skyline_chart_bytes', 'stream_types', 'has_weather', 'has_segments', 'power_field_names', 'power_field', 'icu_zone_times', 'icu_hr_zone_times', 'pace_zone_times', 'gap_zone_times', 'use_gap_zone_times', 'custom_zones', 'tiz_order', 'polarization_index', 'icu_achievements', 'icu_intervals_edited', 'lock_intervals', 'icu_lap_count', 'icu_joules_above_ftp', 'icu_max_wbal_depletion', 'icu_hrr', 'icu_sync_error', 'icu_color', 'icu_power_hr_z2', 'icu_power_hr_z2_mins', 'icu_cadence_z2', 'icu_rpe', 'feel', 'kg_lifted', 'decoupling', 'icu_median_time_delta', 'p30s_exponent', 'workout_shift_secs', 'strava_id', 'lengths', 'pool_length', 'compliance', 'coach_tick', 'source', 'oauth_client_id', 'oauth_client_name', 'average_altitude', 'min_altitude', 'max_altitude', 'power_load', 'hr_load', 'pace_load', 'hr_load_type', 'pace_load_type', 'tags', 'attachments', 'recording_stops', 'average_weather_temp', 'min_weather_temp', 'max_weather_temp', 'average_feels_like', 'min_feels_like', 'max_feels_like', 'average_wind_speed', 'average_wind_gust', 'prevailing_wind_deg', 'headwind_percent', 'tailwind_percent', 'average_clouds', 'max_rain', 'max_snow', 'carbs_ingested', 'route_id', 'pace', 'athlete_max_hr', 'group', 'icu_intensity', 'icu_efficiency_factor', 'icu_power_hr', 'session_rpe', 'average_stride', 'icu_average_watts', 'icu_variability_index', 'strain_score'] missing_lactate=['HrtLndLt1', 'HrtLndLt1p']
+[23:33:47] [T0-PATCH] Injected df_light as activities_full for Tier-2 enrichment (3 rows, 173 columns)
+[23:33:47] [T0-SLICE] 7-day window 2026-03-24 → 2026-03-31 (3 rows)
+[23:33:47] 🧭 Tier-0 weekly snapshot = 5.22h | 245 TSS | 3 events
+[23:33:47] [T0-RESOLVE] Using prefetched 'athlete' dataset
+[23:33:47] [CHECK] athlete name = TheElvenPath
+[23:33:47] [T0-FIX] Defaulting to weekly/rolling window 2026-03-24 → 2026-03-30
+[23:33:47] [T0-FETCH] Canonical activity fetch for report_type=weekly
+[23:33:47] [T0-RESOLVE] Fetching 'full' dataset
+[23:33:47] 🧩 Tier-0: forced full dataset (7-day)
+[23:33:47] [T0] Full fetch: 6 days → 1 chunks
+[23:33:47] [T0-FETCH] → https://intervals.icu/api/v1/athlete/i116116/activities?oldest=2026-03-24&newest=2026-03-30
+[23:33:49] [T0-FIX] icu_zone_times type after patch → <class 'list'>
+[23:33:49] [T0] Deduplicated 0 activities
+[23:33:49] [T0] Zone columns expanded (full dataset)
+[23:33:49] [T0] Diagnostics → Σ(TSS)=245.0, Σ(Time)=5.22h
+[23:33:49] [T0] Completed full fetch → 3 rows
+[23:33:49] [T0-FETCH] Full 7-day fetch complete: 3 activities.
+[23:33:49] [T0-FIX] source_df undefined — using df_light as fallback (season mode).
+[23:33:49] [T0] snapshot_7d_json set (weekly, 3 rows)
+[23:33:49] [T0] Fetching wellness for 42 days → 2026-02-16 00:00:00 → 2026-03-30 00:00:00
+[23:33:49] [T0-RESOLVE] Using prefetched 'wellness' dataset
+[23:33:49] [T0] Loaded cached wellness (43 rows)
+[23:33:49] [T0] Stored wellness in context (43 rows)
+[23:33:49] [T0 WARN] Failed to align wellness range: 'date'
+[23:33:49] [DEBUG] wellness raw: <class 'pandas.DataFrame'> 43
+[23:33:49] [DEBUG] wellness columns (sample 10/46): ['id', 'ctl', 'atl', 'rampRate', 'ctlLoad', 'atlLoad', 'sportInfo', 'updated', 'weight', 'restingHR', 'hrv', 'hrvSDNN', 'menstrualPhase', 'menstrualPhasePredicted', 'kcalConsumed', 'sleepSecs', 'sleepScore', 'sleepQuality', 'avgSleepingHR', 'soreness', 'fatigue', 'stress', 'mood', 'motivation', 'injury', 'spO2', 'systolic', 'diastolic', 'hydration', 'hydrationVolume', 'readiness', 'baevskySI', 'bloodGlucose', 'lactate', 'bodyFat', 'abdomen', 'vo2max', 'comments', 'steps', 'respiration', 'carbohydrates', 'protein', 'fatTotal', 'locked', 'tempWeight', 'tempRestingHR']
+[23:33:49] [DEBUG] wellness head:
+            id        ctl        atl  ...  locked  tempWeight  tempRestingHR
+0  2026-02-16  36.966980  68.453354  ...    None       False          False
+1  2026-02-17  36.826588  63.467484  ...    None        True          False
+2  2026-02-18  37.748272  65.135840  ...    None        True          False
+3  2026-02-19  38.860027  67.780200  ...    None       False          False
+4  2026-02-20  37.945717  58.757156  ...    None       False          False
+
+[5 rows x 46 columns]
+[23:33:49] [T0] Diagnostic only: 3 rows fetched, moving_time present=True
+[23:33:49] [T0] Pre-audit complete: activities=3, wellness_rows=43
+[23:33:49] [T0] Stored wellness for Tier-1 (43 rows)
+[23:33:49] [T0] Created 7d snapshot for weekly (3 rows)
+[23:33:49] [T0-RESOLVE] Fetching 'power_curve' dataset
+[23:33:49] [T0] Fetching power curves → Ride
+[23:33:50] [T0] Power curve dataset retrieved → Ride
+[23:33:50] [T0] ⚠ power_curve payload missing windows for Ride
+[23:33:50] [T0] Fetching power curves → Run
+[23:33:51] [T0] Power curve dataset retrieved → Run
+[23:33:51] [T0] ⚠ power_curve payload missing windows for Run
+[23:33:51] [T0-FINAL] snapshot_7d_json forced (string) from df_light_slice (3 rows)
+[23:33:51] [LOCK] Preserved raw df_light_full for lactate
+[23:33:51] [LOCK] Stored canonical 90d dataset (3 rows)
+[23:33:51] [T0-FULL] Prefetch contained full window — skipping redundant re-fetch.
+[23:33:51] [T0-FULL] Reusing prefetch df_master with 3 rows.
+[23:33:51] [T0-FULL] Preserved wellness in context (43 rows)
+[23:33:51] [T0] Completed range alignment → chunk_mode=False
+[23:33:51] [ORCH] athleteProfile present → preserved
+[23:33:51] ⚙️ Normalization: seconds detected, no conversion (max=12646)
+[23:33:51] [T1] Running Tier-1 controller (weekly mode)
+[23:33:51] [T1] Running Tier-1 controller (weekly mode)
+[23:33:51] [T1] Using merged df_raw_activities (3 rows) as base dataset.
+[23:33:51] [T1] Filtered origin=='event' → 3/3 rows retained.
+[23:33:51] [DEBUG-T1-COLUMNS] sample type=<class 'pandas.DataFrame'> content=['id', 'start_date_local', 'type', 'icu_ignore_time', 'icu_pm_cp', 'icu_pm_w_prime', 'icu_pm_p_max',
+[23:33:51] [Tier-1] Visible subset unified: 5.22 h | 114.1 km | 245 TSS | icu_intensity=None HR=None VO₂=None
+[23:33:51] ✅ Tier-1 finalization: 3 events | 5.218055555555556 h | 245 TSS
+[23:33:51] 🧩 Tier-1 variance check passed (Δh=0.00, ΔTSS=0.0)
+[23:33:51] [T1] Wellness dataset detected — kept separate from activities.
+[23:33:51] [T1-WELLNESS] ✅ Derived resting_hr_delta=1.8 (7d=54.1, 28d=52.4)
+[23:33:51] [T1-WELLNESS] HRV ratio computed → 0.91
+[23:33:51] [T1] Wellness alignment window (tz-aware): 2026-03-24 15:09:15+03:00 → 2026-03-30 19:13:25+03:00
+[23:33:51] [T1] Wellness date range: 2026-02-16 → 2026-03-30
+[23:33:51] ✅ Wellness alignment check passed.
+[23:33:51] [T1] Duplicate columns detected in df_well after normalization — removing
+[23:33:51] [T1-REST] Starting rest day calculation from df_master.
+[23:33:51] [T1-REST] Weekly mode → using df_master for rest-day calculation
+[23:33:51] [T1-REST] Using icu_training_load as primary load source.
+[23:33:51] [T1-REST] Daily load sample (last 7 days): {Timestamp('2026-03-24 00:00:00'): 32, Timestamp('2026-03-25 00:00:00'): 0, Timestamp('2026-03-26 00:00:00'): 0, Timestamp('2026-03-27 00:00:00'): 169, Timestamp('2026-03-28 00:00:00'): 0, Timestamp('2026-03-29 00:00:00'): 0, Timestamp('2026-03-30 00:00:00'): 44}
+[23:33:51] [T1-REST] Counted rest days: 4 → Dates: ['2026-03-25', '2026-03-26', '2026-03-28', '2026-03-29']
+[23:33:51] [T1-REST] Exported daily_load into context (7 days)
+[23:33:51] [T1-READINESS] readiness column summary: exists=True, non-null count=0, values=[]
+[23:33:51] [T1] Wellness summary → rest_days=4, rest_hr=54.1, hrv_trend=-1.0
+[23:33:51] [T1-WELLNESS-LATEST] CTL=44.853546 ATL=40.96221 TSB=3.8913360000000026
+[23:33:51] [DEBUG-T1] Sanity check before Step 6b — rows in df_master: 3
+[23:33:51] [DEBUG-T1] Starting zone distribution extraction...
+[23:33:51] [ZONES-RAW] Columns before zone dist (sample 10/200): ['id', 'start_date_local', 'type', 'icu_ignore_time', 'icu_pm_cp', 'icu_pm_w_prime', 'icu_pm_p_max', 'icu_pm_ftp', 'icu_pm_ftp_secs', 'icu_pm_ftp_watts']
+[23:33:51] [ZONES-RAW] icu_power_zones sample: [[55, 75, 90, 105, 120, 150, 999], [55, 75, 90, 105, 120, 150, 999], None]
+[23:33:51] [ZONES-RAW] 'icu_zone_times' column not found in df_master.
+[23:33:51] [DEBUG-T1] Missing values: icu_power_zones: 1, icu_zone_times: 0
+[23:33:51] [DEBUG-T1] First few rows of icu_power_zones: 0    [55, 75, 90, 105, 120, 150, 999]
+1    [55, 75, 90, 105, 120, 150, 999]
+2                                None
+Name: icu_power_zones, dtype: object
+[23:33:51] [DEBUG-T1] First few rows of icu_zone_times: n/a
+[23:33:51] [DEBUG-T1] Missing values in icu_power_zones: 1
+[23:33:51] [DEBUG-T1] After fillna, icu_power_zones sample: 0    [55, 75, 90, 105, 120, 150, 999]
+1    [55, 75, 90, 105, 120, 150, 999]
+2                                 0.0
+Name: icu_power_zones, dtype: object
+[23:33:51] [ZONES] Normalized columns → 200 total
+[23:33:51] [DEBUG-ZONES] Power cols=['icu_power_zones', 'power_z1', 'power_z2', 'power_z3', 'power_z4', 'power_z5', 'power_z6', 'power_z7', 'power_z8']
+[23:33:51] [DEBUG-ZONES] HR cols=['hr_z1', 'hr_z2', 'hr_z3', 'hr_z4', 'hr_z5', 'hr_z6', 'hr_z7', 'icu_hr_zones']
+[23:33:51] [DEBUG-ZONES] Pace cols=['gap_zone_times', 'pace_zone_times', 'pace_zones']
+[23:33:51] [DEBUG-ZONES] Swim cols=[]
+[23:33:51] [ZONES-FIX] ✅ Sensor exclusivity applied to fused columns only
+[23:33:51] [ZONE-DEBUG] df_master columns (sample 10/215): ['id', 'start_date_local', 'type', 'icu_ignore_time', 'icu_pm_cp', 'icu_pm_w_prime', 'icu_pm_p_max', 'icu_pm_ftp', 'icu_pm_ftp_secs', 'icu_pm_ftp_watts']
+[23:33:51] [ZONE-DEBUG] Power cols detected → ['icu_power_zones', 'power_z1', 'power_z2', 'power_z3', 'power_z4', 'power_z5', 'power_z6', 'power_z7', 'power_z8']
+[23:33:51] [ZONES-HR] HR zones restricted to CHEAT_SHEET Ride group → ['Ride', 'VirtualRide']
+[23:33:51] [DEBUG-ZONES] FULL power dataset:
+ power_z1  power_z2  power_z3  power_z4  power_z5  power_z6  power_z7  power_z8
+     21.0    3584.0       0.0       0.0       0.0       0.0       0.0       0.0
+   5290.0    4047.0    1854.0    1017.0     254.0     134.0      50.0    1255.0
+      0.0       0.0       0.0       0.0       0.0       0.0       0.0       0.0
+[23:33:51] [DEBUG-ZONES] Processed subset:
+   power_z1  power_z2  power_z3  ...  power_z6  power_z7  power_z8
+0      21.0    3584.0       0.0  ...       0.0       0.0       0.0
+1    5290.0    4047.0    1854.0  ...     134.0      50.0    1255.0
+2       0.0       0.0       0.0  ...       0.0       0.0       0.0
+
+[3 rows x 8 columns]
+[23:33:51] [DEBUG-ZONES] ✅ power zones computed → {'power_z1': 30.3, 'power_z2': 43.6, 'power_z3': 10.6, 'power_z4': 5.8, 'power_z5': 1.5, 'power_z6': 0.8, 'power_z7': 0.3, 'power_z8': 7.2}
+[23:33:51] [DEBUG-ZONES] FULL hr dataset:
+ hr_z1  hr_z2  hr_z3  hr_z4  hr_z5  hr_z6  hr_z7
+1084.0 2521.0    0.0    0.0    0.0    0.0    0.0
+3124.0 5313.0 2258.0 1809.0   98.0   44.0    0.0
+[23:33:51] [DEBUG-ZONES] Processed subset:
+    hr_z1   hr_z2   hr_z3   hr_z4  hr_z5  hr_z6  hr_z7
+0  1084.0  2521.0     0.0     0.0    0.0    0.0    0.0
+1  3124.0  5313.0  2258.0  1809.0   98.0   44.0    0.0
+[23:33:51] [DEBUG-ZONES] ✅ hr zones computed → {'hr_z1': 25.9, 'hr_z2': 48.2, 'hr_z3': 13.9, 'hr_z4': 11.1, 'hr_z5': 0.6, 'hr_z6': 0.3, 'hr_z7': 0.0}
+[23:33:51] [DEBUG-ZONES] FULL pace dataset:
+Empty DataFrame
+Columns: []
+Index: [0, 1, 2]
+[23:33:51] [DEBUG-ZONES] Processed subset:
+Empty DataFrame
+Columns: []
+Index: [0, 1, 2]
+[23:33:51] [DEBUG-ZONES] ⚠ No valid pace data — total=0
+[23:33:51] [DEBUG-ZONES] ❌ No swim columns found — skipping.
+[23:33:51] [DEBUG-ZONES] Final packaged zones → power=8, hr=7, pace=0
+[23:33:51] [ZONE-CONTEXT] sportSettings count → 4
+[23:33:51] [ZONE-CONTEXT] Added zones for ride
+[23:33:51] [ZONE-CONTEXT] Added zones for run
+[23:33:51] [ZONE-CONTEXT] Added zones for swim
+[23:33:51] [ZONE-FINAL] available keys → ['ride', 'run', 'swim']
+[23:33:51] [ZONE-FINAL] report_type → ride
+[23:33:51] [ZONE-FINAL] icu_power_zones=[55, 75, 90, 105, 120, 150, 999]
+[23:33:51] [ZONE-FINAL] icu_hr_zones=[140, 156, 163, 174, 179, 184, 188]
+[23:33:51] [ZONE-FINAL] power_dist={'z1': 30.3, 'z2': 43.6, 'z3': 10.6, 'z4': 5.8, 'z5': 1.5, 'z6': 0.8, 'z7': 0.3, 'z8': 7.2}
+[23:33:51] [ZONE-FINAL] hr_dist={'z1': 25.9, 'z2': 48.2, 'z3': 13.9, 'z4': 11.1, 'z5': 0.6, 'z6': 0.3, 'z7': 0.0}
+[23:33:51] [T1-ZONE] Completed zone dist extraction (scope=7d)
+[23:33:51]   power: {'z1': 30.3, 'z2': 43.6, 'z3': 10.6, 'z4': 5.8, 'z5': 1.5, 'z6': 0.8, 'z7': 0.3, 'z8': 7.2}
+[23:33:51]   hr:    {'z1': 25.9, 'z2': 48.2, 'z3': 13.9, 'z4': 11.1, 'z5': 0.6, 'z6': 0.3, 'z7': 0.0}
+[23:33:51] [DEBUG-OUTLIER] Starting detection on 3 rows
+[23:33:51] [DEBUG-T1] Outlier events detected: 0
+[23:33:51] [DEBUG-OUTLIER] mean TSS=81.7, std=75.9, threshold=113.8
+[23:33:51] [DEBUG-OUTLIER] min/max TSS: 32 / 169
+[23:33:51] [T1-DEBUG] daily_summary columns → ['date', 'ctl', 'atl', 'ramprate', 'sportinfo', 'updated', 'weight', 'rest_hr', 'hrv', 'hrvsdnn', 'menstrualphase', 'menstrualphasepredicted', 'kcalconsumed', 'sleepsecs', 'sleepscore', 'sleepquality', 'avgsleepinghr', 'soreness', 'fatigue', 'stress', 'mood', 'motivation', 'injury', 'spo2', 'systolic', 'diastolic', 'hydration', 'hydrationvolume', 'readiness', 'baevskysi', 'bloodglucose', 'lactate', 'bodyfat', 'abdomen', 'vo2max', 'comments', 'steps', 'respiration', 'carbohydrates', 'protein', 'fattotal', 'locked', 'tempweight', 'temprestinghr']
+[23:33:51] [TRACE] df_light_slice already present → 3 rows.
+[23:33:51] [T1] Summary → 3 events | 5.22 h | 245 TSS | 114.1 km
+[23:33:51] [PRESERVE] Stored df_master as _df_scope_full (3 rows, 200 cols)
+[23:33:51] [SCOPE] Weekly analysis → snapshot_7d (3 rows)
+[23:33:51] [CHECK] zone columns in df_events (before enforce): ['timezone', 'analyzed', 'icu_hr_zones', 'pace_zones', 'icu_power_zones', 'pace_zone_times', 'gap_zone_times', 'use_gap_zone_times', 'custom_zones', 'tiz_order', 'polarization_index', 'icu_power_hr_z2', 'icu_power_hr_z2_mins', 'icu_cadence_z2', 'power_z1', 'power_z2', 'power_z3', 'power_z4', 'power_z5', 'power_z6', 'power_z7', 'power_z8', 'hr_z1', 'hr_z2', 'hr_z3', 'hr_z4', 'hr_z5', 'hr_z6', 'hr_z7']
+[23:33:51] 📁 Tier-2 module loaded from: C:\Projects\intervalsicugptcoach\audit_core\tier2_enforce_event_only_totals.py
+[23:33:51] [T2] ✅ Weekly mode → using df_events for totals (calendar-aligned).
+[23:33:51] 🔍 Tier-2 enforcement source: Tier-2 WEEKLY events (calendar-aligned) (3 rows)
+[23:33:51] origin counts:
+ origin
+event    3
+Name: count, dtype: int64
+[23:33:51] moving_time stats:
+ count        3.000000
+mean      6261.666667
+std       5554.866725
+min       2534.000000
+25%       3069.500000
+50%       3605.000000
+75%       8125.500000
+max      12646.000000
+Name: moving_time, dtype: float64
+[23:33:51] [T2-PATCH] ✅ moving_time validated → non-null=3, min=2534, max=12646, mean=6261.7
+[23:33:51] 🧩 Tier-2 weekly/calendar: using 3 light-slice rows for totals (full 7d dataset excluded).
+[23:33:51] 🧮 Tier-2 (weekly, light slice): Σ(moving_time)=18785s → 5.22h Σ(TSS)=245 Σ(Distance)=114.1 km (safe scalar fields)
+[23:33:51] [T2] Tier-1 totals validated (Δh=0.00, ΔTSS=0.0, Δd=0.0)
+[23:33:51] [T2] Retaining Tier-1 totals as validated canonical snapshot.
+[23:33:51] [DEBUG-T2] injected lightweight df_event_only preview (3 rows); full dataset retained only in memory (not serialized)
+[23:33:51] [T2] Locked canonical totals — Hours=0, TSS=245, Dist=0 km
+[23:33:51] [CHECK] zone columns in df_events (after enforce): ['timezone', 'analyzed', 'icu_hr_zones', 'pace_zones', 'icu_power_zones', 'pace_zone_times', 'gap_zone_times', 'use_gap_zone_times', 'custom_zones', 'tiz_order', 'polarization_index', 'icu_power_hr_z2', 'icu_power_hr_z2_mins', 'icu_cadence_z2', 'power_z1', 'power_z2', 'power_z3', 'power_z4', 'power_z5', 'power_z6', 'power_z7', 'power_z8', 'hr_z1', 'hr_z2', 'hr_z3', 'hr_z4', 'hr_z5', 'hr_z6', 'hr_z7']
+[23:33:51] [SYNC] Totals from enforcement hours=0, tss=245
+[23:33:51] [T2] Preserved event-only totals for renderer binding.
+[23:33:51] [CHK] tier0_snapshotTotals_7d = {'hours': np.float64(5.218055555555556), 'distance': np.float64(114.05197), 'tss': np.int64(245), 'count': 3, 'source': 'Tier-0 lightweight 28-day dataset'}
+[23:33:51] [CHK] tier2_enforced_totals = {'hours': np.float64(5.218055555555556), 'distance': np.float64(114.05197), 'tss': np.int64(245), 'count': 3, 'source': 'Tier-0 lightweight 28-day dataset', 'avg_if': np.float64(67.8), 'avg_hr': 145, 'vo2max': None, 'validated': True}
+[23:33:51] [CHK] tier2_eventTotals = None
+[23:33:51] [CHK] tier2_eventTotals_eventOnly = {'hours': np.float64(5.218055555555556), 'distance': np.float64(114.05197), 'tss': np.int64(245), 'count': 3, 'source': 'Tier-0 lightweight 28-day dataset', 'avg_if': np.float64(67.8), 'avg_hr': 145, 'vo2max': None, 'validated': True}
+[23:33:51] [T2] Normal precision: full fetch succeeded or 7d slice validated.
+[23:33:51] [SYNC] df_events replaced with df_scope (3 rows)
+[23:33:51] [CHECK] zone columns in df_events: ['timezone', 'analyzed', 'icu_hr_zones', 'pace_zones', 'icu_power_zones', 'icu_zone_times', 'icu_hr_zone_times', 'pace_zone_times', 'gap_zone_times', 'use_gap_zone_times', 'custom_zones', 'tiz_order', 'polarization_index', 'icu_power_hr_z2', 'icu_power_hr_z2_mins', 'icu_cadence_z2']
+[23:33:51] [T2-VERIFY-IN] df_events type=<class 'pandas.DataFrame'> len=3
+[23:33:51] [T2-VERIFY-IN] df_events cols=['id', 'start_date_local', 'type', 'icu_ignore_time', 'icu_pm_cp', 'icu_pm_w_prime', 'icu_pm_p_max', 'icu_pm_ftp', 'icu_pm_ftp_secs', 'icu_pm_ftp_watts']
+[23:33:51] [T2] Starting derived metric computation on 3 events.
+[23:33:51] [T2] Columns available: ['id', 'start_date_local', 'type', 'icu_ignore_time', 'icu_pm_cp', 'icu_pm_w_prime', 'icu_pm_p_max', 'icu_pm_ftp', 'icu_pm_ftp_secs', 'icu_pm_ftp_watts', 'icu_ignore_power', 'icu_rolling_cp', 'icu_rolling_w_prime', 'icu_rolling_p_max', 'icu_rolling_ftp', 'icu_rolling_ftp_delta', 'icu_training_load', 'icu_atl', 'icu_ctl', 'ss_p_max', 'ss_w_prime', 'ss_cp', 'paired_event_id', 'icu_ftp', 'icu_joules', 'icu_recording_time', 'elapsed_time', 'icu_weighted_avg_watts', 'carbs_used', 'name', 'description', 'start_date', 'distance', 'icu_distance', 'moving_time', 'coasting_time', 'total_elevation_gain', 'total_elevation_loss', 'timezone', 'trainer', 'sub_type', 'commute', 'race', 'max_speed', 'average_speed', 'device_watts', 'has_heartrate', 'max_heartrate', 'average_heartrate', 'average_cadence', 'calories', 'average_temp', 'min_temp', 'max_temp', 'avg_lr_balance', 'gap', 'gap_model', 'use_elevation_correction', 'gear', 'perceived_exertion', 'device_name', 'power_meter', 'power_meter_serial', 'power_meter_battery', 'crank_length', 'external_id', 'file_sport_index', 'file_type', 'icu_athlete_id', 'created', 'icu_sync_date', 'analyzed', 'icu_w_prime', 'p_max', 'threshold_pace', 'icu_hr_zones', 'pace_zones', 'lthr', 'icu_resting_hr', 'icu_weight', 'icu_power_zones', 'icu_sweet_spot_min', 'icu_sweet_spot_max', 'icu_power_spike_threshold', 'trimp', 'icu_warmup_time', 'icu_cooldown_time', 'icu_chat_id', 'icu_ignore_hr', 'ignore_velocity', 'ignore_pace', 'ignore_parts', 'icu_training_load_data', 'interval_summary', 'skyline_chart_bytes', 'stream_types', 'has_weather', 'has_segments', 'power_field_names', 'power_field', 'icu_zone_times', 'icu_hr_zone_times', 'pace_zone_times', 'gap_zone_times', 'use_gap_zone_times', 'custom_zones', 'tiz_order', 'polarization_index', 'icu_achievements', 'icu_intervals_edited', 'lock_intervals', 'icu_lap_count', 'icu_joules_above_ftp', 'icu_max_wbal_depletion', 'icu_hrr', 'icu_sync_error', 'icu_color', 'icu_power_hr_z2', 'icu_power_hr_z2_mins', 'icu_cadence_z2', 'icu_rpe', 'feel', 'kg_lifted', 'decoupling', 'icu_median_time_delta', 'p30s_exponent', 'workout_shift_secs', 'strava_id', 'lengths', 'pool_length', 'compliance', 'coach_tick', 'source', 'oauth_client_id', 'oauth_client_name', 'average_altitude', 'min_altitude', 'max_altitude', 'power_load', 'hr_load', 'pace_load', 'hr_load_type', 'pace_load_type', 'tags', 'attachments', 'recording_stops', 'average_weather_temp', 'min_weather_temp', 'max_weather_temp', 'average_feels_like', 'min_feels_like', 'max_feels_like', 'average_wind_speed', 'average_wind_gust', 'prevailing_wind_deg', 'headwind_percent', 'tailwind_percent', 'average_clouds', 'max_rain', 'max_snow', 'carbs_ingested', 'route_id', 'pace', 'athlete_max_hr', 'group', 'icu_intensity', 'icu_efficiency_factor', 'icu_power_hr', 'session_rpe', 'average_stride', 'icu_average_watts', 'icu_variability_index', 'strain_score']
+[23:33:51] [DERIVED] Using _df_scope_full (rows=3, cols=200)
+[23:33:51] [T2-HRV] HRV candidates detected: ['hrv', 'hrvsdnn']
+[23:33:51] [T2-HRV] Defaulted HRV source to Garmin (detected native HRV data).
+[23:33:51] [T2-HRV] Normalised HRV column ready (source=garmin, available=True, non-null=43)
+[23:33:51] [T2-HRV] HRV extracted → 43.0
+[23:33:51] [T2] Daily aggregated load (rows=3):
+[23:33:51] [T2]       date  icu_training_load
+2026-03-24                 32
+2026-03-27                169
+2026-03-30                 44
+[23:33:51] [T2] df_daily stored in context (3 rows)
+[23:33:51] [T2] Adaptive window → 7d (acute=7, chronic=28)
+[23:33:51] [DERIVED] ACWR computed=1.0 (acute=81.62, chronic=81.88)
+[23:33:51] [T2] df_ref padded to 28 days (2026-03-03 → 2026-03-30)
+[23:33:51] [T2] Monotony/Strain input (7d padded): [ 32.   0.   0. 169.   0.   0.  44.]
+[23:33:51] [T2] Mean load=35.00, Std=61.84
+[23:33:51] [DERIVED] Monotony=0.57, Strain=139.6
+[23:33:51] [T2] FatigueTrend using df_light (len=3)
+[23:33:51] [T2] ⚠️ FatigueTrend computation failed: unsupported format string passed to NoneType.__format__
+[23:33:51] [T2] StressTolerance computed:
+       → weekly_tss=245.0, CTL=44.853546, stress_tolerance=0.78
+[23:33:51] [T2-FUSED] Injected _fused_* columns from raw zones
+[23:33:51] [T2-FUSED] 🔍 Starting fused zone computation
+[23:33:51] [T2-FUSED] df_events shape=(3, 215)
+[23:33:51] [T2-FUSED] df_events cols sample: ['id', 'start_date_local', 'type', 'icu_ignore_time', 'icu_pm_cp', 'icu_pm_w_prime', 'icu_pm_p_max', 'icu_pm_ftp', 'icu_pm_ftp_secs', 'icu_pm_ftp_watts', 'icu_ignore_power', 'icu_rolling_cp', 'icu_rolling_w_prime', 'icu_rolling_p_max', 'icu_rolling_ftp', 'icu_rolling_ftp_delta', 'icu_training_load', 'icu_atl', 'icu_ctl', 'ss_p_max', 'ss_w_prime', 'ss_cp', 'paired_event_id', 'icu_ftp', 'icu_joules', 'icu_recording_time', 'elapsed_time', 'icu_weighted_avg_watts', 'carbs_used', 'name']
+[23:33:51] [T2-FUSED] Unique types before fusion: ['VirtualRide', 'Ride', 'Elliptical']
+[23:33:51] [T2-FUSED] sport_groups available: ['Ride', 'Run', 'Swim', 'Ski', 'Row', 'Excluded']
+[23:33:51] [T2-FUSED] Group 'Ride' members=['Ride', 'VirtualRide', 'GravelRide', 'MountainBikeRide', 'TrackCycling', 'EBikeRide', 'EMountainBikeRide', 'Handcycle', 'Velomobile'] → rows=2
+[23:33:51] [T2-FUSED] Row 0: source=power, has_power=True, has_hr=True
+[23:33:51] [T2-FUSED] Row 1: source=power, has_power=True, has_hr=True
+[23:33:51] [T2-FUSED] ✅ Ride: Z1=0.0% Z2=0.0% Z3+=17.9% total=100%
+[23:33:51] [T2-FUSED] Group 'Run' members=['Run', 'TrailRun', 'VirtualRun', 'Walk', 'Hike', 'Snowshoe'] → rows=0
+[23:33:51] [T2-FUSED] Group 'Swim' members=['Swim', 'OpenWaterSwim', 'VirtualSwim'] → rows=0
+[23:33:51] [T2-FUSED] Group 'Ski' members=['AlpineSki', 'BackcountrySki', 'NordicSki', 'RollerSki', 'Snowboard', 'VirtualSki'] → rows=0
+[23:33:51] [T2-FUSED] Group 'Row' members=['Row', 'VirtualRow'] → rows=0
+[23:33:51] [T2-FUSED] ✅ Fused zones computed → sports=['Ride'], dominant=Ride
+[23:33:51] [T2-COMBINED] 🔍 Starting combined zone computation (fused → canonical)
+[23:33:51] [T2-COMBINED] ✅ Combined zones computed → 8 zones, total=100.0%
+[23:33:51] [ZQI] High-intensity computation:
+       → Detected zone cols=['power_z1', 'power_z2', 'power_z3', 'power_z4', 'power_z5', 'power_z6', 'power_z7', 'power_z8', 'hr_z1', 'hr_z2', 'hr_z3', 'hr_z4', 'hr_z5', 'hr_z6', 'hr_z7']
+       → High (Z4-Z7)=3406.00s, Total=36292.00s
+       → Ratio=0.0938 → ZQI=9.4%
+[23:33:51] [DERIVED] ZQI (initial)=9.4
+[23:33:51] [POL] Seiler 3-zone → Z1=0.326 Z2=0.469 Z3+=0.205 → Ratio=0.565
+[23:33:51] [POL] Treff PI → 2.531
+[23:33:51] [DERIVED] Polarisation=0.565 | TreffPI=2.531
+[23:33:51] [LACTATE] HrtLndLt1 not in df_light columns
+[23:33:51] [DERIVED] IF_proxy=0.677, FatOxEff=0.609, Polarisation=0.565, PolarisationIndex=2.531, MES=22.6, LVI=0.886
+[23:33:51] [CLASSIFY] HRV: 43.0 → moderate → amber
+[23:33:51] [CLASSIFY] HRV=43.0 → 🟠 amber
+[23:33:51] [CLASSIFY] ACWR: 1.0 → productive → green
+[23:33:51] [CLASSIFY] ACWR=1.0 → 🟢 green
+[23:33:51] [CLASSIFY] Monotony: 0.57 → optimal → green
+[23:33:51] [CLASSIFY] Monotony=0.57 → 🟢 green
+[23:33:51] [CLASSIFY] Strain: 139.6 → low → green
+[23:33:51] [CLASSIFY] Strain=139.6 → 🟢 green
+[23:33:51] [CLASSIFY] FatigueTrend: no data
+[23:33:51] [CLASSIFY] FatigueTrend=None → ⚪ undefined
+[23:33:51] [CLASSIFY] ZQI: 9.4 → optimal → green
+[23:33:51] [CLASSIFY] ZQI=9.4 → 🟢 green
+[23:33:51] [CLASSIFY] FatOxEfficiency: 0.609 → optimal → green
+[23:33:51] [CLASSIFY] FatOxEfficiency=0.609 → 🟢 green
+[23:33:51] [CLASSIFY] Polarisation: skipped (multi-dimensional metric)
+[23:33:51] [CLASSIFY] Polarisation=0.565 → — computed
+[23:33:51] [CLASSIFY] PolarisationIndex: skipped (multi-dimensional metric)
+[23:33:51] [CLASSIFY] PolarisationIndex=2.531 → — computed
+[23:33:51] [CLASSIFY] StressTolerance: 0.78 → underload → amber
+[23:33:51] [CLASSIFY] StressTolerance=0.78 → 🟠 amber
+[23:33:51] [CLASSIFY] FOxI: 60.9 → moderate → amber
+[23:33:51] [CLASSIFY] FOxI=60.9 → 🟠 amber
+[23:33:51] [CLASSIFY] CUR: 39.1 → balanced → green
+[23:33:51] [CLASSIFY] CUR=39.1 → 🟢 green
+[23:33:51] [CLASSIFY] GR: 1.62 → optimal → green
+[23:33:51] [CLASSIFY] GR=1.62 → 🟢 green
+[23:33:51] [CLASSIFY] MES: 22.6 → optimal → green
+[23:33:51] [CLASSIFY] MES=22.6 → 🟢 green
+[23:33:51] [T2] ✅ Derived metrics fully computed and classified.
+[23:33:51] [SUMMARY] ACWR=1.0, Monotony=0.57, Strain=139.6, FatOxEff=0.609, ZQI=9.4, StressTol=0.78
+[23:33:51] [T2-ACTIONS] Derived metrics integrated
+[23:33:51] [LOAD-ICU] CTL=44.853546 ATL=40.96221 TSB=3.8913360000000026
+[23:33:51] [EXT-LOAD] Using injected load_metrics CTL=44.853546 ATL=40.96221 TSB=3.8913360000000026
+[23:33:51] [Z2] No valid numeric lactate samples (samples=0, mean=None) → skipping personalized Z2.
+[23:33:51] [ZONES] 💤 No lactate data available → FTP defaulted
+[23:33:51] [EXT] Extended metrics assembled (ICU authoritative load)
+[23:33:51] [EXT-POST] extended=False adaptation=False trend=False corr=False
+[23:33:51] [T3-PI] Starting Performance Intelligence module…
+[23:33:51] [T3] Performance Intelligence start (weekly)
+[23:33:51] [T3] Weekly FULL rows: 3
+[23:33:51] [T3][W′] Utilization divergence -0.065 (mean_dep=0.235, baseline=0.3)
+[23:33:51] [T3][WDRM] Anaerobic Repeatability (7d) max_dep_pct=0.4709760030351892 mean_dep_pct=0.2354880015175946 high_dep_sessions=0 joules_above_ftp=44410.0
+[23:33:51] [T3][ISDM] Durability (7d) mean_decoupling=9.59179355 max_decoupling=18.853348 high_drift_sessions=1 long_sessions=1
+[23:33:51] [T3][NDLI] Neural Density (7d) rolling_joules=44410.0 high_intensity_days=1 mean_if=0.6768155933333334
+[23:33:51] [T3-STATE] signals → autonomic=0.91, ATL=40.96221, CTL=44.853546, TSB=3.8913360000000026
+[23:33:51] [T3-STATE] operational_state → load_accepting
+[23:33:51] [T3 OUTPUT KEYS] ['anaerobic_repeatability', 'model_diagnostics', 'durability', 'neural_density']
+[23:33:51] [T3][NUTRITION] Starting demand model
+[23:33:51] [T3][NUTRITION] Evaluating balance
+[23:33:51] [T3][NUTRITION] weight=85.0
+[23:33:51] [T3-PI] Completed: keys=['anaerobic_repeatability', 'model_diagnostics', 'durability', 'neural_density']
+[23:33:51] [T3-ESPE] Starting Energy System Progression Engine…
+[23:33:51] [T3-ESPE] No power_curve block present — skipping
+[23:33:51] [T3] Starting Tier-3 Future Forecast module …
+[23:33:51] ───────────────────────────────────────────────
+[23:33:51] [T3] 🧭 Starting Future Forecast (mode=auto)
+[23:33:51] [PREFETCH] Using prefetched 'calendar' (7 records)
+[23:33:51] [T3] ✅ Calendar resolved (7 events)
+[23:33:51] [T3] ⚙️ Seeded CTL=50.42, ATL=67.46, TSB=-17.04
+[23:33:51] [T3] 🧠 Intervals-aligned Fatigue/Form classification → PRODUCTIVE_FATIGUE (TSB=-17.04)
+[23:33:51] [T3] ✅ Forecast ready — class=productive_fatigue, actions=1
+[23:33:51] [T3] Summary: {
+  "start_date": "2026-03-30",
+  "end_date": "2026-04-05",
+  "horizon_days": 6,
+  "CTL_future": 50.42,
+  "ATL_future": 67.46,
+  "TSB_future": -17.04,
+  "load_trend": "increasing",
+  "fatigue_class": "productive_fatigue"
+}
+[23:33:51] [T3] Future action: Productive training fatigue
+[23:33:51] [T3] Future forecast added: CTL_future=50.42, ATL_future=67.46, TSB_future=-17.04
+[23:33:51] [T3] Starting Tier-3 ADE ...
+[23:33:51] [T3] ADE ready → directive=Maintain training structure
+[23:33:51] [PATCH-LOCK] Preserved load_metrics before validator: {'CTL': {'value': 44.853546, 'status': 'icu'}, 'ATL': {'value': 40.96221, 'status': 'icu'}, 'TSB': {'value': 3.8913360000000026, 'status': 'icu'}}
+[23:33:51] 🧩 Render mode → full+metrics
+[23:33:51] [SYNC] Canonical totals restored from Tier-2 enforced totals.
+[23:33:51] [RENDER-READY] Totals source=tier2_enforced_totals | hours=5.218055555555556 | tss=245 | distance=114.05197
+[23:33:51] [FINALIZER] First and only render pass permitted.
+[23:33:51] [T2] Injected dual totals → cycling={'hours': np.float64(4.514166666666667), 'distance': np.float64(114.05197), 'tss': np.int64(213), 'sessions': 2}, all={'hours': np.float64(5.218055555555556), 'distance': np.float64(114.05197), 'tss': np.int64(245), 'sessions': 3}
+[23:33:51] [PRE-SEMANTIC] extended=False adaptation=False trend=False corr=False
+[23:33:51] [REPORT-ZONES] Injected thresholds for default → power=True, hr=True, pace=False, swim=False
+[23:33:51] [PHASES] ---- Phase detection start (v17.9) ----
+[23:33:51] [PHASES] ✅ Completed detection (2 merged phases)
+[23:33:51] [PHASES] → Base (2026-03-23 → 2026-03-23) | TSB=0.0, CTL=201.0 [|ΔTSS|<5% & TSB≈0]
+[23:33:51] [PHASES] → Recovery (2026-03-30 → 2026-03-30) | TSB=59.81, CTL=156.14 [TSB>10 & TSS<300]
+[23:33:51] [PHASES] ---- Phase detection end ----
+[23:33:51] [CHECKPOINT] Keys in context before semantic build: ['activities_light', 'wellness', 'athlete', 'calendar', 'render_summary', 'include_coaching_metrics', 'postRenderAudit', 'debug_mode', 'report_type', 'debug_trace', 'semantic_mode', 'prefetched', 'athleteProfile', 'timezone', 'reportMode', 'athlete_now', 'athlete_today', 'range', 'prefetch_done', 'df_light', 'df_light_full', 'activities_full', 'df_light_slice', 'snapshot_7d_json', 'tier0_snapshotTotals_7d', 'report_mode', 'window_start', 'window_end', 'espe_curves', 'df_master', 'df_raw_activities', 'auditPartial', 'auditFinal', 'window_summary', 'power_curve', 'df_light_raw', '_df_light_90d', 'chunk_mode', 'light_days', 'full_days', 'knowledge', 'tier1_visibleTotals', 'weeklyEventLogBlock', 'df_events', 'wellness_summary', 'df_daily', 'daily_load', 'load_distribution', 'wellness_metrics', 'subjective_metrics', 'df_wellness', 'dailyMerged', 'ctl', 'atl', 'tsb', 'load_metrics', 'zone_dist_power', 'zone_dist_hr', 'zone_dist_pace', 'zone_dist_swim', 'zones', 'icu_zones', 'icu_power_zones', 'icu_hr_zones', 'icu_pace_zones', 'zone_dist_power_7d', 'zone_dist_hr_7d', 'zone_dist_pace_7d', 'zone_scope', 'outliers', '_df_scope_full', 'tier2_enforced_totals', 'eventTotals', 'df_event_only_preview', 'event_count', 'trace', 'locked_totalHours', 'locked_totalTss', 'locked_totalDistance', 'totalHours', 'totalTss', 'tier2_eventTotals_eventOnly', 'auditPrecision', 'fetch_status', 'hrv_source', 'hrv_available', 'wellness_coverage', 'HRV', 'zone_dist_fused', 'polarisation_sport', 'zone_dist_combined', 'Polarisation', 'PolarisationIndex', 'lactate_summary', 'hr_only_mode', 'power_data_present', 'if_proxy_used', 'derived_warnings', 'ACWR', 'Monotony', 'Strain', 'FatigueTrend', 'ZQI', 'FatOxEfficiency', 'FOxI', 'CUR', 'GR', 'MES', 'StressTolerance', 'derived_metrics', '_deload_state', 'ui_flag', 'actions', 'metric_signals', 'zones_calibration_source', 'zones_calibration_reason', 'performance_intelligence', 'PI_VERSION', 'operational_state', 'operational_state_context', 'training_state', 'nutrition_balance', 'future_forecast', 'actions_future', 'adaptive_decision', '_locked_load_metrics', 'render_mode', 'totalDistance', 'FINALIZER_LOCKED_GLOBAL', 'summary_all', 'summary_cycling', 'enforce_render_source', 'allow_intent_inference', 'phases']
+[23:33:51] [CHECKPOINT] zone_dist_power exists: True
+[23:33:51] [CHECKPOINT] zone_dist_fused exists: True
+[23:33:51] [SEMANTIC-FORCE] Using preserved _df_scope_full (3 rows, 200 cols)
+[23:33:51] [SEMANTIC] Injected fused zones → sports=['Ride']
+[23:33:51] [SEMANTIC] ✅ Injected combined zones from Tier-2 (authoritative)
+[23:33:51] [THRESHOLDS][Polarisation_fused] Using BASE thresholds {'red': (0.0, 0.64), 'green': (0.8, 3.0), 'amber': (0.65, 0.8)}
+[23:33:51] [THRESHOLDS][Polarisation_fused] Value 0.565
+[23:33:51] [THRESHOLDS][Polarisation_fused] Bands green=(0.8, 3.0) amber=(0.65, 0.8) red=(0.0, 0.64)
+[23:33:51] [THRESHOLDS][Polarisation_fused] Classification → red
+[23:33:51] [SEMANTIC] Polarisation_fused=0.565
+[23:33:51] [THRESHOLDS][Polarisation_combined] Using BASE thresholds {'red': (0.0, 0.59), 'green': (0.78, 3.0), 'amber': (0.6, 0.78)}
+[23:33:51] [THRESHOLDS][Polarisation_combined] Value 2.531
+[23:33:51] [THRESHOLDS][Polarisation_combined] Bands green=(0.78, 3.0) amber=(0.6, 0.78) red=(0.0, 0.59)
+[23:33:51] [THRESHOLDS][Polarisation_combined] Classification → green
+[23:33:51] [SEMANTIC] Polarisation_combined=2.531
+[23:33:51] [SEMANTIC] ✅ Injected Polarisation variants → ['fused', 'combined']
+[23:33:51] [SEMANTIC] Lactate defaults (fallback) → LT1=2.0, LT2=4.0, corr≥0.6
+[23:33:51] [SEMANTIC] ⚠️ Lactate/HRV threshold integration failed: 'hrv_defaults'
+[23:33:51] [SEMANTIC] Derived period from weekly dataset → 2026-03-24 → 2026-03-30
+[23:33:51] [SEMANTIC] Injected HRV → mean=47.3, latest=43.0, trend_7d=0.0, samples=43, source=garmin
+[23:33:51] [SEMANTIC] Wellness subjective markers → keys=[]
+[23:33:51] [SEMANTIC] Injected lactate_summary → mean=None, latest=None, samples=None
+[23:33:51] [SEMANTIC] No personalized_z2 data available in context
+[23:33:51] [DEBUG-EVENTS] sample type=<class 'pandas.DataFrame'> rows=3 cols_sample=['id', 'start_date_local', 'type', 'icu_ignore_time', 'icu_pm_cp', 'icu_pm_w_prime', 'icu_pm_p_max',
+[23:33:51] [SEMANTIC] EVENTS: populated semantic.events with 3 entries
+[23:33:51] [WEEKLY] Using df_ref with 3 rows for weekly aggregation
+[23:33:51] [CHECK] Before weekly aggregation → 3 rows | Dist=114.1 km | Hours=5.2 h | TSS=245
+[23:33:52] [CHECK] After weekly aggregation → 2 weeks | Dist=114.1 km | Hours=5.2 h | TSS=245
+[23:33:52] [WEEKLY-TRACE] df_src rows=3, total distance=114.1 km, hours=5.2, tss=245
+[23:33:52] [WEEKLY-TRACE] df_week rows=2, grouped distance=114.1 km, hours=5.2, tss=245
+[23:33:52] ───────────────────────────────────────────────
+[23:33:52] [T3] 🧭 Starting Future Forecast (mode=auto)
+[23:33:52] [PREFETCH] Using prefetched 'calendar' (7 records)
+[23:33:52] [T3] ✅ Calendar resolved (7 events)
+[23:33:52] [T3] ⚙️ Seeded CTL=50.42, ATL=67.46, TSB=-17.04
+[23:33:52] [T3] 🧠 Intervals-aligned Fatigue/Form classification → PRODUCTIVE_FATIGUE (TSB=-17.04)
+[23:33:52] [T3] ✅ Forecast ready — class=productive_fatigue, actions=1
+[23:33:52] [T3] Summary: {
+  "start_date": "2026-03-30",
+  "end_date": "2026-04-05",
+  "horizon_days": 6,
+  "CTL_future": 50.42,
+  "ATL_future": 67.46,
+  "TSB_future": -17.04,
+  "load_trend": "increasing",
+  "fatigue_class": "productive_fatigue"
+}
+[23:33:52] [T3] Future action: Productive training fatigue
+[23:33:52] [THRESHOLDS][ACWR] Using BASE thresholds {'green': (0.8, 1.3), 'amber': (0.6, 1.5)}
+[23:33:52] [THRESHOLDS][ACWR] Value 1.0
+[23:33:52] [THRESHOLDS][ACWR] Bands green=(0.8, 1.3) amber=(0.6, 1.5) red=None
+[23:33:52] [THRESHOLDS][ACWR] Classification → green
+[23:33:52] [THRESHOLDS][Monotony] Using BASE thresholds {'green': (1.0, 2.0), 'amber': (0.8, 2.5)}
+[23:33:52] [THRESHOLDS][Monotony] Value 0.57
+[23:33:52] [THRESHOLDS][Monotony] Bands green=(1.0, 2.0) amber=(0.8, 2.5) red=None
+[23:33:52] [THRESHOLDS][Monotony] Classification → amber
+[23:33:52] [THRESHOLDS][Strain] Using BASE thresholds {'green': (0, 2500), 'amber': (2500, 4000), 'red': (4000, 8000)}
+[23:33:52] [THRESHOLDS][Strain] Value 139.6
+[23:33:52] [THRESHOLDS][Strain] Bands green=(0, 2500) amber=(2500, 4000) red=(4000, 8000)
+[23:33:52] [THRESHOLDS][Strain] Classification → green
+[23:33:52] [THRESHOLDS][ZQI] Using BASE thresholds {'green': (5, 15), 'amber': (3, 5), 'red': (0, 3)}
+[23:33:52] [THRESHOLDS][ZQI] Value 9.4
+[23:33:52] [THRESHOLDS][ZQI] Bands green=(5, 15) amber=(3, 5) red=(0, 3)
+[23:33:52] [THRESHOLDS][ZQI] Classification → green
+[23:33:52] [THRESHOLDS][FatOxEfficiency] Using BASE thresholds {'green': (0.4, 0.8), 'amber': (0.3, 0.9)}
+[23:33:52] [THRESHOLDS][FatOxEfficiency] Value 0.609
+[23:33:52] [THRESHOLDS][FatOxEfficiency] Bands green=(0.4, 0.8) amber=(0.3, 0.9) red=None
+[23:33:52] [THRESHOLDS][FatOxEfficiency] Classification → green
+[23:33:52] [THRESHOLDS][Polarisation] Using BASE thresholds {'red': (0.0, 0.65), 'amber': (0.65, 0.85), 'green': (0.85, 3.0)}
+[23:33:52] [THRESHOLDS][Polarisation] Value 0.565
+[23:33:52] [THRESHOLDS][Polarisation] Bands green=(0.85, 3.0) amber=(0.65, 0.85) red=(0.0, 0.65)
+[23:33:52] [THRESHOLDS][Polarisation] Classification → red
+[23:33:52] [THRESHOLDS][PolarisationIndex] Using BASE thresholds {'red': (0.0, 1.5), 'amber': (1.5, 2.0), 'green': (2.0, 4.0)}
+[23:33:52] [THRESHOLDS][PolarisationIndex] Value 2.531
+[23:33:52] [THRESHOLDS][PolarisationIndex] Bands green=(2.0, 4.0) amber=(1.5, 2.0) red=(0.0, 1.5)
+[23:33:52] [THRESHOLDS][PolarisationIndex] Classification → green
+[23:33:52] [THRESHOLDS][FOxI] Using BASE thresholds {'green': (30, 80), 'amber': (20, 90)}
+[23:33:52] [THRESHOLDS][FOxI] Value 60.9
+[23:33:52] [THRESHOLDS][FOxI] Bands green=(30, 80) amber=(20, 90) red=None
+[23:33:52] [THRESHOLDS][FOxI] Classification → green
+[23:33:52] [THRESHOLDS][CUR] Using BASE thresholds {'green': (30, 70), 'amber': (20, 80)}
+[23:33:52] [THRESHOLDS][CUR] Value 39.1
+[23:33:52] [THRESHOLDS][CUR] Bands green=(30, 70) amber=(20, 80) red=None
+[23:33:52] [THRESHOLDS][CUR] Classification → green
+[23:33:52] [THRESHOLDS][GR] Using BASE thresholds {'green': (0.5, 2.0), 'amber': (0.3, 3.0)}
+[23:33:52] [THRESHOLDS][GR] Value 1.62
+[23:33:52] [THRESHOLDS][GR] Bands green=(0.5, 2.0) amber=(0.3, 3.0) red=None
+[23:33:52] [THRESHOLDS][GR] Classification → green
+[23:33:52] [THRESHOLDS][MES] Using BASE thresholds {'green': (20, 100), 'amber': (10, 120)}
+[23:33:52] [THRESHOLDS][MES] Value 22.6
+[23:33:52] [THRESHOLDS][MES] Bands green=(20, 100) amber=(10, 120) red=None
+[23:33:52] [THRESHOLDS][MES] Classification → green
+[23:33:52] [THRESHOLDS][StressTolerance] Using BASE thresholds {'green': (0.8, 1.2), 'amber': (0.6, 1.4), 'red': (1.4, 3.0)}
+[23:33:52] [THRESHOLDS][StressTolerance] Value 0.78
+[23:33:52] [THRESHOLDS][StressTolerance] Bands green=(0.8, 1.2) amber=(0.6, 1.4) red=(1.4, 3.0)
+[23:33:52] [THRESHOLDS][StressTolerance] Classification → amber
+[23:33:52] [SEM] CTL/ATL/TSB sourced from wellness_summary fallback
+[23:33:52] [SEMANTIC] 🌤️ Added 1 future actions to semantic JSON.
+[23:33:52] [THRESHOLDS][max_depletion_pct_7d] Using BASE thresholds {}
+[23:33:52] [THRESHOLDS][max_depletion_pct_7d] Value 0.4709760030351892
+[23:33:52] [THRESHOLDS][max_depletion_pct_7d] EMPTY THRESHOLDS
+[23:33:52] [THRESHOLDS][mean_depletion_pct_7d] Using BASE thresholds {}
+[23:33:52] [THRESHOLDS][mean_depletion_pct_7d] Value 0.2354880015175946
+[23:33:52] [THRESHOLDS][mean_depletion_pct_7d] EMPTY THRESHOLDS
+[23:33:52] [THRESHOLDS][moderate_depletion_sessions_7d] Using BASE thresholds {'green': (0, 3), 'amber': (4, 6), 'red': (7, 10)}
+[23:33:52] [THRESHOLDS][moderate_depletion_sessions_7d] Value 0.0
+[23:33:52] [THRESHOLDS][moderate_depletion_sessions_7d] Bands green=(0, 3) amber=(4, 6) red=(7, 10)
+[23:33:52] [THRESHOLDS][moderate_depletion_sessions_7d] Classification → green
+[23:33:52] [THRESHOLDS][high_depletion_sessions_7d] Using BASE thresholds {'green': (0, 2), 'amber': (3, 4)}
+[23:33:52] [THRESHOLDS][high_depletion_sessions_7d] Value 0.0
+[23:33:52] [THRESHOLDS][high_depletion_sessions_7d] Bands green=(0, 2) amber=(3, 4) red=None
+[23:33:52] [THRESHOLDS][high_depletion_sessions_7d] Classification → green
+[23:33:52] [THRESHOLDS][total_joules_above_ftp_7d] Using BASE thresholds {}
+[23:33:52] [THRESHOLDS][total_joules_above_ftp_7d] Value 44410.0
+[23:33:52] [THRESHOLDS][total_joules_above_ftp_7d] EMPTY THRESHOLDS
+[23:33:52] [CRITERIA][total_joules_above_ftp_7d] ERROR could not convert string to float: '100kJ'
+[23:33:52] [THRESHOLDS][w_prime_divergence_7d] Using BASE thresholds {'green': (-0.1, 0.15), 'amber': (0.15, 0.3), 'red': (0.3, 1.0)}
+[23:33:52] [THRESHOLDS][w_prime_divergence_7d] Value -0.06451199848240538
+[23:33:52] [THRESHOLDS][w_prime_divergence_7d] Bands green=(-0.1, 0.15) amber=(0.15, 0.3) red=(0.3, 1.0)
+[23:33:52] [THRESHOLDS][w_prime_divergence_7d] Classification → green
+[23:33:52] [THRESHOLDS][mean_decoupling_7d] Using BASE thresholds {}
+[23:33:52] [THRESHOLDS][mean_decoupling_7d] Value 9.59179355
+[23:33:52] [THRESHOLDS][mean_decoupling_7d] EMPTY THRESHOLDS
+[23:33:52] [THRESHOLDS][max_decoupling_7d] Using BASE thresholds {}
+[23:33:52] [THRESHOLDS][max_decoupling_7d] Value 18.853348
+[23:33:52] [THRESHOLDS][max_decoupling_7d] EMPTY THRESHOLDS
+[23:33:52] [THRESHOLDS][high_drift_sessions_7d] Using BASE thresholds {'green': (0, 2), 'amber': (3, 4)}
+[23:33:52] [THRESHOLDS][high_drift_sessions_7d] Value 1.0
+[23:33:52] [THRESHOLDS][high_drift_sessions_7d] Bands green=(0, 2) amber=(3, 4) red=None
+[23:33:52] [THRESHOLDS][high_drift_sessions_7d] Classification → green
+[23:33:52] [THRESHOLDS][long_sessions_7d] Using BASE thresholds {}
+[23:33:52] [THRESHOLDS][long_sessions_7d] Value 1.0
+[23:33:52] [THRESHOLDS][long_sessions_7d] EMPTY THRESHOLDS
+[23:33:52] [THRESHOLDS][rolling_joules_above_ftp_7d] Using BASE thresholds {'green': (0, 150000), 'amber': (150000, 250000), 'red': (250000, 1000000)}
+[23:33:52] [THRESHOLDS][rolling_joules_above_ftp_7d] Value 44410.0
+[23:33:52] [THRESHOLDS][rolling_joules_above_ftp_7d] Bands green=(0, 150000) amber=(150000, 250000) red=(250000, 1000000)
+[23:33:52] [THRESHOLDS][rolling_joules_above_ftp_7d] Classification → green
+[23:33:52] [THRESHOLDS][high_intensity_days_7d] Using BASE thresholds {'green': (0, 2), 'amber': (3, 4), 'red': (5, 7)}
+[23:33:52] [THRESHOLDS][high_intensity_days_7d] Value 1.0
+[23:33:52] [THRESHOLDS][high_intensity_days_7d] Bands green=(0, 2) amber=(3, 4) red=(5, 7)
+[23:33:52] [THRESHOLDS][high_intensity_days_7d] Classification → green
+[23:33:52] [THRESHOLDS][mean_if_7d] Using BASE thresholds {}
+[23:33:52] [THRESHOLDS][mean_if_7d] Value 0.6768155933333334
+[23:33:52] [THRESHOLDS][mean_if_7d] EMPTY THRESHOLDS
+[23:33:52] [THRESHOLDS][mean_efficiency_factor_7d] Using BASE thresholds {}
+[23:33:52] [THRESHOLDS][mean_efficiency_factor_7d] Value 1.2305674
+[23:33:52] [THRESHOLDS][mean_efficiency_factor_7d] EMPTY THRESHOLDS
+[23:33:52] [THRESHOLDS][mean_variability_index_7d] Using BASE thresholds {}
+[23:33:52] [THRESHOLDS][mean_variability_index_7d] Value 1.1443662
+[23:33:52] [THRESHOLDS][mean_variability_index_7d] EMPTY THRESHOLDS
+[23:33:52] [SEMANTIC] Injected load_distribution → rest_days=4
+[23:33:52] [SEMANTIC] Injected training_state → Stable | Planned structured session
+[23:33:52] [SEMANTIC] energy_system_progression not present
+[23:33:52] [MICROCYCLE-CALENDAR] events=7
+[23:33:52] [MICROCYCLE-CALENDAR] id=101355940 date=2026-03-30T00:00:00 load=45 name=Z2 Re-entry Ride
+[23:33:52] [MICROCYCLE-CALENDAR] id=101355945 date=2026-03-31T00:00:00 load=68 name=Climbing Sweet Spot
+[23:33:52] [MICROCYCLE-CALENDAR] id=101355951 date=2026-04-01T00:00:00 load=86 name=Z2 Endurance
+[23:33:52] [MICROCYCLE-CALENDAR] id=101355959 date=2026-04-02T00:00:00 load=108 name=Over Under Climbing
+[23:33:52] [MICROCYCLE-CALENDAR] id=101355965 date=2026-04-03T00:00:00 load=28 name=Recovery Ride
+[23:33:52] [MICROCYCLE-CALENDAR] id=101355972 date=2026-04-04T00:00:00 load=196 name=Long Ride Controlled Hills
+[23:33:52] [MICROCYCLE-CALENDAR] id=101355977 date=2026-04-05T00:00:00 load=33 name=Recovery Spin
+[23:33:52] [MICROCYCLE] {'week_iso': '2026-W14', 'weekly_target_tss': 45.0, 'completed_tss': 44.0, 'planned_remaining_tss': 519.0, 'projected_total_tss': 563.0, 'delta_to_target': 518.0, 'basis': 'The microcycle is based on the current ISO week (Monday to Sunday) and includes planned and completed with compliance,', 'completed_hours': 1.0, 'projected_hours': 12.48}
+[23:33:52] [PHASES] 🔧 Current week projection applied (TSS=563.0, hours=12.48, completed=44.0, remaining=519.0)
+[23:33:52] [PHASES] ✅ Injected CTL/ATL/TSB from df_light (2 weekly rows) — mean TSB=-0.24
+[23:33:52] [PHASES] 🔄 Propagated calc_method/context into weekly roll-up
+[23:33:52] [PHASES] ✅ Created 2 macro phase blocks (merged unclassified weeks where needed)
+[23:33:52] [PHASES] ✅ Created 2 sequential phase blocks (no overlaps)
+[23:33:52] [PHASES] ✅ Cleaned weekly phase output (2 weeks)
+[23:33:52] [TREND] Derived from FINAL weekly phases → {'load_trend': '—', 'fitness_trend': '—', 'fatigue_trend': '—'}
+[23:33:52] [THRESHOLDS][FOxI] Using BASE thresholds {'green': (30, 80), 'amber': (20, 90)}
+[23:33:52] [THRESHOLDS][FOxI] Value 60.9
+[23:33:52] [THRESHOLDS][FOxI] Bands green=(30, 80) amber=(20, 90) red=None
+[23:33:52] [THRESHOLDS][FOxI] Classification → green
+[23:33:52] [THRESHOLDS][ACWR] Using BASE thresholds {'green': (0.8, 1.3), 'amber': (0.6, 1.5)}
+[23:33:52] [THRESHOLDS][ACWR] Value 1.0
+[23:33:52] [THRESHOLDS][ACWR] Bands green=(0.8, 1.3) amber=(0.6, 1.5) red=None
+[23:33:52] [THRESHOLDS][ACWR] Classification → green
+[23:33:52] [CONTRACT] ⚠️ Unexpected keys in 'weekly' report: {'planned_summary_by_date', 'insights', 'correlation_metrics', 'weekly_phases', 'adaptation_metrics', 'trend_metrics', 'phases', 'planned_events', 'performance_summary', 'header', 'debug_trace', 'phases_summary'}
+[23:33:52] ✅ Render + validation completed for weekly

@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:intervals.icu)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "Bash(curl -s \"https://raw.githubusercontent.com/TheElvenPath/intervalsicugptcoach-public/main/semantic_json_builder.py\")",
+      "Bash(curl -s \"https://raw.githubusercontent.com/TheElvenPath/intervalsicugptcoach-public/main/coaching_heuristics.py\")",
+      "Bash(curl -s \"https://raw.githubusercontent.com/TheElvenPath/intervalsicugptcoach-public/main/audit_core/report_controller.py\")",
+      "Bash(git clone:*)",
+      "Bash(cp -r _upstream/audit_core .)",
+      "Bash(cp _upstream/athlete_profile.py .)",
+      "Bash(cp _upstream/coaching_heuristics.py .)",
+      "Bash(cp _upstream/coaching_profile.py .)",
+      "Bash(cp _upstream/coaching_cheat_sheet.py .)",
+      "Bash(grep -v \"^$\")",
+      "Bash(python -c \":*)",
+      "Bash(pip install:*)"
+    ]
+  }
+}
