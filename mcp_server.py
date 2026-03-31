@@ -88,9 +88,20 @@ def list_activities(oldest: str = "", newest: str = "") -> str:
 
 
 @mcp.tool()
-def get_activity(activity_id: int) -> str:
-    """Return full details for a single activity by its numeric ID."""
-    data = _client().get_activity(activity_id)
+def get_activity(activity_id: str) -> str:
+    """Return full details for a single activity.
+
+    activity_id: the activity ID as returned by list_activities, e.g. "i126379241".
+    The "i" prefix is required — pass the full ID string, not just the number.
+    Returns a list with one activity object containing power zones, HR zones,
+    streams, laps, decoupling, efficiency factor and all computed metrics.
+    """
+    # Ensure i-prefix is present
+    aid = activity_id if str(activity_id).startswith("i") else f"i{activity_id}"
+    data = _client().get_activity(aid)
+    # API returns a list — unwrap to single object if possible
+    if isinstance(data, list) and len(data) == 1:
+        data = data[0]
     return json.dumps(data, ensure_ascii=False, indent=2)
 
 
