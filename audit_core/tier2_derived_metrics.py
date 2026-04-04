@@ -1126,19 +1126,13 @@ def compute_derived_metrics(df_events, context):
             "icon": classified["MES"]["icon"],
             "desc": "Metabolic efficiency score",
         },
-        #"LoadVariabilityIndex": {   #moved to internal only now not a coaching metric 
-        #    "value": lvi,
-        #    "classification": classified["LoadVariabilityIndex"]["state"],
-        #    "icon": classified["LoadVariabilityIndex"]["icon"],
-        #    "desc": "Load variability score (1 − monotony/5)"
-        #},
         "StressTolerance": {
             "value": stress_tolerance,
             "classification": classified["StressTolerance"]["state"],
             "icon": classified["StressTolerance"]["icon"],
             "desc": "Sustainable training tolerance",
         },
-    }   
+    }
     # ======================================================
     # 🩵 HR-only Fallback Annotations (metadata for reports)
     # ======================================================

@@ -460,6 +460,7 @@ def compute_nutrition_demand(context):
 
     daily = context.get("wellness")
 
+    daily = daily.sort_index().tail(7)
     if daily is None or daily.empty:
         return
 
@@ -524,7 +525,17 @@ def compute_nutrition_balance(context):
     debug(context, "[T3][NUTRITION] Evaluating balance")
 
     demand = context.get("nutrition_demand") or {}
-    daily = context.get("wellness")  # DataFrame
+    daily = context.get("wellness")
+
+    if daily is None or daily.empty:
+        context["nutrition_balance"] = {
+            "status": "no_data",
+            "confidence": "none"
+        }
+        return
+
+    daily = daily.sort_index().tail(7) #LIMIT to 7 NOT 42 days
+
     weight = (context.get("athlete") or {}).get("icu_weight")
 
     debug(context, f"[T3][NUTRITION] weight={weight}")

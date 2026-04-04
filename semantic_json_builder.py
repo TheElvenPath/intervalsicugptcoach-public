@@ -3,28 +3,8 @@ semantic_json_builder.py
 ------------------------
 
 Builds a FULL semantic DICT coaching graph based on the Unified Reporting
-Framework v5.1, Coaching Profile, Coaching Cheat Sheet, and all Tier-2 modules.
+Framework v5.1, Coaching Profile, Coaching Cheat Sheet, and all Tier-2/3 modules.
 
-Includes (URF v5.1 Canonical Layout):
- - Authoritative totals (hours, TSS, distance)
- - Derived metrics (Tier-2 + contextual)
- - Extended metrics (e.g., lactate, endurance zones)
- - Adaptation metrics
- - Trend metrics
- - Correlation metrics
- - Wellness (sanitised + HRV integration)
- - Thresholds / interpretations / coaching links
- - Insights (aggregated + classification)
- - Insight view (UI-ready grouping)
- - Coaching actions (Tier-2 guidance + future actions)
- - Phase detection (Base → Build → Peak → Taper → Recovery)
- - Phases weekly summary (for seasonal and summary reports)
- - Event previews (stable canonical structure)
- - Planned events + daily load summaries
- - Future forecast (Tier-3 projections)
- - Athlete identity / profile / context (flattened Intervals.icu schema)
- - Zones (power / HR / pace + lactate_calibration metadata)
- - Meta header (URF v5.1 framework + reporting window + scope)
 """
 
 
@@ -42,6 +22,7 @@ from audit_core.tier2_derived_metrics import classify_marker
 from textwrap import dedent
 from questions_engine import detect_signals, select_question, generate_question, dominant_signal
 from audit_core.utils import set_time_context
+from prompt_builder import build_system_prompt_from_header
 
 # ---------------------------------------------------------
 # Helpers
@@ -1715,7 +1696,7 @@ def build_semantic_json(context):
 
 
     # ---------------------------------------------------------
-    # EVENTS (canonical)
+    # EVENTS (canonical → render-optimised)
     # ---------------------------------------------------------
     df_events = context["_df_scope_full"]
 
@@ -1723,26 +1704,8 @@ def build_semantic_json(context):
 
         debug(
             context,
-            f"[DEBUG-EVENTS] sample type={type(df_events)} rows={len(df_events)} "
-            f"cols_sample={str(list(df_events.columns))[:100]}"
+            f"[DEBUG-EVENTS] rows={len(df_events)} cols_sample={str(list(df_events.columns))[:100]}"
         )
-
-        core_fields = [
-            "id","start_date_local", "name", "type", "paired_event_id", "compliance",
-            "distance", "moving_time", "icu_training_load",
-            "average_heartrate", "average_cadence",
-            "icu_average_watts", "icu_variability_index", "icu_weighted_avg_watts",
-            "strain_score", "trimp", "hr_load",
-            "ss", "ss_cp", "ss_w", "ss_pmax",
-            "icu_efficiency_factor", "icu_intensity", "IF", "icu_power_hr",
-            "decoupling", "icu_pm_w_prime", "icu_w_prime",
-            "icu_max_wbal_depletion", "icu_joules_above_ftp",
-            "total_elevation_gain", "calories", "VO2MaxGarmin",
-            "source", "core_temp_mean", "core_temp_max",
-            "core_temp_drift_per_hour", "device_name", "compliance", "icu_rpe", "feel"
-        ]
-
-        available_fields = [f for f in core_fields if f in df_events.columns]
 
         semantic["events"] = []
 
@@ -1750,129 +1713,129 @@ def build_semantic_json(context):
 
             ev = {}
 
-            # 1️⃣ Identity fields
-            for key in ["id", "start_date_local", "name", "type"]:
-                if key in row and pd.notna(row[key]):
-                    ev[key] = row[key]
+            # ---------------------------------------------------------
+            # 1️⃣ Identity
+            # ---------------------------------------------------------
+            name = row.get("name")
+            if not name:
+                continue
 
-            # build activity link
+            ev["name"] = name
+            ev["type"] = row.get("type")
+
+            if pd.notna(row.get("start_date_local")):
+                ev["start_date_local"] = convert_to_str(row["start_date_local"])
+
+            # ---------------------------------------------------------
+            # 2️⃣ Activity link
+            # ---------------------------------------------------------
             activity_id = row.get("id") or row.get("activity_id")
 
             if pd.notna(activity_id):
                 activity_id = str(activity_id)
-
                 if not activity_id.startswith("i"):
                     activity_id = f"i{activity_id}"
 
-                ev["activity_id"] = activity_id
-                ev["activity_link"] = f'https://intervals.icu/activities/{activity_id}'
-
-            # 2️⃣ Scalar fields
-            for k in available_fields:
-
-                val = row.get(k)
-
-                # skip empty / NaN
-                if val is None:
-                    continue
-                if isinstance(val, float) and pd.isna(val):
-                    continue
-
-                # convert numpy → python scalar
-                if hasattr(val, "item"):
-                    try:
-                        val = val.item()
-                    except Exception:
-                        pass
-
-                ev[k] = val
-
-            # Intensity Factor (canonicalised)
-                val = row.get("icu_intensity")
-
-                if val is not None and pd.notna(val):
-                    try:
-                        val = float(val)
-
-                        # normalize legacy % values
-                        if val > 2:
-                            val = val / 100
-
-                        ev["IF"] = round(val, 3)
-
-                    except Exception:
-                        pass
+                ev["activity_link"] = f"https://intervals.icu/activities/{activity_id}"
 
             # ---------------------------------------------------------
-            # Subjective perception (RPE emoji + Feel emoji)
+            # 3️⃣ Core render fields (SAFE)
             # ---------------------------------------------------------
+            val = row.get("moving_time")
+            ev["duration"] = int(val) if pd.notna(val) else 0
 
+            val = row.get("distance")
+            ev["distance"] = round(float(val) / 1000, 1) if pd.notna(val) else 0
+
+            val = row.get("icu_training_load")
+            ev["tss"] = int(val) if pd.notna(val) else 0
+
+            # ---------------------------------------------------------
+            # 4️⃣ IF (icu_intensity ONLY — canonical)
+            # ---------------------------------------------------------
+            val = row.get("icu_intensity")
+
+            if pd.notna(val):
+                try:
+                    val = float(val)
+                    if val > 2:
+                        val = val / 100
+                    ev["IF"] = round(val, 2)
+                except Exception:
+                    pass
+
+            # ---------------------------------------------------------
+            # NP (SAFE)
+            # ---------------------------------------------------------
+            val = row.get("icu_weighted_avg_watts")
+            if pd.notna(val):
+                ev["NP"] = int(val)
+
+            # ---------------------------------------------------------
+            # 5️⃣ HRR (SAFE)
+            # ---------------------------------------------------------
+            hrr = row.get("icu_hrr.hrr")
+            if pd.notna(hrr):
+                ev["HRR60"] = int(hrr)
+
+            # ---------------------------------------------------------
+            # 6️⃣ Subjective (emoji only)
+            # ---------------------------------------------------------
             rpe = row.get("icu_rpe")
             feel = row.get("feel")
 
-            # ---- RPE emoji (read-only, do not overwrite icu_rpe) ----
-            if rpe is not None and pd.notna(rpe):
+            if pd.notna(rpe):
                 try:
-                    rpe = int(rpe)
-                    rpe_emoji = CHEAT_SHEET["subjective_scales"]["rpe_emoji"].get(rpe)
-
-                    if rpe_emoji:
-                        ev["rpe_emoji"] = rpe_emoji
-
+                    ev["rpe_emoji"] = CHEAT_SHEET["subjective_scales"]["rpe_emoji"].get(int(rpe))
                 except Exception:
                     pass
 
-
-            # ---- Feel emoji ----
-            if feel is not None and pd.notna(feel):
+            if pd.notna(feel):
                 try:
-                    feel = int(feel)
-                    feel_emoji = CHEAT_SHEET["subjective_scales"]["feel_emoji"].get(feel)
-
-                    if feel_emoji:
-                        ev["feel_emoji"] = feel_emoji
-
+                    ev["feel_emoji"] = CHEAT_SHEET["subjective_scales"]["feel_emoji"].get(int(feel))
                 except Exception:
                     pass
 
-            # 3️⃣ Convert date
-            if "start_date_local" in ev:
-                ev["start_date_local"] = convert_to_str(ev["start_date_local"])
+            # ---------------------------------------------------------
+            # 7️⃣ Flags (for icons only)
+            # ---------------------------------------------------------
+            flags = []
 
-            # 4️⃣ Only append valid events
-            if "name" in ev:
+            wbal = classify_wbal_pattern(row)
+            if wbal.get("wbal_pattern") == "repeated":
+                flags.append("repeated")
 
-                ev.update(classify_wbal_pattern(ev))
-                ev.update(classify_event_efficiency(ev))
+            eff = classify_event_efficiency(row)
+            if eff.get("event_efficiency") == "efficient":
+                flags.append("efficient")
 
-                # 5️⃣ HRR (flattened columns)
-                hrr_60 = row.get("icu_hrr.hrr")
-                hrr_start = row.get("icu_hrr.start_bpm")
-                hrr_end = row.get("icu_hrr.end_bpm")
+            if pd.notna(hrr):
+                flags.append("hrr")
 
-                if pd.notna(hrr_60):
-                    ev["heart_rate_recovery_60s"] = float(hrr_60)
-                    ev["heart_rate_recovery_start_bpm"] = hrr_start
-                    ev["heart_rate_recovery_end_bpm"] = hrr_end
+            if flags:
+                ev["flags"] = flags
 
-                semantic["events"].append(ev)
+            # ---------------------------------------------------------
+            # 8️⃣ Append
+            # ---------------------------------------------------------
+            semantic["events"].append(ev)
 
-        # ✅ Add meta AFTER loop
+        # ---------------------------------------------------------
+        # META
+        # ---------------------------------------------------------
         semantic["meta"]["events"] = {
             "is_event_block": True,
             "event_block_count": len(semantic["events"]),
-            "render": True,
-            "notes": "Canonical activity/event block (URF v5.2) — intended for ChatGPT / structured UI rendering."
+            "render": True
         }
 
         debug(
             context,
-            f"[SEMANTIC] EVENTS: populated semantic.events with {len(semantic['events'])} entries"
+            f"[SEMANTIC] EVENTS: {len(semantic['events'])} events (optimised)"
         )
 
     else:
-        debug(context, "[SEMANTIC] EVENTS: no df_events available or empty DataFrame")
-
+        debug(context, "[SEMANTIC] EVENTS: no data")
 
     # --- Prevent override by short df_scope_full for season/summary ---
     if semantic["meta"]["report_type"] in ("season", "summary"):
@@ -2384,7 +2347,6 @@ def build_semantic_json(context):
             if start:
                 planned_by_date.setdefault(start, []).append(event)
 
-
         planned_summary_by_date = {
             day: {
                 "total_events": len(events),
@@ -2393,6 +2355,68 @@ def build_semantic_json(context):
                 "categories": sorted({e.get("category") for e in events if e.get("category")}),
             }
             for day, events in planned_by_date.items()
+        }
+
+        # ---------------------------------------------------------
+        # 🧠 TRAINING CONTEXT (LLM CONTROL SIGNAL — NOT CONTRACT DATA)
+        # ---------------------------------------------------------
+
+        next_3d = []
+        next_7d = []
+
+        today = pd.Timestamp.now().date()
+
+        for e in planned_events:
+            try:
+                d = pd.to_datetime(e.get("start_date_local")).date()
+            except Exception:
+                continue
+
+            delta = (d - today).days
+
+            if 0 <= delta <= 3:
+                next_3d.append(e)
+
+            if 0 <= delta <= 7:
+                next_7d.append(e)
+
+        next_3d_load = sum(e.get("icu_training_load", 0) for e in next_3d)
+        next_7d_load = sum(e.get("icu_training_load", 0) for e in next_7d)
+
+        debug(
+            context,
+            "[SEMANTIC][CTX_MID_LOOP]",
+            f"next_3d_load={next_3d_load}",
+            f"next_7d_load={next_7d_load}",
+            f"events_so_far={len(planned_events)}"
+        )
+
+        context["training_context"] = {
+            "short_term": {
+                "window": "3d",
+                "load": next_3d_load,
+                "sessions": len(next_3d),
+                "status": (
+                    "high" if next_3d_load > 180
+                    else "moderate" if next_3d_load > 100
+                    else "low"
+                ),
+                "instruction": (
+                    "absorb_load"
+                    if next_3d_load > 180
+                    else "normal"
+                )
+            },
+            "weekly_shape": {
+                "window": "7d",
+                "load": next_7d_load,
+                "sessions": len(next_7d),
+                "density": (
+                    "dense" if len(next_7d) >= 5
+                    else "balanced" if len(next_7d) >= 3
+                    else "sparse"
+                )
+            }
         }
 
         # ---------------------------------------------------------
@@ -2538,6 +2562,7 @@ def build_semantic_json(context):
             "planned_events_block_count": 0,
             "notes": "No planned events found or calendar source unavailable."
         }
+        semantic["training_guidance"] = []
         debug(context, "[SEMANTIC] ⚠️ No valid planned events found")
 
     # ---------------------------------------------------------
@@ -2597,6 +2622,37 @@ def build_semantic_json(context):
 
     for name, metric in semantic["metrics"].items():
         metric["context_window"] = metric_windows.get(name, "unknown")
+
+    # ---------------------------------------------------------
+    # NON-BREAKING METRIC GROUPING (FINAL STEP)
+    # ---------------------------------------------------------
+
+    semantic["metrics_groups"] = {
+        "load": {
+            "ACWR": semantic["metrics"].get("ACWR"),
+            "Strain": semantic["metrics"].get("Strain"),
+            "FatigueTrend": semantic["metrics"].get("FatigueTrend"),
+        },
+        "intensity": {
+            "ZQI": semantic["metrics"].get("ZQI"),
+            "Polarisation": semantic["metrics"].get("Polarisation"),
+            "PolarisationIndex": semantic["metrics"].get("PolarisationIndex"),
+            "Polarisation_variants": semantic["metrics"].get("Polarisation_variants"),
+        },
+        "variability": {
+            "Monotony": semantic["metrics"].get("Monotony"),
+        },
+        "metabolic": {
+            "FOxI": semantic["metrics"].get("FOxI"),
+            "CUR": semantic["metrics"].get("CUR"),
+            "GR": semantic["metrics"].get("GR"),
+            "MES": semantic["metrics"].get("MES"),
+            "FatOxEfficiency": semantic["metrics"].get("FatOxEfficiency"),
+        },
+        "capacity": {
+            "StressTolerance": semantic["metrics"].get("StressTolerance"),
+        }
+    }
 
     # ---------------------------------------------------------
     # 🧮 CTL / ATL / TSB RESOLUTION (AUTHORITATIVE + FALLBACK)
@@ -2835,7 +2891,7 @@ def build_semantic_json(context):
             nutrition_demand = context.get("nutrition_demand")
             weight = (context.get("athlete") or {}).get("icu_weight")
 
-            if nutrition and nutrition_demand:
+            if nutrition and nutrition_demand and nutrition.get("confidence") != "none":
 
                 classification = nutrition.get("status")
 
@@ -3313,8 +3369,10 @@ def build_semantic_json(context):
                     current_ISO_weekly_microcycle["projected_total_tss"] = round(projected_total, 1)
                     current_ISO_weekly_microcycle["delta_to_target"] = round(delta, 1)
 
-                    current_ISO_weekly_microcycle["weekly_target_tss"] = weekly_target
-                    current_ISO_weekly_microcycle["planned_remaining_tss"] = planned_remaining
+                    full_week_target = weekly_target + planned_remaining
+
+                    current_ISO_weekly_microcycle["weekly_target_tss"] = round(full_week_target, 1)
+                    current_ISO_weekly_microcycle["planned_remaining_tss"] = round(planned_remaining, 1)
 
                     # -------------------------------------------------
                     # 6️⃣ Projected Hours (reconstructed from compliance)
@@ -3723,10 +3781,10 @@ def build_semantic_json(context):
                         if micro.get("projected_hours") is not None:
                             block["hours_total"] = round(micro["projected_hours"], 1)
 
-                        # invalidate phase classification for projected weeks
-                        block["phase"] = "Projected"
-                        block["descriptor"] = "🔮 **Projected training week** — classification deferred until execution."
-                        block["calc_method"] = "projection_override"
+                        # invalidate phase classification for projected weeks # WE KEEP THI SNOW FOR ADE v2
+                        #block["phase"] = "Projected"
+                        #block["descriptor"] = "🔮 **Projected training week** — classification deferred until execution."
+                        block["calc_method"] = "projection_forecast"
                         block["calc_context"] = None
 
                         break
@@ -3894,13 +3952,12 @@ def build_semantic_json(context):
             insight_view["positive"].append(entry)
 
     # ---------------------------------------------------------
-    # ADE
+    # ADE → SEMANTIC ACTION
     # ---------------------------------------------------------
 
     ade = context.get("adaptive_decision")
 
     if ade:
-
         semantic.setdefault("actions", [])
 
         semantic["actions"].insert(0, {
@@ -3912,6 +3969,235 @@ def build_semantic_json(context):
 
             **ade
         })
+
+    # ---------------------------------------------------------
+    # 🧭 PHASE CONTEXT (PAST → CURRENT → FUTURE ALIGNMENT)
+    # ---------------------------------------------------------
+    phase_override = False
+    try:
+
+        phases = semantic.get("phases", [])
+        summaries = semantic.get("phases_summary", [])
+        ts = context.get("training_state", {})
+        micro = semantic.get("current_ISO_weekly_microcycle", {})
+
+        # -----------------------------
+        # Past pattern (sequence + streak)
+        # -----------------------------
+        recent = phases[-6:]
+        recent_labels = [p.get("classification") for p in recent if p.get("classification")]
+
+        fatigue_labels = {"Productive_fatigue", "Overreached"}
+
+        fatigue_streak = 0
+        for label in reversed(recent_labels):
+            if label in fatigue_labels:
+                fatigue_streak += 1
+            else:
+                break
+
+        if fatigue_streak >= 4:
+            past_pattern = "fatigue_streak"
+        elif "Recovery" in recent_labels:
+            past_pattern = "recovery_present"
+        else:
+            past_pattern = "mixed"
+
+        # -----------------------------
+        # Block context (REMOVE projected)
+        # -----------------------------
+        real_blocks = [b for b in summaries if not b.get("is_projected")]
+
+        recent_blocks = real_blocks[-4:] if real_blocks else []
+        last_block = recent_blocks[-1] if recent_blocks else {}
+
+        last_block_phase = last_block.get("phase")
+        last_block_days = last_block.get("duration_days", 0)
+
+        # -----------------------------
+        # Current
+        # -----------------------------
+        operational_state = ts.get("operational_state")
+        current_state = ts.get("state_label")
+
+        # -----------------------------
+        # Future (planned) — source of truth = projected phase + forecast
+        # -----------------------------
+        planned_pattern = "unknown"
+
+        forecast_block = semantic.get("future_forecast", {})
+        summaries = semantic.get("phases_summary", [])
+
+        forecast_load_trend = forecast_block.get("load_trend")
+        forecast_fatigue_class = forecast_block.get("fatigue_class")
+
+        projected_block = next((b for b in summaries if b.get("is_projected")), None)
+        projected_phase = (projected_block.get("phase", "") if projected_block else "").lower()
+
+        # Structural intent first
+        if projected_phase in {"recovery", "deload", "taper"}:
+            planned_pattern = "reduced"
+        elif projected_phase in {"build", "peak"}:
+            planned_pattern = "increasing"
+
+        # Forecast direction fallback
+        elif forecast_load_trend == "declining":
+            planned_pattern = "reduced"
+        elif forecast_load_trend == "increasing":
+            planned_pattern = "increasing"
+        elif forecast_load_trend == "stable":
+            planned_pattern = "stable"
+
+        # Fatigue-class fallback only if still unknown
+        # NOTE: fatigue_class is form-state, not load direction
+        elif forecast_fatigue_class in {"transition", "fresh"}:
+            planned_pattern = "reduced"
+        elif forecast_fatigue_class == "neutral":
+            planned_pattern = "stable"
+        elif forecast_fatigue_class == "productive_fatigue":
+            planned_pattern = "increasing"
+        elif forecast_fatigue_class == "overreached":
+            planned_pattern = "reduced"
+
+        # -----------------------------
+        # Required phase (SAFE + PRIORITY)
+        # -----------------------------
+        required_phase = "build"  # default (never remove)
+
+        if fatigue_streak >= 4:
+            required_phase = "recovery"
+
+        elif last_block_phase == "Overreached" and last_block_days >= 7:
+            required_phase = "recovery"
+
+        elif operational_state == "recovery_priority" and fatigue_streak >= 2:
+            required_phase = "recovery"
+
+        # -----------------------------
+        # Alignment
+        # -----------------------------
+        alignment = "aligned"
+
+        RECOVERY_COMPATIBLE = {"recovery", "deload", "taper"}
+
+        current_phase = projected_phase or (summaries[-1].get("phase", "").lower() if summaries else "")
+
+        if required_phase == "recovery":
+            if current_phase in RECOVERY_COMPATIBLE and planned_pattern != "increasing":
+                alignment = "aligned"
+            elif planned_pattern == "increasing":
+                alignment = "misaligned"
+            else:
+                alignment = "aligned"
+
+        # -----------------------------
+        # Output FIRST (important)
+        # -----------------------------
+        semantic["phase_alignment"] = {
+            "past_pattern": past_pattern,
+            "current_state": current_state,
+            "operational_state": operational_state,
+            "planned_pattern": planned_pattern,
+            "required_phase": required_phase,
+            "alignment": alignment,
+            "phase_streak": {
+                "type": "fatigue" if fatigue_streak else "none",
+                "length": fatigue_streak
+            },
+            "last_block": {
+                "phase": last_block_phase,
+                "duration_days": last_block_days
+            }
+        }
+
+        # ---------------------------------------------------------
+        # 🧭 TRAINING GUIDANCE (FINAL — GOVERNED + MODULATED)
+        # ---------------------------------------------------------
+
+        ade_directive = ade["directive"]
+        phase = semantic["phase_alignment"]["required_phase"]
+
+        future_action = semantic.get("future_actions", [{}])[0]
+        future_title = future_action.get("title", "").lower()
+
+        base_guidance = ade_directive
+        phase_override = False
+
+        # -------------------------
+        # HARD RULE (PHASE) BUT NOT IF ITS THE SAME ALREADY
+        # -------------------------
+        if phase == "recovery":
+
+            if ade.get("operational_state") == "recovery_priority":
+                # ✅ ALIGNED → DO NOT OVERRIDE
+                decision = base_guidance
+                phase_override = False
+            else:
+                # ❌ CONFLICT → OVERRIDE
+                decision = "Reduce load and prioritise recovery"
+                phase_override = True
+
+        # -------------------------
+        # SOFT RULE (FORECAST via ACTION)
+        # -------------------------
+        else:
+            decision = base_guidance
+            if "neutral" in future_title:
+                decision += " — maintain balanced load"
+            elif "increase" in future_title or "build" in future_title:
+                decision += " — progress load carefully"
+            elif "recovery" in future_title:
+                decision += " — allow for recovery adaptation"
+
+        # -------------------------
+        # FINAL (CAN vs SHOULD)
+        # -------------------------
+        final_guidance = f"Can: {ade_directive} | Should: {phase.capitalize()} → {decision}"
+
+        semantic["training_guidance"] = final_guidance
+
+        semantic["decision_context"] = {
+            "ade_directive": ade_directive,
+            "required_phase": phase,
+            "alignment": alignment,
+            "phase_override": phase_override,
+            "forecast_trend": forecast.get("load_trend")
+        }
+        debug(context, f"[PHASE_ALIGNMENT] required={required_phase} alignment={alignment}")
+
+    except Exception as e:
+        debug(context, f"[PHASE_ALIGNMENT] ⚠️ failed: {e}")
+
+    # ---------------------------------------------------------
+    # ALIGN ADE ACTION WITH PHASE GOVERNANCE (CRITICAL)
+    # ---------------------------------------------------------
+
+    if semantic.get("actions"):
+        ade_action = semantic["actions"][0]  # first is always ADE
+
+        ade_action["phase_constraint"] = phase
+        ade_action["phase_alignment"] = alignment
+
+        if phase_override:
+            ade_action["resolution"] = "overridden_by_phase"
+
+            semantic["conflict"] = {
+                "metrics_state": ade.get("operational_state"),
+                "phase_requirement": phase,
+                "resolution": "override"
+            }
+        else:
+            ade_action["resolution"] = "honoured"
+
+    # ---------------------------------------------------------
+    # 🧠 LLM CONTROL SIGNALS (FINAL PROMOTION)
+    # MUST BE LAST STEP BEFORE RETURN
+    # ---------------------------------------------------------
+
+    # Training context (correct as-is)
+    if context.get("training_context"):
+        semantic["training_context"] = context["training_context"]
+
 
     # ---------------------------------------------------------
     # ✅ Contract Enforcement
@@ -4064,432 +4350,6 @@ def apply_report_type_contract(semantic: dict) -> dict:
         )
 
     return filtered
-
-def build_system_prompt_from_header(report_type: str, header: dict) -> str:
-    """
-    Build deterministic renderer instructions for GPT based on the
-    URF v5.1 report contract.
-
-    This output is DATA ONLY and must be used as a system-role message
-    by the caller.
-    """
-    from coaching_profile import RENDERER_PROFILES
-    from textwrap import dedent
-
-    title = header.get("title", f"{report_type.title()} Report")
-    scope = header.get("scope", "Training and wellness summary")
-    sources = header.get("data_sources", "Intervals.icu activity and wellness datasets")
-    intended = header.get("intended_use", "General endurance coaching insight")
-    contract_sections = REPORT_CONTRACT.get(report_type, [])
-    contract_version = "URF v5.1"
-
-    # --------------------------------------------------
-    # Resolve section order from contract
-    # --------------------------------------------------
-    if isinstance(contract_sections, dict):
-        section_order = list(contract_sections.keys())
-    else:
-        section_order = contract_sections or ["Summary", "Metrics", "Actions"]
-
-    manifest_lines = [f"{i}. {section}" for i, section in enumerate(section_order, start=1)]
-
-    # --------------------------------------------------
-    # Resolve renderer profiles
-    # --------------------------------------------------
-    global_profile = RENDERER_PROFILES.get("global", {})
-    report_profile = RENDERER_PROFILES.get(report_type, {})
-
-    stack_structure = report_profile.get("stack_structure", {})
-
-    hard_rules = global_profile.get("hard_rules", [])
-    list_rules = global_profile.get("list_rules", [])
-    tone_rules = global_profile.get("tone_rules", [])
-
-    interpretation_rules = report_profile.get("interpretation_rules", [])
-    allowed_enrichment = report_profile.get("allowed_enrichment", [])
-
-    coaching_cfg = report_profile.get("coaching_sentences", {})
-    coaching_enabled = coaching_cfg.get("enabled", False)
-    coaching_max = coaching_cfg.get("max_per_section", 0)
-
-    section_handling = report_profile.get("section_handling", {})
-    stack_labels = report_profile.get("stack_labels", {})
-    signal_hierarchy = report_profile.get("signal_hierarchy", [])
-    fatigue_logic = report_profile.get("fatigue_logic", [])
-    question_themes = report_profile.get("question_rule", [])
-    events_rule = report_profile.get("events_rule")
-    planned_events_rule = report_profile.get("planned_events_rule")
-    resolution = REPORT_RESOLUTION.get(report_type, {})
-
-    # ➕ NEW: presentation config (read directly, no helpers)
-    state_presentation = global_profile.get("state_presentation", {})
-    emphasis = report_profile.get("emphasis", {})
-    framing = report_profile.get("framing", {})
-    closing_cfg = report_profile.get("closing_note", {})
-    post_render = report_profile.get("post_render", {})
-
-    # --------------------------------------------------
-    # Optional blocks (existing)
-    # --------------------------------------------------
-
-    stack_map_lines = []
-
-    for layer, sections in stack_structure.items():
-        label = stack_labels.get(layer, layer.upper())
-
-        for section in sections:
-            stack_map_lines.append(f"{section} → {label}")
-    #-----------------------------------------------------------------
-    stack_lines = []
-    for layer, sections in stack_structure.items():
-        label = stack_labels.get(layer, layer.upper())
-
-        stack_lines.append(label)
-        for s in sections:
-            stack_lines.append(f"- {s}")
-    #-----------------------------------------------------------------
-    stack_block = ""
-    if stack_structure:
-
-        stack_lines = []
-
-        for layer, sections in stack_structure.items():
-
-            layer_name = layer.replace("_", " ").title()
-
-            stack_lines.append(f"{layer_name}:")
-            for s in sections:
-                stack_lines.append(f"- {s}")
-
-            stack_lines.append("")
-
-        stack_block = dedent(f"""
-        STACK STRUCTURE RULE:
-
-        The report MUST be organised into the following conceptual intelligence layers:
-
-        {chr(10).join(stack_lines)}
-
-        These layers are PRESENTATIONAL GROUPINGS ONLY.
-
-        They must NOT:
-        - change section order
-        - override section_handling rules
-        - modify interpretation_rules
-        - alter table rendering rules
-
-        Sections must appear in the exact URF contract order.
-        Stack layers only determine which layer header a section appears under.
-
-        Each section must appear under its corresponding stack layer while still following the URF section order.
-        A stack layer header MUST be rendered once when the first section belonging to that layer appears.
-        Subsequent sections mapped to the same stack layer MUST remain under that header and MUST NOT repeat the header.
-        """).strip()
-    #-----------------------------------------------------------------
-    stack_map_block = ""
-
-    if stack_map_lines:
-        stack_map_block = dedent(f"""
-        STACK SECTION MAP:
-        {chr(10).join(stack_map_lines)}
-        """).strip()
-
-    resolution_block = ""
-    #-----------------------------------------------------------------
-    if resolution:
-        resolution_block = dedent(f"""
-        DATA RESOLUTION MODEL:
-
-        This report uses the following semantic resolution rules.
-
-        {chr(10).join(f"- {k}: {v}" for k, v in resolution.items())}
-
-        These rules determine which metrics are authoritative,
-        which signals may appear, and the time horizon used
-        for interpretation.
-
-        Resolution rules MUST NOT be printed in the report output.
-        """).strip()
-    #-----------------------------------------------------------------
-    section_handling_block = ""
-    if section_handling:
-        section_handling_block = dedent(f"""
-        SECTION HANDLING RULES:
-        {chr(10).join(f"- {k}: {v}" for k, v in section_handling.items())}
-
-        Handling meanings:
-
-        - full:
-            Render the entire section exactly as provided.
-            Tables remain tables, lists remain lists.
-            Do not remove rows or fields.
-
-        - summary:
-            Render a compact representation using ONLY existing semantic aggregates
-            already present in the section. Do NOT derive new metrics.
-
-        Summary rules:
-            Prefer a short table if aggregate values exist.
-            If aggregates do not exist, show the top-level fields only.
-            Do NOT iterate full arrays or lists.
-            Do NOT narrate each element of a list.
-            Maximum 3–5 rows or key metrics.
-
-        - table_summary:
-            Render a condensed table using aggregate fields only.
-            Do NOT render the full underlying dataset.
-
-        - headline:
-            Render only the primary indicators of the section.
-            Maximum 3–4 metrics.
-            No tables longer than one row.
-            No subsections.
-            No detailed narrative.
-
-        Rules:
-        • Maximum 5 rows.
-        • Prefer totals, means, or trend indicators already provided.
-        • Do NOT derive calculations.
-
-        - forbid:
-        This section MUST NOT be rendered in the report output.
-        It may still be used internally for reasoning.
-        """).strip()
-    #-----------------------------------------------------------------
-    closing_note_block = ""
-
-    if closing_cfg.get("required"):
-        verdict_rule = closing_cfg.get("verdict_rule", "")
-        classifications = closing_cfg.get("classification_required", [])
-        focus = closing_cfg.get("focus", "")
-        intent = closing_cfg.get("intent_rule", "")
-        anchors = closing_cfg.get("anchor_metrics", [])
-        exact_sent = closing_cfg.get("exact_sentences")
-        max_sent = closing_cfg.get("max_sentences")
-        sentence_structure = closing_cfg.get("sentence_structure", [])
-
-        closing_note_block = dedent(f"""
-        CLOSING NOTE REQUIREMENTS:
-        - The closing note MUST begin with one of the following classifications:
-        {", ".join(classifications)}.
-        - {verdict_rule}
-        - The closing note MUST remain within the conceptual focus: {focus}.
-        - {intent}
-        - It MUST anchor strictly to: {", ".join(anchors)}.
-        - It MUST NOT introduce new metrics or reinterpret semantic data.
-        """).strip()
-
-        if exact_sent:
-            closing_note_block += f"\n- The closing note MUST contain exactly {exact_sent} sentences."
-        elif max_sent:
-            closing_note_block += f"\n- Maximum {max_sent} sentences."
-
-        if sentence_structure:
-            closing_note_block += "\n- The six sentences MUST follow this structure:"
-            for s in sentence_structure:
-                closing_note_block += f"\n  {s}"
-    #-----------------------------------------------------------------
-    post_render_block = ""
-
-    post_cfg = report_profile.get("post_render", {}).get("explore_deeper", {})
-
-    if post_cfg.get("enabled"):
-        commands = post_cfg.get("commands", [])
-
-        post_render_block = dedent(f"""
-        POST-RENDER INTERACTION:
-        - After the full report is rendered, present follow-up commands to allow deeper inspection.
-        - These commands MUST be shown after the closing reflection section.
-        - The commands MUST be rendered as short, copyable user prompts in raw markdown
-        - Do NOT add explanation, narrative, or coaching around these commands.
-
-        Suggested follow up questions:
-        {chr(10).join([f'- "{cmd}"' for cmd in commands])}
-        """).strip()
-    #-----------------------------------------------------------------
-    coaching_block = ""
-    if coaching_enabled and coaching_max > 0:
-        coaching_block = dedent(f"""
-        COACHING INTERPRETATION RULES:
-        - You are an Endurance Coach
-        - You MAY include up to {coaching_max} short coaching sentence(s) per section.
-        - Coaching sentences MUST be directly anchored to values, states, or interpretation fields in that section.
-        - Coaching sentences MUST be descriptive or conditional, not predictive.
-        - Coaching sentences MUST appear immediately after the section’s data and before the next divider.
-        - Coaching sentences MUST NOT introduce new metrics.
-        """).strip()
-
-    #-----------------------------------------------------------------
-    question_block = ""
-    if coaching_enabled and question_themes:
-        question_block = dedent(f"""
-        CLOSING REFLECTION RULE:
-        After the full report is produced, generate exactly ONE short reflective coaching question.
-
-        The question MUST be based on the dominant signal in the report.
-
-        Allowed reflection themes:
-        {chr(10).join(f"- {t}" for t in question_themes)}
-
-        The closing question must be grounded in the signals present in the report
-        and must not introduce new metrics or predictions.
-
-        Format exactly as:
-        ---
-        Closing Reflection
-        <question>
-        """).strip()
-    #-----------------------------------------------------------------
-    enrichment_block = ""
-    if allowed_enrichment:
-        enrichment_block = dedent(f"""
-        ALLOWED ENRICHMENT:
-        {chr(10).join(f"- {r}" for r in allowed_enrichment)}
-        """).strip()
-    #-----------------------------------------------------------------
-    events_block = ""
-
-    if events_rule:
-        icon_list = "\n".join(
-            f"{i+1}) {icon}" for i, icon in enumerate(events_rule.get("icons", []))
-        )
-
-        duration_rules = "\n".join(f"- {r}" for r in events_rule.get("duration_conversion", []))
-        rules = "\n".join(f"- {r}" for r in events_rule.get("rules", []))
-
-        columns = " | ".join(events_rule.get("column_order", []))
-
-        events_block = dedent(f"""
-        EVENTS (WEEKLY — NON-NEGOTIABLE):
-        {rules}
-
-        - The EVENTS table MUST use the following column order:
-        {columns}
-
-        {duration_rules}
-
-        - When multiple icons apply, they MUST be rendered together in the following fixed order (left → right):
-        {icon_list}
-        """).strip()
-    #-----------------------------------------------------------------
-    planned_events_block = ""
-
-    if planned_events_rule:
-        planned_events_block = dedent(f"""
-        PLANNED EVENTS (WEEKLY — NON-NEGOTIABLE):
-        {chr(10).join(f"- {r}" for r in planned_events_rule)}
-        """).strip()
-
-    # --------------------------------------------------
-    state_presentation_block = ""
-    if state_presentation.get("enabled"):
-        state_presentation_block = dedent(f"""
-        STATE PRESENTATION:
-        - Present a concise, single-sentence state banner at the top of the report.
-        - Use ONLY semantic states already present in the data.
-        - Do NOT derive, compute, or infer new states.
-        - Style: {state_presentation.get("style")}
-        """).strip()
-    #-----------------------------------------------------------------
-    emphasis_block = ""
-    if emphasis:
-        emphasis_block = dedent(f"""
-        EMPHASIS GUIDANCE:
-        The following sections should receive proportional narrative and visual emphasis.
-        This does NOT change section order, inclusion, or data fidelity.
-        {chr(10).join(f"- {k}: {v}" for k, v in emphasis.items())}
-        """).strip()
-    #-----------------------------------------------------------------
-    framing_block = ""
-    if framing:
-        framing_block = dedent(f"""
-        FRAMING INTENT:
-        - Interpret and summarise this report through the following intent:
-          {framing.get("intent")}
-        - This intent guides prioritisation and narrative focus only.        
-        """).strip()
-    # --------------------------------------------------
-    # Welness blocks
-    # --------------------------------------------------
-    fatigue_block = ""
-    if fatigue_logic:
-        fatigue_block = dedent(f"""
-        FATIGUE INTERPRETATION MODEL:
-        {chr(10).join(f"- {r}" for r in fatigue_logic)}
-        """).strip()
-    #-----------------------------------------------------------------
-    signal_block = ""
-    if signal_hierarchy:
-        signal_block = dedent(f"""
-        SIGNAL PRIORITY MODEL:
-        Interpret recovery signals using the following hierarchy.
-        Earlier layers take precedence when signals disagree.
-
-        {chr(10).join(f"- {s}" for s in signal_hierarchy)}
-        """).strip()
-    # --------------------------------------------------
-    # Assemble final prompt
-    # --------------------------------------------------
-    prompt = dedent(f"""
-    You are a deterministic URF renderer.
-
-    You must render a **{title}** using the embedded system context.
-    This report follows the **Unified Reporting Framework ({contract_version})**.
-
-    **Scope:** {scope}
-    **Data Sources:** {sources}
-    **Intended Use:** {intended}
-    {resolution_block}
-    HARD RULES:
-    {chr(10).join(f"- {r}" for r in hard_rules)}
-
-    {stack_block}
-
-    {stack_map_block}
-
-    INTERPRETATION RULES:
-    {chr(10).join(f"- {r}" for r in interpretation_rules)}
-
-    {coaching_block}
-
-    {enrichment_block}
-
-    {signal_block}
-
-    {fatigue_block}
-
-    {state_presentation_block}
-
-    {emphasis_block}
-
-    {framing_block}
-
-    {section_handling_block}
-
-    {events_block}
-
-    {planned_events_block}
-
-    LIST RENDERING RULES (NON-NEGOTIABLE):
-    {chr(10).join(f"- {r}" for r in list_rules)}
-
-    TONE AND STYLE:
-    {chr(10).join(f"- {r}" for r in tone_rules)}
-
-    SECTION ORDER (INSTRUCTIONAL — DO NOT NUMBER HEADERS):
-    {chr(10).join(manifest_lines)}
-
-    {closing_note_block}
-
-    {question_block}
-
-    {post_render_block}
-    
-    """).strip()
-
-    return prompt
-
-
 
 
 

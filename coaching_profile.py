@@ -13,7 +13,7 @@ REPORT_CONTRACT = {
 
         # 🧭 TRAINING LOAD
         "training_volume",
-        "metrics",
+        "metrics_groups",
         "daily_load",
         "events",
 
@@ -29,14 +29,19 @@ REPORT_CONTRACT = {
         "energy_system_progression",
         "physiology",
         "zones",
+        "phases_summary",
 
         # 🎯 ADAPTIVE DECISIONS
         "actions",
+        "phase_alignment",
+        "training_guidance",
+        "decision_context",
         #"planned_events",
         "current_ISO_weekly_microcycle",
         "planned_summary_by_iso_week",
         "future_forecast",
         "future_actions",
+        #"phases",
     ],
 
     "weekly_lite": [
@@ -44,7 +49,7 @@ REPORT_CONTRACT = {
 
         # 🧭 TRAINING LOAD
         "training_volume",
-        "metrics",
+        "metrics_groups",
         "events",
 
         # 🫀 PHYSIOLOGY RESPONSE
@@ -59,6 +64,9 @@ REPORT_CONTRACT = {
 
         # 🎯 ADAPTIVE DECISIONS
         "actions",
+        "phase_alignment",
+        "training_guidance",
+        "decision_context",
     ],
 
     "season": [
@@ -66,7 +74,7 @@ REPORT_CONTRACT = {
 
         # 🧭 TRAINING LOAD
         "training_volume",
-        "metrics",
+        "metrics_groups",
         "trend_metrics",
 
         # 🫀 PHYSIOLOGY RESPONSE
@@ -89,6 +97,9 @@ REPORT_CONTRACT = {
         "planned_summary_by_iso_week",
         "future_forecast",
         "future_actions",
+        "phase_alignment",
+        "training_guidance",
+        "decision_context"
     ],
 
     "season_lite": [
@@ -96,7 +107,7 @@ REPORT_CONTRACT = {
 
         # 🧭 TRAINING LOAD
         "training_volume",
-        "metrics",
+        "metrics_groups",
         "trend_metrics",
 
         # 🫀 PHYSIOLOGY RESPONSE
@@ -114,6 +125,9 @@ REPORT_CONTRACT = {
         "actions",
         "future_forecast",
         "future_actions",
+        "phase_alignment",
+        "training_guidance",
+        "decision_context"
     ],
 
     "summary": [
@@ -156,11 +170,12 @@ REPORT_CONTRACT = {
 
 PRUNE_RULES = {
     "weekly": {
+        "meta": [
+            "methodology",
+            "planned_events"
+        ],
         "wellness": [
             "hrv_series"
-        ],
-        "meta": [
-            "phases_summary"
         ],
         "meta.athlete.context": [
             "platforms",
@@ -296,19 +311,23 @@ RENDERER_PROFILES = {
             ],
             "training_load": [
                 "training_volume",
-                "metrics",
+                "metrics_groups.load",
+                "metrics_groups.intensity",
+                "metrics_groups.variability",
+                "metrics_groups.metabolic",
+                "metrics_groups.capacity",
                 "daily_load",
                 "events"
             ],
 
             "physiology_response": [
                 "wellness",
-                "insight_view",
+                "insight_view"
             ],
 
             "performance_intelligence": [
                 "performance_intelligence",
-                "wbal_summary",
+                "wbal_summary"
             ],
 
             "adaptation": [
@@ -316,16 +335,21 @@ RENDERER_PROFILES = {
                 # physiological calibration
                 "physiology",
                 "zones",
+                "phases_summary"
             ],
 
             "adaptive_decisions": [
                 "actions",
+                "phase_alignment",
+                #"decision_context",
                 #"planned_events",
-                #"planned_summary_by_date",
+                "planned_summary_by_date",
                 "current_ISO_weekly_microcycle",
                 "planned_summary_by_iso_week",
                 "future_forecast",
                 "future_actions",
+                "training_guidance",
+                #"phases"
             ]
         },
         "stack_labels": {
@@ -359,18 +383,29 @@ RENDERER_PROFILES = {
             "Render power anchors as [<power> W](link) when activity_link exists, else plain.",
             "Title current_ISO_weekly_microcycle as 'Current ISO Week ## (Mon-Sun)'.",
             "If a section is marked full, render every entity and field exactly as present in the semantic data",
-            #ADAPTIVE DECISIONS
+            "If actions[0].resolution == 'overridden_by_phase':",
+            "- required_phase overrides ADE directive in interpretation.",
+            "- Any positive load statement MUST be qualified by fatigue/phase context.",
+            "- Do NOT present training as fully acceptable without qualification.",
+            "Precedence: required_phase > ADE.directive > performance_intelligence.training_state > metrics.",
+            # ADAPTIVE DECISIONS
             "Render adaptive_decisions as compact dashboard tables (no narrative).",
-            "adaptive_decisions MUST be rendered as STATE and OPERATIONS tables.",
+            "adaptive_decisions MUST be rendered as STATE, OPERATIONS, TRAINING_GUIDANCE, PHASE ALIGNMENT, DECISION CONTEXT, FUTURE ACTIONS, PHASES SUMMARY tables.",
             "STATE MUST NOT exceed 4 columns per table.",
             "STATE MUST be split into multiple tables when more than 4 fields are present.",
             "STATE tables MUST follow this fixed grouping:",
-            "STATE SNAPSHOT: directive, state, load_trend, risk_flag.",
+            "STATE SNAPSHOT: ADE directive, state, resolution, load_trend.",
             "ADAPTATION RESPONSE: adaptation_focus, key_constraint, next_action, dominant_signal.",
             "OPERATIONS table MUST contain week_delta, planned_load (current → next), and 14 day forecast summary (CTL / TSB / fatigue_class).",
+            "training_guidance MUST be rendered as a single-row table with column: Directive.",
+            "phase_alignment MUST be rendered as a single-row table with columns: Required Phase, Recent Load Alignment, Past Pattern, Phase Streak.",
+            #"decision_context MUST be rendered as a single-row table with columns: ADE Directive, Phase Requirement, Alignment",
+            "future_actions MUST be rendered as a table with columns: Priority, Action, Reason.",
             "Do NOT render state_action, system_guidance, or reflection as separate sections.",
-            "Do NOT render paragraph explanations for adaptive_decisions.",
+            "Do NOT render paragraph explanations for adaptive_decisions."
             #ADAPTATION
+            "phases_summary MUST be rendered as a compact table (max 4 rows) with columns: Phase, Duration, Trend",
+            "Phases should always be sequential dated phases",
             "energy_system_progression MUST be rendered as compact adaptation table(s)",
             "Table MUST include key systems (aerobic, threshold, vo2, anaerobic) and overall phase/adaptation_state.",
             "lactate_calibration when available MUST be rendered as a single compact adaptation table before suppression.",
@@ -396,13 +431,16 @@ RENDERER_PROFILES = {
             "events": "full",
             "current_ISO_weekly_microcycle": "forbid",
             "daily_load": "full",
-            "metrics": "summary",
+            "metrics_groups": "table_summary",
             "performance_intelligence": "full",
             "energy_system_progression": "full",
             "zones": "forbid",
             "physiology": "full",
             "wellness": "summary",
             "phases": "forbid",
+            "phase_alignment": "headline",
+            "decision_context": "headline",
+            "phases_summary": "summary",
             #"planned_events": "forbid",
             #"planned_summary_by_date": "forbid",
             "planned_summary_by_iso_week": "forbid",
@@ -411,6 +449,7 @@ RENDERER_PROFILES = {
             "actions.1.state_action": "full",
             "actions.3.system_guidance": "full",
             "actions.4.reflection": "full",
+            "training_guidance": "headline",
             "future_forecast": "forbid",
             "future_actions": "full",
             "insights": "forbid",
@@ -418,11 +457,12 @@ RENDERER_PROFILES = {
         },
 
         "emphasis": {
-            "metrics": "high",
+            "metrics_groups": "high",
             "actions": "high",
             "events": "medium",
             "wellness": "medium",
             "adaptation": "high",
+            "phases_summary": "low"
         },
 
         "events_rule": {
@@ -566,6 +606,9 @@ RENDERER_PROFILES = {
                 "planned_summary_by_iso_week",
                 "future_forecast",
                 "future_actions"
+                "phase_alignment",
+                "training_guidance",
+                #"decision_context"
             ]
         },
 
@@ -592,18 +635,29 @@ RENDERER_PROFILES = {
             "When energy_system_progression exists, generate at least one sentence summarising the current adaptation direction using system_status and adaptation_state.",
             "Insights SHOULD prioritise adaptation signals (ESPE) before repeating metric definitions.",
             "Ensure current_ISO_weekly_microcycle is totled as 'Current ISO Week ## (Mon-Sun)'",
-            #ADAPTIVE DECISIONS
+            "If actions[0].resolution == 'overridden_by_phase':",
+            "- required_phase overrides ADE directive in interpretation.",
+            "- Any positive load statement MUST be qualified by fatigue/phase context.",
+            "- Do NOT present training as fully acceptable without qualification.",
+            "Precedence: required_phase > ADE.directive > performance_intelligence.training_state > metrics.",
+            # ADAPTIVE DECISIONS
             "Render adaptive_decisions as compact dashboard tables (no narrative).",
-            "adaptive_decisions MUST be rendered as STATE and OPERATIONS tables.",
+            "adaptive_decisions MUST be rendered as STATE, OPERATIONS, TRAINING_GUIDANCE, PHASE ALIGNMENT, DECISION CONTEXT, FUTURE ACTIONS, PHASES SUMMARY tables.",
             "STATE MUST NOT exceed 4 columns per table.",
             "STATE MUST be split into multiple tables when more than 4 fields are present.",
             "STATE tables MUST follow this fixed grouping:",
-            "STATE SNAPSHOT: directive, state, load_trend, risk_flag.",
+            "STATE SNAPSHOT: ADE directive, state, resolution, load_trend.",
             "ADAPTATION RESPONSE: adaptation_focus, key_constraint, next_action, dominant_signal.",
             "OPERATIONS table MUST contain week_delta, planned_load (current → next), and 14 day forecast summary (CTL / TSB / fatigue_class).",
+            "training_guidance MUST be rendered as a single-row table with column: Directive.",
+            "phase_alignment MUST be rendered as a single-row table with columns: Required Phase, Recent Load Alignment, Past Pattern, Phase Streak.",
+            #"decision_context MUST be rendered as a single-row table with columns: ADE Directive, Phase Requirement, Alignment",
+            "future_actions MUST be rendered as a table with columns: Priority, Action, Reason.",
             "Do NOT render state_action, system_guidance, or reflection as separate sections.",
-            "Do NOT render paragraph explanations for adaptive_decisions.",
+            "Do NOT render paragraph explanations for adaptive_decisions."
             #ADAPTATION
+            "phases_summary MUST be rendered as a compact table (max 4 rows) with columns: Phase, Duration, Trend",
+            "Phases should always be sequential dated phases",
             "energy_system_progression MUST be rendered as compact adaptation table(s)",
             "Table MUST include key systems (aerobic, threshold, vo2, anaerobic) and overall phase/adaptation_state.",
             "lactate_calibration when available MUST be rendered as a single compact adaptation table before suppression.",
@@ -627,9 +681,11 @@ RENDERER_PROFILES = {
             "events": "forbid",
             "daily_load": "forbid",
             "weekly_phases": "forbid",
-            "phases": "headline",
-            "phases_summary": "full",
-            "metrics": "table_summary",
+            "phases": "forbid",
+            "phase_alignment": "headline",
+            "decision_context": "headline",
+            "phases_summary": "summary",
+            "metrics_groups": "table_summary",
             "performance_intelligence": "full",
             "current_ISO_weekly_microcycle": "forbid",
             "planned_summary_by_iso_week": "forbid",
@@ -646,11 +702,13 @@ RENDERER_PROFILES = {
         },
 
         "emphasis": {
-            "phases_summary": "high",
-            "trend_metrics": "high",
-            "metrics": "medium",
+            "metrics": "high",
+            "actions": "high",
+            "events": "medium",
+            "wellness": "medium",
             "adaptation": "high",
-            "actions": "high"
+            "phases_summary": "high",
+            "trend_metrics": "high"
         },
 
         "framing": {
@@ -955,6 +1013,8 @@ RENDERER_PROFILES = {
             "If semantic.training_volume exists, render it under the header 'Training Volume' with three stacked metrics: Hours, Training Load (TSS), Distance.",
             "High-level descriptive interpretation only.",
             "Avoid granular metrics or micro-coaching."
+            "phases_summary MUST be rendered as a compact table (max 10 rows) with columns: Phase, Duration, Trend",
+            "phases_summary should always be sequential dated phases"
         ],
         "allowed_enrichment": [
             "Restate high-level trends explicitly present in semantic data.",
@@ -1125,22 +1185,47 @@ Summary:
 """
 
 COACH_PROFILE = {
-    "version": "v16.17",
+    "version": "v17.0",
+
     "bio": {
         "summary": (
-            "Data-driven endurance coaching blending objective load metrics "
-            "(TSS, CTL, ATL, HRV, VO₂max) with subjective readiness (RPE, mood, recovery). "
-            "Implements evidence-based frameworks for phase-specific training adaptation."
+            "Deterministic endurance coaching system combining load modelling, "
+            "physiological response, performance intelligence, and adaptive decision logic."
         ),
         "domains": [
-            "Triathlon", "Cycling", "Running", "Endurance", "Ironman", "Gran Fondo", "Marathon"
+            "Cycling", "Running", "Endurance"
         ],
         "principles": [
-            "Seiler 3-Zone Polarisation","Treff Polarization-Index (2019)", "Banister TRIMP", "Foster Monotony/Strain",
-            "San Millán Zone 2", "Friel Periodisation", "Sandbakk Durability",
-            "Skiba Critical Power", "Coggan Power Zones", "Noakes Central Governor"
+            "Load–Recovery Balance",
+            "Polarised Intensity Distribution",
+            "Progressive Overload",
+            "Durability under Fatigue",
+            "Energy System Specificity"
         ]
     },
+
+    "science": {
+        "models": [
+            "Banister Load Model (CTL / ATL / TSB, EWMA)",
+            "ACWR (Acute:Chronic Workload Ratio)",
+            "Foster Monotony & Strain",
+            "Seiler 3-Zone Intensity Distribution",
+            "Treff Polarisation Index (2019)",
+            "Critical Power Model (Skiba CP / W′)"
+        ],
+        "tier3_models": [
+            "WDRM (Anaerobic Repeatability)",
+            "ISDM (Durability / Decoupling)",
+            "NDLI (Neural Load Density)",
+            "ESPE (Energy System Progression)"
+        ],
+        "nutrition_model": [
+            "IOC / ACSM Carbohydrate Availability",
+            "Fuel Availability vs Training Load Matching"
+        ],
+        "decision_model": "Adaptive Decision Engine (ADE)"
+    },
+
 
     "skills_matrix": {
         "load_management": [

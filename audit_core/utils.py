@@ -100,7 +100,7 @@ def debug(*args):
 
         # persistent debug file
         if GLOBAL_FILE_HANDLE is None:
-            GLOBAL_FILE_HANDLE = open(GLOBAL_LOGFILE, "a", encoding="utf-8")
+            GLOBAL_FILE_HANDLE = open(GLOBAL_LOGFILE, "w", encoding="utf-8")
 
         GLOBAL_FILE_HANDLE.write(msg_out + "\n")
         GLOBAL_FILE_HANDLE.flush()

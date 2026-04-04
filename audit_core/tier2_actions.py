@@ -166,8 +166,8 @@ def detect_phases(context, events):
         acwr = float(df_week.iloc[i]["acwr"])
         lvi = float(df_week.iloc[i]["lvi"])
 
-        label = "Continuous Load"
-        method_source = "trend_window"
+        label = "Base"
+        method_source = "steady_load_fallback"
         method_trace = {
             "delta": round(d, 3),
             "tsb": round(tsb, 2),
@@ -187,16 +187,44 @@ def detect_phases(context, events):
                     method_source = f"PhaseBoundaries({phase})"
                     break
 
-        # --- Secondary Banister refinement
+        # --- Banister-informed multi-model phase detection system
+        '''
+        Hybrid endurance periodisation model combining:
+        - Banister load-response (CTL/ATL/TSB)
+        - ΔTSS trend analysis
+        - ACWR load safety
+        - Block periodisation mapping
+        - Macrocycle
+            └── Mesocycle (Season block)
+                └── Phase (Base / Build / etc.)
+                    └── Microcycle (Week)
+                            └── Sessions
+        '''
         if tsb < -30:
-            label, method_source = "Overreached", "TSB<-30 (Banister fatigue)"
-        elif tsb > 10 and tss < 300:
-            label, method_source = "Recovery", "TSB>10 & TSS<300"
-        elif tsb > 10 and tss >= 300 and ctl > 50:
-            label, method_source = "Taper", "TSB>10 & CTL>50"
+            # True overreach = strong spike + deep fatigue
+            if (
+                d > 0.20
+                and tsb < -50
+                and acwr >= 1.15
+                and atl_slope > ctl_slope * 1.3
+            ):
+                label, method_source = "Overreached", "TSB<-50 + overload spike"
+            else:
+                label, method_source = "Build", "TSB<-30 (acute overload)"
+
+        elif tsb > 10:
+            # distinguish taper vs recovery by magnitude of drop
+            if d < -0.15:
+                label, method_source = "Taper", "TSB>10 + strong unload"
+            elif d < -0.05:
+                label, method_source = "Deload", "TSB>10 + moderate unload"
+            else:
+                label, method_source = "Recovery", "TSB>10 + low load"
+
         elif -5 <= tsb <= 5 and abs(d) < 0.05:
             label, method_source = "Base", "|ΔTSS|<5% & TSB≈0"
-        elif -30 <= tsb < -5 and d > 0.1:
+
+        elif -30 <= tsb < -5 and d > 0.10:
             label, method_source = "Build", "TSB=-30–-5 & ΔTSS>0.1"
 
         labels.append(label)
@@ -213,7 +241,10 @@ def detect_phases(context, events):
 
     for i, row in df_week.iterrows():
         ph = row["phase_raw"]
-        if ph != current_phase:
+
+        force_split = False
+
+        if ph != current_phase or force_split:
             if current_phase is not None:
                 merged.append({
                     "phase": current_phase,
@@ -253,6 +284,54 @@ def detect_phases(context, events):
             "calc_context": prev_trace,
             "descriptor": phase_advice.get(current_phase, f"{current_phase} phase detected.")
         })
+
+
+    # --- Phase smoothing (prevent flip-flopping) ------------------
+    '''
+    Banister model → fatigue/adaptation lag (not instant)
+    Issurin block periodisation → blocks ≥ 2–4 weeks
+    Mujika tapering → taper ≠ 1-week noise flip
+    Real coaching practice → phases persist
+    '''
+    min_block_weeks = 2
+    smoothed = []
+
+    for i in range(len(df_week)):
+        current = df_week.iloc[i]["phase_raw"]
+
+        if i == 0:
+            smoothed.append(current)
+            continue
+
+        prev = smoothed[-1]
+
+        # if phase changes too quickly → ignore change
+        if current != prev:
+            # look ahead to confirm change is real
+            future = df_week.iloc[i:i+min_block_weeks]["phase_raw"].tolist()
+
+            if len(future) < min_block_weeks or any(p != current for p in future):
+                smoothed.append(prev)   # reject flip
+            else:
+                smoothed.append(current)
+        else:
+            smoothed.append(current)
+
+    df_week["phase_raw"] = smoothed
+
+    # -------------------------------------------------
+    # 🔁 Post-process: fix misclassified Load Spikes
+    # -------------------------------------------------
+
+    for i in range(len(merged)):
+
+        phase = merged[i]["phase"]
+        duration = merged[i]["duration_days"]
+        ctx = merged[i].get("calc_context", {}) or {}
+
+        delta = ctx.get("delta", 0)
+        acwr = ctx.get("acwr", 1.0)
+        ctl_slope = ctx.get("ctl_slope", 0)
 
     # --- Finalization -----------------------------------------------------
     context["phases"] = merged

@@ -1,6 +1,6 @@
-#ADE V1.0
+#ADE V2.0
 
-ADE_VERSION = "ade_v1.1"
+ADE_VERSION = "ade_v2.0"
 
 
 def run_adaptive_decision_engine(context):
@@ -11,7 +11,7 @@ def run_adaptive_decision_engine(context):
 
     directive = training_state.get("recommendation")
     operational_state = training_state.get("operational_state")
-
+    
     fatigue_class = forecast.get("fatigue_class")
     load_trend = forecast.get("load_trend")
 
