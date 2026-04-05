@@ -18,7 +18,7 @@ Import order is critical:
 """
 
 # ── reports must be imported first — it pulls in intervals_icu_adapter ────
-from reports import weekly_report  # noqa: E402
+from reports import weekly_report, analyze_activity_report  # noqa: E402
 
 import json
 import os
@@ -289,70 +289,42 @@ def analyze_activity(activity_id: str) -> str:
     if isinstance(activity, list) and len(activity) == 1:
         activity = activity[0]
 
-    # 2. Time-series streams
-    streams = {}
-    try:
-        streams = client.get_activity_streams(aid)
-    except Exception as e:
-        streams = {"error": str(e)}
-
-    # 3. Compute summary stats per stream
+    # 2. Time-series streams → compute summary stats
     def _stats(values: list) -> dict:
-        if not values:
-            return {}
         nums = [v for v in values if v is not None]
         if not nums:
             return {}
         n = len(nums)
-        mn = min(nums)
-        mx = max(nums)
-        avg = sum(nums) / n
-        return {"count": n, "min": round(mn, 3), "max": round(mx, 3), "mean": round(avg, 3)}
+        return {"count": n, "min": round(min(nums), 3),
+                "max": round(max(nums), 3), "mean": round(sum(nums) / n, 3)}
 
     streams_summary: dict = {}
-    for stream_type, data in streams.items():
-        if stream_type == "error" or not isinstance(data, list):
-            continue
-        s = _stats(data)
-        if not s:
-            continue
-        # DFA-alpha1 thresholds
-        if stream_type == "dfa_a1":
-            nums = [v for v in data if v is not None]
-            total = len(nums)
-            if total:
-                below_075 = sum(1 for v in nums if v < 0.75)
-                below_050 = sum(1 for v in nums if v < 0.50)
-                s["pct_above_lt1"] = round(below_075 / total * 100, 1)   # % time above aerobic threshold
-                s["pct_above_lt2"] = round(below_050 / total * 100, 1)   # % time above anaerobic threshold
-                s["aerobic_threshold_estimate"] = "check dfa_a1 ≈ 0.75 crossings"
-        # HSI thresholds
-        if stream_type == "heat_strain_index":
-            nums = [v for v in data if v is not None]
-            total = len(nums)
-            if total:
-                high = sum(1 for v in nums if v > 1.0)
-                s["pct_high_heat_strain"] = round(high / total * 100, 1)
-        streams_summary[stream_type] = s
-
-    # 4. Wellness for activity date
-    wellness_day: dict = {}
     try:
-        activity_date = (activity.get("start_date_local") or "")[:10]
-        if activity_date:
-            wellness_list = client.list_wellness(oldest=activity_date, newest=activity_date)
-            if wellness_list:
-                wellness_day = wellness_list[0]
-    except Exception:
-        pass
+        streams_raw = client.get_activity_streams(aid)
+        for stream_type, data in streams_raw.items():
+            if not isinstance(data, list):
+                continue
+            s = _stats(data)
+            if not s:
+                continue
+            if stream_type == "dfa_a1":
+                nums = [v for v in data if v is not None]
+                total = len(nums)
+                if total:
+                    s["pct_above_lt1"] = round(sum(1 for v in nums if v < 0.75) / total * 100, 1)
+                    s["pct_above_lt2"] = round(sum(1 for v in nums if v < 0.50) / total * 100, 1)
+            if stream_type == "heat_strain_index":
+                nums = [v for v in data if v is not None]
+                total = len(nums)
+                if total:
+                    s["pct_high_heat_strain"] = round(sum(1 for v in nums if v > 1.0) / total * 100, 1)
+            streams_summary[stream_type] = s
+    except Exception as e:
+        streams_summary = {"error": str(e)}
 
-    result = {
-        "activity": activity,
-        "streams_summary": streams_summary,
-        "streams_raw": streams,
-        "wellness": wellness_day,
-    }
-    return json.dumps(result, ensure_ascii=False, indent=2)
+    # 3. Run full audit_core pipeline + merge streams analysis
+    report = analyze_activity_report(activity=activity, streams_summary=streams_summary)
+    return json.dumps(report, ensure_ascii=False, indent=2)
 
 
 # ── Weekly report ─────────────────────────────────────────────────────────────

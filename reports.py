@@ -26,6 +26,7 @@ import intervals_icu_adapter  # noqa: F401 — side effects: apply() called on i
 import json
 
 from audit_core.report_controller import run_report as _run_report
+from audit_core.tier2_activity_streams import compute_activity_streams
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -122,6 +123,41 @@ def weekly_report(
     # Fallback: strip non-serialisable context key and return raw output
     output.pop("context", None)
     return _make_serialisable(output)
+
+
+def analyze_activity_report(activity: dict, streams_summary: dict) -> dict:
+    """
+    Run full audit_core pipeline for a single activity enriched with stream data.
+
+    The standard weekly pipeline runs with [activity] as the dataset.
+    DFA-alpha1, Heat Strain Index, core temperature and intra-activity HRV
+    are computed separately via tier2_activity_streams and merged on top —
+    no changes to report_controller or semantic_json_builder required.
+
+    Parameters
+    ----------
+    activity : dict
+        Full activity object from intervals.icu (as returned by get_activity).
+    streams_summary : dict
+        Pre-computed stream stats from mcp_server.analyze_activity()
+        e.g. {"dfa_a1": {"mean": 1.046, "pct_above_lt1": 12.3}, ...}
+
+    Returns
+    -------
+    dict
+        Merged report: URF v5.1 semantic_graph + "streams_analysis" key.
+    """
+    # 1. Run the standard pipeline with the single activity as the dataset
+    report = weekly_report(activities=[activity])
+
+    # 2. Compute streams analysis independently
+    streams_analysis = compute_activity_streams(streams_summary)
+
+    # 3. Merge — enrich report without touching existing keys
+    if isinstance(report, dict) and streams_analysis:
+        report["streams_analysis"] = _make_serialisable(streams_analysis)
+
+    return report
 
 
 # ═══════════════════════════════════════════════════════════════════════════
