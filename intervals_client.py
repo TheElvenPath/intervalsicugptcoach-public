@@ -77,6 +77,33 @@ class IntervalsClient:
         """Return full details for a single activity."""
         return self._get(f"/athlete/{self.athlete_id}/activities/{activity_id}")
 
+    def get_activity_streams(
+        self,
+        activity_id: str,
+        types: list[str] | None = None,
+    ) -> dict[str, list]:
+        """Return time-series streams for a single activity.
+
+        Returns a dict {stream_type: [values...]} for easy access.
+        Available types include: time, watts, heartrate, cadence, dfa_a1, hrv,
+        heat_strain_index, core_temperature, skin_temperature, respiration,
+        distance, velocity_smooth, altitude, temp, artifacts.
+        """
+        if types is None:
+            types = [
+                "time", "watts", "heartrate", "cadence",
+                "dfa_a1", "hrv", "heat_strain_index",
+                "core_temperature", "respiration",
+            ]
+        raw = self._get(
+            f"/activity/{activity_id}/streams",
+            params={"types": ",".join(types)},
+        )
+        # intervals.icu returns [{"type": "time", "data": [...]}, ...]
+        if isinstance(raw, list):
+            return {s["type"]: s["data"] for s in raw if "type" in s and "data" in s}
+        return raw
+
     # ── Wellness ──────────────────────────────────────────────────────────────
 
     def list_wellness(

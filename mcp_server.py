@@ -253,6 +253,108 @@ def delete_workout(event_id: int) -> str:
     return json.dumps({"deleted": True, "event_id": event_id})
 
 
+# ── Activity deep analysis ────────────────────────────────────────────────────
+
+@mcp.tool()
+def analyze_activity(activity_id: str) -> str:
+    """Fetch full activity data + time-series streams for deep single-activity analysis.
+
+    Returns a combined JSON with:
+      - activity: full metadata (power zones, HR zones, TSS, IF, decoupling, etc.)
+      - streams_summary: per-stream descriptive stats computed from the raw data
+      - streams_raw: raw time-series arrays (time, watts, heartrate, dfa_a1, hrv,
+                     heat_strain_index, core_temperature, respiration, cadence)
+      - wellness: wellness record for the activity date (HRV, sleep, resting HR)
+
+    DFA-alpha1 interpretation (aerobic threshold detection):
+      α1 > 1.0   → purely aerobic (Z1–Z2)
+      α1 ≈ 0.75  → aerobic threshold (LT1) — key coaching marker
+      α1 < 0.75  → above LT1, approaching threshold
+      α1 < 0.5   → high intensity (approaching or above LT2)
+
+    Heat Strain Index (HSI) from Garmin body temperature sensors:
+      < 0.5  → low heat strain
+      0.5–1.0 → moderate
+      > 1.0  → high heat strain (reduce intensity)
+      > 2.0  → very high, dangerous
+
+    Use this tool when the user asks to analyse a specific workout, check
+    aerobic threshold markers, or evaluate thermal load.
+    """
+    aid = activity_id if str(activity_id).startswith("i") else f"i{activity_id}"
+    client = _client()
+
+    # 1. Full activity metadata
+    activity = client.get_activity(aid)
+    if isinstance(activity, list) and len(activity) == 1:
+        activity = activity[0]
+
+    # 2. Time-series streams
+    streams = {}
+    try:
+        streams = client.get_activity_streams(aid)
+    except Exception as e:
+        streams = {"error": str(e)}
+
+    # 3. Compute summary stats per stream
+    def _stats(values: list) -> dict:
+        if not values:
+            return {}
+        nums = [v for v in values if v is not None]
+        if not nums:
+            return {}
+        n = len(nums)
+        mn = min(nums)
+        mx = max(nums)
+        avg = sum(nums) / n
+        return {"count": n, "min": round(mn, 3), "max": round(mx, 3), "mean": round(avg, 3)}
+
+    streams_summary: dict = {}
+    for stream_type, data in streams.items():
+        if stream_type == "error" or not isinstance(data, list):
+            continue
+        s = _stats(data)
+        if not s:
+            continue
+        # DFA-alpha1 thresholds
+        if stream_type == "dfa_a1":
+            nums = [v for v in data if v is not None]
+            total = len(nums)
+            if total:
+                below_075 = sum(1 for v in nums if v < 0.75)
+                below_050 = sum(1 for v in nums if v < 0.50)
+                s["pct_above_lt1"] = round(below_075 / total * 100, 1)   # % time above aerobic threshold
+                s["pct_above_lt2"] = round(below_050 / total * 100, 1)   # % time above anaerobic threshold
+                s["aerobic_threshold_estimate"] = "check dfa_a1 ≈ 0.75 crossings"
+        # HSI thresholds
+        if stream_type == "heat_strain_index":
+            nums = [v for v in data if v is not None]
+            total = len(nums)
+            if total:
+                high = sum(1 for v in nums if v > 1.0)
+                s["pct_high_heat_strain"] = round(high / total * 100, 1)
+        streams_summary[stream_type] = s
+
+    # 4. Wellness for activity date
+    wellness_day: dict = {}
+    try:
+        activity_date = (activity.get("start_date_local") or "")[:10]
+        if activity_date:
+            wellness_list = client.list_wellness(oldest=activity_date, newest=activity_date)
+            if wellness_list:
+                wellness_day = wellness_list[0]
+    except Exception:
+        pass
+
+    result = {
+        "activity": activity,
+        "streams_summary": streams_summary,
+        "streams_raw": streams,
+        "wellness": wellness_day,
+    }
+    return json.dumps(result, ensure_ascii=False, indent=2)
+
+
 # ── Weekly report ─────────────────────────────────────────────────────────────
 
 @mcp.tool()
