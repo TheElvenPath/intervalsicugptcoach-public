@@ -89,12 +89,13 @@ def list_activities(oldest: str = "", newest: str = "") -> str:
 
 @mcp.tool()
 def get_activity(activity_id: str) -> str:
-    """Return full details for a single activity.
+    """Return raw metadata for a single activity — use ONLY when you need the raw fields.
 
-    activity_id: the activity ID as returned by list_activities, e.g. "i126379241".
-    The "i" prefix is required — pass the full ID string, not just the number.
-    Returns a list with one activity object containing power zones, HR zones,
-    streams, laps, decoupling, efficiency factor and all computed metrics.
+    For any analysis, coaching review, or workout debrief use analyze_activity instead.
+    This tool returns raw JSON without pipeline analysis, DFA-alpha1 interpretation,
+    or heat strain assessment.
+
+    activity_id: e.g. "i126379241" — full ID with "i" prefix from list_activities.
     """
     # Ensure i-prefix is present
     aid = activity_id if str(activity_id).startswith("i") else f"i{activity_id}"
@@ -257,29 +258,25 @@ def delete_workout(event_id: int) -> str:
 
 @mcp.tool()
 def analyze_activity(activity_id: str) -> str:
-    """Fetch full activity data + time-series streams for deep single-activity analysis.
+    """PRIMARY tool for any activity analysis, coaching review, or workout debrief.
 
-    Returns a combined JSON with:
-      - activity: full metadata (power zones, HR zones, TSS, IF, decoupling, etc.)
-      - streams_summary: per-stream descriptive stats computed from the raw data
-      - streams_raw: raw time-series arrays (time, watts, heartrate, dfa_a1, hrv,
-                     heat_strain_index, core_temperature, respiration, cadence)
-      - wellness: wellness record for the activity date (HRV, sleep, resting HR)
+    ALWAYS use this tool (not get_activity) when the user asks to:
+    - analyse, review, or discuss a specific workout
+    - check today's / yesterday's / any recent activity
+    - evaluate aerobic effort, heat stress, or training quality
+    - get coaching recommendations for a completed session
 
-    DFA-alpha1 interpretation (aerobic threshold detection):
-      α1 > 1.0   → purely aerobic (Z1–Z2)
-      α1 ≈ 0.75  → aerobic threshold (LT1) — key coaching marker
-      α1 < 0.75  → above LT1, approaching threshold
-      α1 < 0.5   → high intensity (approaching or above LT2)
+    Workflow: call list_activities first to find the activity_id, then call this.
 
-    Heat Strain Index (HSI) from Garmin body temperature sensors:
-      < 0.5  → low heat strain
-      0.5–1.0 → moderate
-      > 1.0  → high heat strain (reduce intensity)
-      > 2.0  → very high, dangerous
-
-    Use this tool when the user asks to analyse a specific workout, check
-    aerobic threshold markers, or evaluate thermal load.
+    Returns full audit_core coaching report (Tier-0..3 pipeline) enriched with:
+      streams_analysis.dfa_alpha1:
+        - mean α1, state label, % time above LT1 (aerobic threshold) and LT2
+        - α1 > 1.0 = purely aerobic; α1 ≈ 0.75 = LT1; α1 < 0.5 = above LT2
+      streams_analysis.heat_strain:
+        - max/mean HSI, % high heat strain, coaching recommendation
+        - HSI > 1.0 = high strain; > 2.0 = very high (reduce volume)
+      streams_analysis.core_temperature: peak core temp, thermal stress flag
+      Plus all standard report sections: CTL/ATL/TSB, zones, phases, ESPE, PI.
     """
     aid = activity_id if str(activity_id).startswith("i") else f"i{activity_id}"
     client = _client()
@@ -291,7 +288,8 @@ def analyze_activity(activity_id: str) -> str:
 
     # 2. Time-series streams → compute summary stats
     def _stats(values: list) -> dict:
-        nums = [v for v in values if v is not None]
+        # Filter to plain numbers only (some streams like hrv contain nested lists)
+        nums = [v for v in values if isinstance(v, (int, float))]
         if not nums:
             return {}
         n = len(nums)
