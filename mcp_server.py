@@ -329,7 +329,18 @@ def analyze_activity(activity_id: str) -> str:
 
 @mcp.tool()
 def run_weekly_report() -> str:
-    """Run a full training-load analysis covering all analytical tiers.
+    """PRIMARY tool for any coaching question about training load, fitness, or progress.
+
+    ALWAYS call this tool first when the user asks:
+    - "как мои тренировки", "анализ тренировок", "недельный отчёт"
+    - "how am I doing", "weekly report", "analyse my training"
+    - "дай рекомендации", "coaching recommendations", "что тренировать"
+    - "моя форма", "усталость", "готовность", "fitness", "fatigue", "form"
+    - "план на неделю", "что делать дальше", "next workouts"
+    - anything about training load, CTL, ATL, TSB, FTP progress
+
+    Do NOT use list_activities + get_activity as a substitute — those return
+    raw data without any analysis. This tool runs the full pipeline.
 
     Tier-2 Derived:
       ACWR (EWMA 7d/28d), Monotony, Strain (Foster method), FatigueTrend,
