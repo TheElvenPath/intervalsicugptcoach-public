@@ -5,6 +5,9 @@ CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
 ROOT_DIR = os.path.abspath(os.path.join(CURRENT_DIR, os.pardir))
 if ROOT_DIR not in sys.path:
     sys.path.insert(0, ROOT_DIR)
+# audit_core submodules use bare imports (e.g. from tier3_trail_execution import ...)
+if CURRENT_DIR not in sys.path:
+    sys.path.insert(0, CURRENT_DIR)
 sys.stderr.write(f"[DEBUG] Added ROOT_DIR to sys.path: {ROOT_DIR}\n")
 
 # --- Optional: show current working directory ---

@@ -1,14 +1,16 @@
 """
 Energy System Progression Engine (ESPE)
-Version: v1.1
+Version: v1.2
 
-Stateless physiological engine comparing two rolling power-curve windows.
+Stateless engine comparing two rolling power-curve windows to track energy system progression.
 
 Consumes:
     power_curve block injected by Worker
 
 Produces:
     energy_system_progression section
+
+v1.2 factored for baseline where no previous exists
 """
 
 from typing import Dict, Any
@@ -17,7 +19,7 @@ from coaching_cheat_sheet import CHEAT_SHEET
 from audit_core.utils import debug
 from coaching_profile import COACH_PROFILE
 
-ESPE_VERSION = "espe_v1.1"
+ESPE_VERSION = "espe_v1.2"
 
 # ---------------------------------------------------------------------
 # Power Anchor Helpers
@@ -66,9 +68,26 @@ def run_espe(power_curve_block: Dict[str, Any], context: Dict[str, Any]) -> Dict
 
         debug(context, f"[ESPE] processing sport={sport}")
 
-        if not _valid_curve_block(data, context, sport):
-            result["sports"][sport] = _unsupported("invalid or insufficient data")
+        current = data.get("current", {})
+        previous = data.get("previous", {})
+
+        # --- require CURRENT only ---
+        required = ["5m", "20m"] if sport == "Run" else ["1m", "5m", "20m", "60m"]
+
+        has_current = all(
+            (_power(current.get(k)) is not None and _power(current.get(k)) > 0)
+            for k in required
+        )
+
+        if not has_current:
+            result["sports"][sport] = _unsupported("missing current power data")
             continue
+
+        # --- check if comparison is possible ---
+        has_previous = all(
+            (_power(previous.get(k)) is not None and _power(previous.get(k)) > 0)
+            for k in required
+        )
 
         result["sports"][sport] = _process_sport(sport, data, context)
 
@@ -91,7 +110,12 @@ def _process_sport(sport: str, data: Dict[str, Any], context: Dict[str, Any]) ->
         "60m": _anchor_meta(current.get("60m")),
     }
 
-    delta = _compute_delta_percent(current, previous, context)
+    has_previous = any(
+    _power(previous.get(k)) not in (None, 0)
+    for k in ("1m", "5m", "20m", "60m")
+    )
+
+    delta = _compute_delta_percent(current, previous, context) if has_previous else None
 
     glycolytic_bias = _safe_ratio(
         _power(current.get("1m")),
@@ -109,10 +133,18 @@ def _process_sport(sport: str, data: Dict[str, Any], context: Dict[str, Any]) ->
         _power(current.get("20m"))
     )
 
-    system_status = _classify_system_status(sport, delta)
-    system_timeline = _build_system_timeline(system_status)
+    system_status = (
+        _classify_system_status(sport, delta)
+        if delta
+        else {k: "baseline" for k in ["anaerobic", "vo2", "threshold", "aerobic_durability"]}
+    )
+    system_timeline = (
+        _build_system_timeline(system_status)
+        if delta
+        else {k: "baseline" for k in system_status.keys()}
+    )
 
-    plateau = _detect_plateau(sport, delta, context)
+    plateau = _detect_plateau(sport, delta, context) if delta else False
 
     balance_score = _compute_balance_score(glycolytic_bias, aerobic_durability)
 
@@ -150,28 +182,45 @@ def _process_sport(sport: str, data: Dict[str, Any], context: Dict[str, Any]) ->
         else "unknown"
     )
 
-    adaptation_bias = _derive_adaptation_bias(system_status)
-    adaptation_state = classify_adaptation_state(system_status, delta)
+    adaptation_bias = (
+        _derive_adaptation_bias(system_status)
+        if delta
+        else "baseline"
+    )
+    adaptation_state = (
+        classify_adaptation_state(system_status, delta)
+        if delta
+        else "baseline"
+    )
 
-    curve_dynamics = _compute_curve_dynamics(delta)
+    curve_dynamics = _compute_curve_dynamics(delta or {})
 
     # ---- curve window definition ----
     window = data.get(
         "window_days",
         CHEAT_SHEET["thresholds"]["ESPE"]["curve_windows"]["default_days"]
-    )
+    ) or CHEAT_SHEET["thresholds"]["ESPE"]["curve_windows"]["default_days"]
     anchors_context = {
         "window_days": window,
         "description": f"Best power values recorded within the last {window} days"
     }
 
-    curve_window = {
-        "current_days": window,
-        "previous_days": window,
-        "comparison": f"{window}d_vs_{window}d",
-        "anchor": "report_end",
-        "curve_source": "FFT_CURVES"
-    }
+    if has_previous:
+        curve_window = {
+            "current_days": window,
+            "previous_days": window,
+            "comparison": f"{window}d_vs_{window}d",
+            "anchor": "report_end",
+            "curve_source": "FFT_CURVES"
+        }
+    else:
+        curve_window = {
+            "current_days": window,
+            "previous_days": None,
+            "comparison": f"{window}d_baseline",
+            "anchor": "report_end",
+            "curve_source": "FFT_CURVES"
+        }
 
     # ---- derived metrics block ----
     markers = COACH_PROFILE.get("markers", {})
@@ -230,26 +279,25 @@ def _process_sport(sport: str, data: Dict[str, Any], context: Dict[str, Any]) ->
 
         if system_status.get("vo2") == "decline":
             system_guidance = (
-                "Aerobic development progressing while VO₂ capacity drifts — "
-                "reintroduce VO₂ stimulus within the next microcycle."
+            "Aerobic development is progressing, but VO₂ capacity is slipping slightly — reintroduce VO₂ stimulus in the next microcycle."
             )
 
     elif adaptation_state == "vo2_expansion":
 
         system_guidance = (
-            "VO₂ capacity expanding — consolidate gains with threshold work."
+            "VO₂ capacity is improving — support it with threshold work to consolidate gains."
         )
 
     elif adaptation_state == "anaerobic_build":
 
         system_guidance = (
-            "Anaerobic power improving — maintain short high-intensity efforts."
+            "Anaerobic power is improving — keep short, high-intensity efforts in the mix."
         )
 
     elif adaptation_state == "plateau":
 
         system_guidance = (
-            "Power curve stable across systems — introduce new stimulus to drive adaptation."
+            "Power curve is stable across systems — a new stimulus may be needed to restart progression."
         )
 
     return {
@@ -650,7 +698,7 @@ def _valid_curve_block(
         cur = _power(current.get(k))
         prev = _power(previous.get(k))
 
-        if cur is None or prev is None or cur <= 0 or prev <= 0:
+        if cur is None or cur <= 0:
             debug(context, f"[ESPE] missing anchor {k} for {sport}")
             return False
 

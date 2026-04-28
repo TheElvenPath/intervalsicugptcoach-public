@@ -91,9 +91,9 @@ CHEAT_SHEET["thresholds"] = {
         "red": (0.0, 0.9)
     },
     "HRVStability": {
-        "green": (0.85, 1.0),
-        "amber": (0.7, 0.85),
-        "red": (0.0, 0.7)
+        "green": (0.8, 1.0),
+        "amber": (0.65, 0.8),
+        "red": (0.0, 0.65)
     },
     "HRVTrend": {
         "green": (0.0, 5.0),
@@ -109,11 +109,11 @@ CHEAT_SHEET["thresholds"] = {
     },
     "high_depletion_sessions_7d": {"green":(0,2),"amber":(3,4)},
     #"mean_depletion_pct_90d": {"green":(0.15,0.35),"amber":(0.35,0.55)},
-    "high_depletion_sessions_90d": {"green":(0,6),"amber":(6,10)},
+    "high_depletion_sessions_90d": {"green":(0,6),"amber":(7,10)},
     #"mean_decoupling_7d": {"green":(0,5),"amber":(5,8)},
-    "high_drift_sessions_7d": {"green":(0,2),"amber":(3,4)},
+    "high_drift_sessions_7d": {"green":(0,2),"amber":(3,99)},
     #"mean_decoupling_90d": {"green":(0,4),"amber":(4,7)},
-    "high_drift_sessions_90d": {"green":(0,10),"amber":(10,20)},
+    "high_drift_sessions_90d": {"green":(0,10),"amber":(11,999)},
     "rolling_joules_above_ftp_7d": {
         "green": (0,150000),
         "amber": (150000,250000),
@@ -239,33 +239,17 @@ CHEAT_SHEET["thresholds"] = {
     #     high_risk: [-999, -30]  → overreached
     # ================================================================
 
-    "PhaseBoundaries": {
+   "PhaseBoundaries": {
 
-        # 🧱 BASE → Stable or gently rising CTL; small week-to-week variance
-        "Base": {
-            "trend_min": -0.05,
-            "trend_max": 0.10,
-            "acwr_max": 1.2,
-            "lvi_min": 0.75
+        # 💤 RECOVERY → extreme unload / detraining
+        "Recovery": {
+            "trend_min": -1.00,
+            "trend_max": -0.50,
+            "acwr_max": 1.0,
+            "lvi_min": 0.6
         },
 
-        # 📈 BUILD → Progressive overload; productive fatigue zone
-        "Build": {
-            "trend_min": 0.10,
-            "trend_max": 0.40,
-            "acwr_max": 1.3,
-            "lvi_min": 0.65
-        },
-
-        # 🏁 PEAK → Stabilised high CTL, ATL dropping, freshness improving
-        "Peak": {
-            "trend_min": -0.10,
-            "trend_max": 0.05,
-            "acwr_max": 1.15,
-            "lvi_min": 0.8
-        },
-
-        # 📉 TAPER → Rapid ATL drop, load reduced 30–50%
+        # 📉 TAPER → strong unload (race prep)
         "Taper": {
             "trend_min": -0.50,
             "trend_max": -0.15,
@@ -273,26 +257,36 @@ CHEAT_SHEET["thresholds"] = {
             "lvi_min": 0.8
         },
 
-        # 💤 RECOVERY → Heavy unload / detraining period
-        "Recovery": {
-            "trend_min": -1.0,
-            "trend_max": -0.50,
-            "acwr_max": 1.0,
-            "lvi_min": 0.6
-        },
-
-        # 🧘 DELOAD → Short mid-block unloads; prevents overreach
+        # 🧘 DELOAD → controlled unload inside block
         "Deload": {
-            "trend_min": -0.25,
-            "trend_max": -0.10,
+            "trend_min": -0.15,
+            "trend_max": -0.05,
             "acwr_max": 1.2,
             "lvi_min": 0.7
         },
 
-        # 🔁 CONTINUOUS LOAD → fallback when variation minimal (<5%)
-        "Continuous Load": {
+        # 🧱 BASE → stable / slight variation
+        "Base": {
             "trend_min": -0.05,
-            "trend_max": 0.05
+            "trend_max": 0.05,
+            "acwr_max": 1.2,
+            "lvi_min": 0.75
+        },
+
+        # 🏁 PEAK → stable but fresh (slight drop or flat)
+        "Peak": {
+            "trend_min": 0.05,
+            "trend_max": 0.10,
+            "acwr_max": 1.15,
+            "lvi_min": 0.8
+        },
+
+        # 📈 BUILD → progressive overload
+        "Build": {
+            "trend_min": 0.10,
+            "trend_max": 0.40,
+            "acwr_max": 1.3,
+            "lvi_min": 0.65
         }
     },
     "ESPE": {
@@ -357,9 +351,12 @@ CHEAT_SHEET["metric_groups"] = {
     "high_depletion_sessions_90d": "AnaerobicRepeatability",
     # --- ISDM ---
     "mean_decoupling_7d": "DurabilityProfile",
+    "mean_decoupling_signed_7d": "DurabilityProfile",
     "max_decoupling_7d": "DurabilityProfile",
     "high_drift_sessions_7d": "DurabilityProfile",
+
     "mean_decoupling_90d": "DurabilityProfile",
+    "mean_decoupling_signed_90d": "DurabilityProfile",
     "high_drift_sessions_90d": "DurabilityProfile",
     # --- NDLI ---
     "rolling_joules_above_ftp_7d": "NeuralDensity",
@@ -612,8 +609,8 @@ CLASSIFICATION_ALIASES = {
 # === Context ===
 CHEAT_SHEET["context"] = {
     "ACWR": (
-    "EWMA Acute:Chronic Load Ratio — compares 7-day vs 28-day weighted loads. "
-    "0.8–1.3 = productive training, <0.8 = recovery or detraining, >1.5 = overload/injury risk."
+        "EWMA Acute:Chronic Load Ratio — compares acute vs chronic weighted loads. "
+        "0.8–1.3 = productive training, <0.8 = recovery or detraining, >1.5 = overload/injury risk."
     ),
     "Monotony": "1–2 shows healthy variation; >2.5 means repetitive stress pattern.",
     "Strain": (
@@ -720,8 +717,9 @@ CHEAT_SHEET["context"] = {
         "deep supra-threshold exposure."
     ),
     "DurabilityProfile": (
-        "ISDM (Intensity Stability & Durability Metric) reflects decoupling behaviour "
-        "under fatigue. Elevated values indicate cardiovascular drift or durability stress."
+        "ISDM (Intensity Stability & Durability Model) reflects stability of effort over time. "
+        "Decoupling magnitude indicates how stable the effort is. "
+        "Durability state provides the resolved interpretation and must be used as the authoritative assessment."
     ),
     "NeuralDensity": (
         "NDLI (Neural Density Load Index) captures clustering of high-intensity "
@@ -838,8 +836,9 @@ CHEAT_SHEET["coaching_links"] = {
         "deep W′ sessions without adequate low-intensity support."
     ),
     "DurabilityProfile": (
-        "If durability drift rising, extend aerobic steady work or reduce "
-        "high-intensity density to stabilise cardiovascular efficiency."
+        "Use durability state to guide action. "
+        "If durability is drifting, reduce intensity density or extend aerobic work. "
+        "If stable or improving, maintain current structure."
     ),
     "NeuralDensity": (
         "If neural density clustered, insert recovery microcycles or "
@@ -952,8 +951,9 @@ CHEAT_SHEET["display_names"] = {
     "high_depletion_sessions_7d": "High W′ Depletion Sessions (7-day)",
     "total_joules_above_ftp_7d": "Total Work Above FTP (7-day)",
 
-    # ISDM metrics
-    "mean_decoupling_7d": "Mean Decoupling (7-day)",
+    # ISDM metrics 7d
+    "mean_decoupling_7d": "Mean Decoupling (abs, 7-day)",
+    "mean_decoupling_signed_7d": "Decoupling Direction (7-day)",
     "max_decoupling_7d": "Max Decoupling (7-day)",
     "high_drift_sessions_7d": "High Drift Sessions (7-day)",
     "long_sessions_7d": "Long Endurance Sessions (7-day)",
@@ -972,7 +972,8 @@ CHEAT_SHEET["display_names"] = {
     "total_joules_above_ftp_90d": "Total Work Above FTP (90-day)",
 
     # ISDM metrics (90d)
-    "mean_decoupling_90d": "Mean Decoupling (90-day)",
+    "mean_decoupling_90d": "Mean Decoupling (abs, 90-day)",
+    "mean_decoupling_signed_90d": "Decoupling Direction (90-day)",
     "max_decoupling_90d": "Max Decoupling (90-day)",
     "high_drift_sessions_90d": "High Drift Sessions (90-day)",
 
@@ -1065,13 +1066,17 @@ CHEAT_SHEET["advice"] = {
     },
     # --- Phase Detection --- (Seasonal Phase Advice)
     "PhaseAdvice": {
-        "Base": "🧱 **Base phase detected** — focus on aerobic volume (Z1–Z2 ≥ 70%), maintain ACWR ≤ 1.0.",
-        "Build": "📈 **Build phase detected** — progressive overload active; maintain ACWR ≤ 1.3.",
-        "Peak": "🏁 **Peak phase detected** — high-intensity emphasis; monitor fatigue (RI ≥ 0.6).",
-        "Taper": "📉 **Taper phase detected** — reduce ATL by 30–50%, maintain intensity; expected RI ↑.",
-        "Recovery": "💤 **Recovery phase detected** — active regeneration; target RI ≥ 0.8 and low monotony.",
-        "Deload": "🧘 **Deload phase detected** — reduced load, maintain frequency; transition readiness improving.",
-        "Continuous Load": "🔁 **Continuous Load** — steady training; insert variation if fatigue rises."
+        "Base": "🧱 **Base phase detected** — prioritise aerobic volume (Z1–Z2 ≥ 70%) and stable load progression (ACWR ≤ 1.0).",
+
+        "Build": "📈 **Build phase detected** — progressive overload active; maintain ACWR ≤ 1.3 and manage intensity density.",
+
+        "Peak": "🏁 **Peak phase detected** — high-intensity emphasis; monitor fatigue signals (NDLI, durability, FatigueTrend).",
+
+        "Taper": "📉 **Taper phase detected** — reduce ATL by ~30–50% while maintaining intensity; expect freshness to rise (TSB ↑, fatigue ↓).",
+
+        "Recovery": "💤 **Recovery phase detected** — reduce load and prioritise recovery; target low monotony and declining load trend.",
+
+        "Deload": "🧘 **Deload phase detected** — controlled reduction in load while maintaining frequency; prepare for next progression block."
     },
     #Lactate-based training advice and reasoning
     "Lactate": {
@@ -1104,8 +1109,10 @@ CHEAT_SHEET["advice"] = {
     },
     "DurabilityProfile": {
         "stable": "Durability stable — cardiovascular drift controlled.",
-        "fatigue": "Elevated drift — consider aerobic consolidation.",
-        "severe": "Significant durability stress — reduce load."
+        "stable_improving": "Durability stable and improving — efficiency trending positively.",
+        "drifting": "Elevated drift — expected under load. Monitor trend, not single-week values.",
+        "improving": "Durability improving — strong efficiency adaptation.",
+        "logic": "Durability state is pre-resolved. Do not infer interpretation from decoupling metrics."
     },
     "NeuralDensity": {
         "balanced": "Intensity density well distributed.",
@@ -1153,9 +1160,6 @@ CHEAT_SHEET["sport_groups"] = {
         "Run",
         "TrailRun",
         "VirtualRun",
-        "Walk",
-        "Hike",
-        "Snowshoe",
     ],
 
     # -----------------------------
@@ -1177,6 +1181,15 @@ CHEAT_SHEET["sport_groups"] = {
         "RollerSki",
         "Snowboard",
         "VirtualSki",
+        "Snowshoe",
+    ],
+
+    # -----------------------------
+    #  HIKE
+    # -----------------------------
+    "Hike": [
+        "Walk",
+        "Hike",
     ],
 
     # -----------------------------

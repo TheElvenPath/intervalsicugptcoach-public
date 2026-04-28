@@ -454,17 +454,6 @@ def compute_derived_metrics(df_events, context):
 
     debug(context, f"[T2] Adaptive window → {window_days}d (acute={acute_days}, chronic={chronic_days})")
 
-    # --- ✅ 4. ACWR Calculation (EWMA-based) ---
-    if len(load_series) > 0:
-        ewma_acute = load_series.ewm(span=acute_days).mean().iloc[-1]
-        ewma_chronic = load_series.ewm(span=chronic_days).mean().iloc[-1]
-        acwr = round(ewma_acute / ewma_chronic, 2) if ewma_chronic != 0 else 1.0
-        acwr_status = "ok" if acwr != 1.0 else "fallback"
-        debug(context, f"[DERIVED] ACWR computed={acwr} (acute={ewma_acute:.2f}, chronic={ewma_chronic:.2f})")
-    else:
-        acwr, acwr_status = 1.0, "fallback"
-        debug(context, "[DERIVED] ACWR fallback=1.0 — no load data.")
-
     # --- ✅ 5. Unified padded load reference (used for Monotony, Strain, and FatigueTrend) ---
     if not df_daily.empty:
         min_date = df_daily["date"].min()
@@ -490,11 +479,47 @@ def compute_derived_metrics(df_events, context):
         })
         debug(context, "[T2] df_ref fallback created (all zero loads).")
 
-    load_series = df_ref["icu_training_load"].fillna(0)
+    # --- ✅ ACWR Calculation (EWMA-based, corrected + safe) ---
+
+    # Decide source series (do NOT reuse later for other metrics)
+    if len(df_daily) < 14:
+        acwr_series = df_daily["icu_training_load"].fillna(0)
+        debug(context, "[ACWR] Using df_daily (insufficient history)")
+    else:
+        acwr_series = df_ref["icu_training_load"].fillna(0)
+        debug(context, "[ACWR] Using df_ref (padded time-series)")
+
+    # Compute
+    if len(acwr_series) > 0:
+        ewma_acute = acwr_series.ewm(span=acute_days).mean().iloc[-1]
+        ewma_chronic = acwr_series.ewm(span=chronic_days).mean().iloc[-1]
+
+        acwr = round(ewma_acute / ewma_chronic, 2) if ewma_chronic != 0 else 1.0
+        acwr_status = "ok" if acwr != 1.0 else "fallback"
+
+        # store windows for downstream (fixes your 7/28 vs 21/55 issue)
+        context["acwr_windows"] = {
+            "acute_days": acute_days,
+            "chronic_days": chronic_days
+        }
+
+        debug(context,
+            f"[DERIVED] ACWR computed={acwr} "
+            f"(acute={ewma_acute:.2f}, chronic={ewma_chronic:.2f}, "
+            f"window={acute_days}/{chronic_days})"
+        )
+
+    else:
+        acwr, acwr_status = 1.0, "fallback"
+        context["acwr_windows"] = {
+            "acute_days": acute_days,
+            "chronic_days": chronic_days
+        }
+        debug(context, "[DERIVED] ACWR fallback=1.0 — no load data.")
 
     # --- ✅ 6. Monotony & Strain (Foster 2001 method) ---
 
-    last_7d = load_series.tail(7).astype(float).values
+    last_7d = df_ref["icu_training_load"].fillna(0).tail(7).astype(float).values
 
     mean_load = np.mean(last_7d)
     std_load = np.std(last_7d, ddof=1)
@@ -1058,7 +1083,12 @@ def compute_derived_metrics(df_events, context):
             "value": acwr,
             "classification": classified["ACWR"]["state"],
             "icon": classified["ACWR"]["icon"],
-            "desc": "EWMA Acute:Chronic Load Ratio",
+            "desc": f"EWMA Acute:Chronic Load Ratio ({acute_days}d / {chronic_days}d)",
+            "interpretation": (
+                f"EWMA Acute:Chronic Load Ratio — compares {acute_days}-day vs "
+                f"{chronic_days}-day weighted loads. "
+                "0.8–1.3 = productive training, <0.8 = recovery or detraining, >1.5 = overload/injury risk."
+            ),
         },
         "Monotony": {
             "value": monotony,

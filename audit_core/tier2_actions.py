@@ -74,7 +74,6 @@ def metric_value(context, key, default=0.0):
     except (TypeError, ValueError):
         return default
 
-
 def detect_phases(context, events):
     """
     Tier-2 Phase Detection (v17.9 — Science-Aligned, Traceable)
@@ -129,8 +128,28 @@ def detect_phases(context, events):
         return context
 
     # --- Compute Banister model metrics -----------------------------------
-    df_week["ctl"] = df_week["tss"].ewm(span=6, adjust=False).mean()
-    df_week["atl"] = df_week["tss"].ewm(span=2, adjust=False).mean()
+    # --- Use Intervals CTL/ATL (NOT reconstructed) ------------------------
+    if "icu_ctl" in df.columns and "icu_atl" in df.columns:
+
+        df_week = (
+            df.groupby("week_start")
+            .agg({
+                "icu_training_load": "sum",
+                "icu_ctl": "last",
+                "icu_atl": "last"
+            })
+            .reset_index()
+            .rename(columns={"icu_training_load": "tss"})
+        )
+
+        df_week["ctl"] = df_week["icu_ctl"]
+        df_week["atl"] = df_week["icu_atl"]
+
+    else:
+        # fallback if somehow missing
+        df_week["ctl"] = df_week["tss"].ewm(span=6, adjust=False).mean()
+        df_week["atl"] = df_week["tss"].ewm(span=2, adjust=False).mean()
+
     df_week["tsb"] = df_week["ctl"] - df_week["atl"]
     df_week["delta_raw"] = df_week["tss"].pct_change().clip(-1, 2).fillna(0)
     df_week["delta"] = df_week["delta_raw"].ewm(span=3, adjust=False).mean().round(3)
@@ -166,11 +185,11 @@ def detect_phases(context, events):
         acwr = float(df_week.iloc[i]["acwr"])
         lvi = float(df_week.iloc[i]["lvi"])
 
-        label = "Base"
-        method_source = "steady_load_fallback"
+        label = "Transition"
+        method_source = "TSB mixed + moderate load"
         method_trace = {
             "delta": round(d, 3),
-            "tsb": round(tsb, 2),
+            "tsb": round(np.clip(tsb, -50, 50), 2),
             "ctl_slope": round(ctl_slope, 2),
             "atl_slope": round(atl_slope, 2),
             "acwr": round(acwr, 2),
@@ -190,9 +209,10 @@ def detect_phases(context, events):
         # --- Banister-informed multi-model phase detection system
         '''
         Hybrid endurance periodisation model combining:
-        - Banister load-response (CTL/ATL/TSB)
-        - ΔTSS trend analysis
-        - ACWR load safety
+        Banister → TSB
+        Mujika → taper = unload + freshness
+        Gabbett → ACWR controls risk
+        Foster → load reduction defines recovery
         - Block periodisation mapping
         - Macrocycle
             └── Mesocycle (Season block)
@@ -200,32 +220,122 @@ def detect_phases(context, events):
                     └── Microcycle (Week)
                             └── Sessions
         '''
-        if tsb < -30:
-            # True overreach = strong spike + deep fatigue
-            if (
-                d > 0.20
-                and tsb < -50
-                and acwr >= 1.15
-                and atl_slope > ctl_slope * 1.3
-            ):
-                label, method_source = "Overreached", "TSB<-50 + overload spike"
-            else:
-                label, method_source = "Build", "TSB<-30 (acute overload)"
+        # -------------------------------------------------
+        # 🎯 Intervals-aligned phase classification
+        # -------------------------------------------------
 
-        elif tsb > 10:
-            # distinguish taper vs recovery by magnitude of drop
-            if d < -0.15:
-                label, method_source = "Taper", "TSB>10 + strong unload"
+        def get_tsb_zone(tsb):
+            if tsb < -30:
+                return "deep_fatigue"
+            elif tsb < -10:
+                return "fatigue"
+            elif tsb <= 5:
+                return "neutral"
+            elif tsb <= 25:
+                return "fresh"
+            else:
+                return "very_fresh"
+
+
+        zone = get_tsb_zone(tsb)
+        load_ratio = tss / (ctl * 7) if ctl > 0 else 0
+
+
+        # -------------------------------
+        # 🔴 DEEP FATIGUE
+        # -------------------------------
+        if zone == "deep_fatigue":
+
+            if d > 0.15 and acwr >= 1.1:
+                label = "Build"
+            else:
+                label = "Overreached"
+
+
+        # -------------------------------
+        # 🟠 FATIGUE
+        # -------------------------------
+        elif zone == "fatigue":
+
+            if d > 0.05:
+                label = "Build"
+
             elif d < -0.05:
-                label, method_source = "Deload", "TSB>10 + moderate unload"
+                if d < -0.12:
+                    label = "Deload"
+                else:
+                    label = "Recovery"
+
             else:
-                label, method_source = "Recovery", "TSB>10 + low load"
+                label = "Transition"
 
-        elif -5 <= tsb <= 5 and abs(d) < 0.05:
-            label, method_source = "Base", "|ΔTSS|<5% & TSB≈0"
 
-        elif -30 <= tsb < -5 and d > 0.10:
-            label, method_source = "Build", "TSB=-30–-5 & ΔTSS>0.1"
+        # -------------------------------
+        # 🟡 NEUTRAL
+        # -------------------------------
+        elif zone == "neutral":
+
+            if abs(d) < 0.05:
+                label = "Base"
+
+            elif d > 0.05:
+                label = "Build"
+
+            elif d < -0.08:
+                label = "Recovery"
+
+            else:
+                label = "Transition"
+
+
+        # -------------------------------
+        # 🟢 FRESH
+        # -------------------------------
+        elif zone == "fresh":
+
+            if d < -0.10 and load_ratio < 0.75:
+                label = "Taper"
+
+            elif d < -0.05:
+                label = "Recovery"
+
+            elif d > 0.05:
+                label = "Build"
+
+            else:
+                label = "Transition"
+
+
+        # -------------------------------
+        # 🔵 VERY FRESH
+        # -------------------------------
+        elif zone == "very_fresh":
+
+            if load_ratio < 0.60:
+                label = "Peak"
+            else:
+                label = "Transition"
+
+
+        # -------------------------------------------------
+        # 🧠 CANONICAL METHOD SOURCE (SINGLE SOURCE OF TRUTH)
+        # -------------------------------------------------
+
+        if zone in ("deep_fatigue", "fatigue"):
+            zone_simple = "fatigue"
+        elif zone == "neutral":
+            zone_simple = "neutral"
+        else:
+            zone_simple = "fresh"
+
+        if d > 0.05:
+            trend = "increasing load"
+        elif d < -0.05:
+            trend = "unloading"
+        else:
+            trend = "stable load"
+
+        method_source = f"{zone_simple} + {trend}"
 
         labels.append(label)
         methods.append(method_source)
@@ -236,16 +346,31 @@ def detect_phases(context, events):
     df_week["calc_context"] = traces
 
     # --- Merge contiguous same-phase blocks -------------------------------
+    zone_counts = {"fatigue": 0, "neutral": 0, "fresh": 0}
+    trend_counts = {"increasing load": 0, "stable load": 0, "unloading": 0}
+    # --- Merge contiguous same-phase blocks -------------------------------
     merged = []
-    current_phase, current_method, start_date, tss_acc = None, None, None, 0
+
+    zone_counts = {"fatigue": 0, "neutral": 0, "fresh": 0}
+    trend_counts = {"increasing load": 0, "stable load": 0, "unloading": 0}
+    trace_accumulator = []
+
+    current_phase = None
+    start_date = None
+    tss_acc = 0
 
     for i, row in df_week.iterrows():
         ph = row["phase_raw"]
 
-        force_split = False
+        # ----------------------------
+        # PHASE SWITCH FIRST
+        # ----------------------------
+        if ph != current_phase:
 
-        if ph != current_phase or force_split:
             if current_phase is not None:
+                dominant_zone = max(zone_counts, key=zone_counts.get)
+                dominant_trend = max(trend_counts, key=trend_counts.get)
+
                 merged.append({
                     "phase": current_phase,
                     "start": start_date.strftime("%Y-%m-%d"),
@@ -254,23 +379,57 @@ def detect_phases(context, events):
                     "duration_weeks": round((prev - start_date).days / 7, 1),
                     "tss_total": round(tss_acc, 1),
                     "ctl": round(prev_ctl, 2),
+                    "atl": round(prev_atl, 2),
                     "tsb": round(prev_tsb, 2),
-                    "calc_method": current_method,
-                    "calc_context": prev_trace,
+                    "calc_method": f"{dominant_zone} + {dominant_trend}",
+                    "calc_context": {
+                        "weeks": len(trace_accumulator),
+                        "mean_delta": round(np.mean([t["delta"] for t in trace_accumulator]), 3),
+                        "mean_tsb": round(np.mean([t["tsb"] for t in trace_accumulator]), 2),
+                        "mean_acwr": round(np.mean([t["acwr"] for t in trace_accumulator]), 2),
+                    },
                     "descriptor": phase_advice.get(current_phase, f"{current_phase} phase detected.")
                 })
-            current_phase = ph
-            current_method = row["calc_method"]
-            start_date = row["week_start"]
-            tss_acc = row["tss"]
-        else:
-            tss_acc += row["tss"]
-        prev = row["week_start"]
-        prev_ctl, prev_tsb = row["ctl"], row["tsb"]
-        prev_trace = row["calc_context"]
 
-    # Close final phase
+            # RESET for new phase
+            current_phase = ph
+            start_date = row["week_start"]
+            tss_acc = 0
+
+            zone_counts = {"fatigue": 0, "neutral": 0, "fresh": 0}
+            trend_counts = {"increasing load": 0, "stable load": 0, "unloading": 0}
+            trace_accumulator = []
+
+        # ----------------------------
+        # ADD CURRENT WEEK
+        # ----------------------------
+        method = row["calc_method"]
+
+        parts = method.split(" + ")
+        if len(parts) == 2:
+            zone_key, trend_key = parts
+        else:
+            zone_key, trend_key = "neutral", "stable load"
+
+        zone_counts[zone_key] += 1
+        trend_counts[trend_key] += 1
+
+        trace_accumulator.append(row["calc_context"])
+
+        tss_acc += row["tss"]
+
+        prev = row["week_start"]
+        prev_ctl = row["ctl"]
+        prev_atl = row["atl"]
+        prev_tsb = row["tsb"]
+
+    # ----------------------------
+    # CLOSE FINAL PHASE
+    # ----------------------------
     if current_phase:
+        dominant_zone = max(zone_counts, key=zone_counts.get)
+        dominant_trend = max(trend_counts, key=trend_counts.get)
+
         merged.append({
             "phase": current_phase,
             "start": start_date.strftime("%Y-%m-%d"),
@@ -279,13 +438,18 @@ def detect_phases(context, events):
             "duration_weeks": round((prev - start_date).days / 7, 1),
             "tss_total": round(tss_acc, 1),
             "ctl": round(prev_ctl, 2),
+            "atl": round(prev_atl, 2),
             "tsb": round(prev_tsb, 2),
-            "calc_method": current_method,
-            "calc_context": prev_trace,
+            "calc_method": f"{dominant_zone} + {dominant_trend}",
+            "calc_context": {
+                "weeks": len(trace_accumulator),
+                "mean_delta": round(np.mean([t["delta"] for t in trace_accumulator]), 3),
+                "mean_tsb": round(np.mean([t["tsb"] for t in trace_accumulator]), 2),
+                "mean_acwr": round(np.mean([t["acwr"] for t in trace_accumulator]), 2),
+            },
             "descriptor": phase_advice.get(current_phase, f"{current_phase} phase detected.")
         })
-
-
+    
     # --- Phase smoothing (prevent flip-flopping) ------------------
     '''
     Banister model → fatigue/adaptation lag (not instant)
@@ -293,7 +457,7 @@ def detect_phases(context, events):
     Mujika tapering → taper ≠ 1-week noise flip
     Real coaching practice → phases persist
     '''
-    min_block_weeks = 2
+    min_block_weeks = 1
     smoothed = []
 
     for i in range(len(df_week)):
@@ -310,7 +474,7 @@ def detect_phases(context, events):
             # look ahead to confirm change is real
             future = df_week.iloc[i:i+min_block_weeks]["phase_raw"].tolist()
 
-            if len(future) < min_block_weeks or any(p != current for p in future):
+            if len(future) >= 2 and all(p != current for p in future):
                 smoothed.append(prev)   # reject flip
             else:
                 smoothed.append(current)

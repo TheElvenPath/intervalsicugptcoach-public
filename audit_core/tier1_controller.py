@@ -1201,12 +1201,11 @@ def run_tier1_controller(df_master, wellness, context):
 
     context["dailyMerged"] = daily_summary
 
-    # --- Step 6a: Extract CTL / ATL / TSB from *latest* wellness record only (AUTHORITATIVE) ---
+    # --- Step 6a: Extract CTL / ATL / TSB from   yesterday + today's completed load ---
     if isinstance(wellness, pd.DataFrame) and not wellness.empty:
         df_well = wellness.copy()
         df_well.columns = [c.strip().lower() for c in df_well.columns]
 
-        # Identify date column
         date_col = next(
             (c for c in ("date", "day", "start_date_local", "start_date") if c in df_well.columns),
             None
@@ -1214,49 +1213,80 @@ def run_tier1_controller(df_master, wellness, context):
 
         if date_col:
             df_well[date_col] = pd.to_datetime(df_well[date_col], errors="coerce")
-            df_well = df_well.sort_values(date_col)
+            df_well = df_well.dropna(subset=[date_col]).sort_values(date_col)
+            df_well["_date"] = df_well[date_col].dt.date
+        else:
+            df_well["_date"] = pd.NaT
 
-        last = df_well.iloc[-1]
+        today = pd.to_datetime(context.get("athlete_today")).date()
 
-        ctl = pd.to_numeric(last.get("ctl"), errors="coerce")
-        atl = pd.to_numeric(last.get("atl"), errors="coerce")
-        tsb = pd.to_numeric(last.get("tsb"), errors="coerce") if "tsb" in df_well.columns else None
+        # ---------------------------------------------------------
+        # ALWAYS use latest wellness row strictly BEFORE today
+        # ---------------------------------------------------------
+        df_past = df_well[df_well["_date"] < today]
 
-        if pd.isna(tsb) and pd.notna(ctl) and pd.notna(atl):
-            tsb = ctl - atl
+        if not df_past.empty:
+            last = df_past.iloc[-1]
+        else:
+            last = df_well.iloc[-1]
 
-        context["ctl"] = float(ctl) if pd.notna(ctl) else None
-        context["atl"] = float(atl) if pd.notna(atl) else None
-        context["tsb"] = float(tsb) if pd.notna(tsb) else None
+        # --- yesterday baseline from wellness ---
+        ctl_y = pd.to_numeric(last.get("ctl"), errors="coerce")
+        atl_y = pd.to_numeric(last.get("atl"), errors="coerce")
 
-        # 🔒 AUTHORITATIVE wellness snapshot ONLY
+        # --- today's COMPLETED load only from activities ---
+        today_tss = 0.0
+
+        if isinstance(df_master, pd.DataFrame) and not df_master.empty:
+            df_master = df_master.copy()
+            df_master["_date"] = pd.to_datetime(
+                df_master["start_date_local"], errors="coerce"
+            ).dt.date
+
+            today_tss = pd.to_numeric(
+                df_master.loc[df_master["_date"] == today, "icu_training_load"],
+                errors="coerce"
+            ).fillna(0).sum()
+
+        # --- recompute observed CTL / ATL / TSB from yesterday + today's actual load ---
+        if pd.notna(ctl_y) and pd.notna(atl_y):
+            tau_ctl = 42.0
+            tau_atl = 7.0
+
+            ctl_today = ctl_y + (today_tss - ctl_y) / tau_ctl
+            atl_today = atl_y + (today_tss - atl_y) / tau_atl
+            tsb_today = ctl_today - atl_today
+        else:
+            ctl_today, atl_today, tsb_today = None, None, None
+
+        context["ctl"] = round(float(ctl_today), 2) if ctl_today is not None else None
+        context["atl"] = round(float(atl_today), 2) if atl_today is not None else None
+        context["tsb"] = round(float(tsb_today), 2) if tsb_today is not None else None
+
         load_snapshot = {
             "ctl": context["ctl"],
             "atl": context["atl"],
             "tsb": context["tsb"],
-            # do not exist in wellness data
- #           "recovery": last.get("recovery"),
- #           "fitness": last.get("fitness"),
- #           "form": last.get("form"),
         }
 
         existing = context.get("wellness_summary", {})
-
         context["wellness_summary"] = {
-            **existing,          # keep subjective markers
-            **load_snapshot      # overlay load model
+            **existing,
+            **load_snapshot
         }
-        # For renderer / UI only — Tier-2 must stay source of truth
+
         context["load_metrics"] = {
-            "CTL": {"value": context["ctl"], "status": "icu"},
-            "ATL": {"value": context["atl"], "status": "icu"},
-            "TSB": {"value": context["tsb"], "status": "icu"},
+            "CTL": {"value": context["ctl"], "status": "recomputed_observed"},
+            "ATL": {"value": context["atl"], "status": "recomputed_observed"},
+            "TSB": {"value": context["tsb"], "status": "recomputed_observed"},
         }
 
         debug(
             context,
-            f"[T1-WELLNESS-LATEST] CTL={context['ctl']} ATL={context['atl']} TSB={context['tsb']}"
+            f"[T1-WELLNESS-OBSERVED] baseline_date={last.get('_date')} today_tss={today_tss} "
+            f"CTL={context['ctl']} ATL={context['atl']} TSB={context['tsb']}"
         )
+
     else:
         debug(context, "[T1] No valid wellness DataFrame — skipping wellness hydration")
 

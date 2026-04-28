@@ -1,7 +1,49 @@
-#ADE V2.0
+#ADE V2.1
 
-ADE_VERSION = "ade_v2.0"
+ADE_VERSION = "ade_v2.1"
 
+from datetime import datetime
+from audit_core.utils import debug
+
+def _extract_target_event(ev):
+    name = (ev.get("name") or "").lower()
+    category = str(ev.get("category") or "").upper()
+
+    if category == "RACE_A":
+        priority = "A"
+    elif category == "RACE_B":
+        priority = "B"
+    elif category == "RACE_C":
+        priority = "C"
+    else:
+        return None
+
+    if "climb" in name:
+        training_bias = "durability"
+    elif "tt" in name or "threshold" in name:
+        training_bias = "ftp"
+    elif "vo2" in name:
+        training_bias = "anaerobic"
+    elif "sprint" in name:
+        training_bias = "neuromuscular"
+    else:
+        training_bias = "mixed"
+
+    date_raw = ev.get("start_date_local") or ev.get("date")
+
+    if not date_raw:
+        return None
+
+    try:
+        dt = datetime.fromisoformat(str(date_raw)[:10])
+    except:
+        return None
+
+    return {
+        "priority": priority,
+        "training_bias": training_bias,
+        "dt": dt
+    }
 
 def run_adaptive_decision_engine(context):
 
@@ -34,6 +76,74 @@ def run_adaptive_decision_engine(context):
     nutrition = context.get("nutrition_balance", {}) or {}
     nutrition_status = nutrition.get("status")
     nutrition_conf = nutrition.get("confidence")
+
+    # --------------------------------------------------
+    # 🎯 TARGET EVENT CONTEXT (calendar ONLY)
+    # --------------------------------------------------
+
+    today_raw = context.get("athlete_today")
+
+    if isinstance(today_raw, str):
+        today = datetime.fromisoformat(today_raw).date()
+    elif hasattr(today_raw, "date"):
+        today = today_raw.date()
+    else:
+        today = today_raw
+
+    events = context.get("calendar") or []
+
+    next_a = None
+
+    if today and events:
+
+        candidates = []
+
+        for ev in events:
+
+            t = _extract_target_event(ev)
+
+            if not t:
+                continue
+
+            if t["priority"] != "A":
+                continue
+
+            if t["dt"].date() < today:
+                continue
+
+            candidates.append(t)
+
+        if candidates:
+            next_a = sorted(candidates, key=lambda x: x["dt"])[0]
+
+    days_to_event = None
+    taper_state = "none"
+    training_bias = "mixed"
+
+    if next_a:
+        days_to_event = (next_a["dt"].date() - today).days if today else None
+
+        p = next_a.get("priority") if next_a else None
+
+        if days_to_event is not None and p:
+
+            if p == "A":
+                if days_to_event <= 10:
+                    taper_state = "taper"
+                elif days_to_event <= 21:
+                    taper_state = "pre_taper"
+
+            elif p == "B":
+                if days_to_event <= 5:
+                    taper_state = "taper"
+                elif days_to_event <= 10:
+                    taper_state = "pre_taper"
+
+            else:
+                taper_state = "none"
+
+        # ✅ DIRECT — no mapping
+        training_bias = next_a.get("training_bias", "mixed")
 
     # --------------------------------------------------
     # Nutrition = supplementary signal only (graded)
@@ -70,6 +180,12 @@ def run_adaptive_decision_engine(context):
         "nutrition_status": nutrition_status,
         "nutrition_confidence": nutrition_conf,
         "nutrition_note": nutrition_note,
+        "target_event": {
+            "exists": bool(next_a),
+            "days_to_event": days_to_event,
+            "taper_state": taper_state,
+            "event_demand": training_bias
+        },
         "version": ADE_VERSION
     }
 

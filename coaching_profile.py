@@ -16,9 +16,11 @@ REPORT_CONTRACT = {
         "metrics_groups",
         "daily_load",
         "events",
+        "planned_events_7d",
 
         # 🫀 PHYSIOLOGY RESPONSE
         "wellness",
+        #"insights", //old - good for wellness report though
         "insight_view",
 
         # ⚙️ PERFORMANCE INTELLIGENCE
@@ -33,10 +35,11 @@ REPORT_CONTRACT = {
 
         # 🎯 ADAPTIVE DECISIONS
         "actions",
+        "event_targets",
         "phase_alignment",
         "training_guidance",
         "decision_context",
-        #"planned_events",
+
         "current_ISO_weekly_microcycle",
         "planned_summary_by_iso_week",
         "future_forecast",
@@ -64,6 +67,7 @@ REPORT_CONTRACT = {
 
         # 🎯 ADAPTIVE DECISIONS
         "actions",
+        "event_targets",
         "phase_alignment",
         "training_guidance",
         "decision_context",
@@ -79,8 +83,8 @@ REPORT_CONTRACT = {
 
         # 🫀 PHYSIOLOGY RESPONSE
         "wellness",
-        "adaptation_metrics",
         "insight_view",
+        "insights",
 
         # ⚙️ PERFORMANCE INTELLIGENCE
         "performance_intelligence",
@@ -90,9 +94,11 @@ REPORT_CONTRACT = {
         "energy_system_progression",
         "physiology",
         "phases_summary",
-
+        #"phases",
+        
         # 🎯 ADAPTIVE DECISIONS
         "actions",
+        "event_targets",
         "current_ISO_weekly_microcycle",
         "planned_summary_by_iso_week",
         "future_forecast",
@@ -112,7 +118,6 @@ REPORT_CONTRACT = {
 
         # 🫀 PHYSIOLOGY RESPONSE
         "wellness",
-        "adaptation_metrics",
 
         # ⚙️ PERFORMANCE INTELLIGENCE
         "performance_intelligence",
@@ -123,6 +128,7 @@ REPORT_CONTRACT = {
 
         # 🎯 ADAPTIVE DECISIONS
         "actions",
+        "event_targets",
         "future_forecast",
         "future_actions",
         "phase_alignment",
@@ -307,7 +313,7 @@ RENDERER_PROFILES = {
     "weekly": {
         "stack_structure": {
             "meta_context": [
-                "meta"
+                "meta",
             ],
             "training_load": [
                 "training_volume",
@@ -317,12 +323,14 @@ RENDERER_PROFILES = {
                 "metrics_groups.metabolic",
                 "metrics_groups.capacity",
                 "daily_load",
-                "events"
+                "events",
+                "planned_events_7d",
             ],
 
             "physiology_response": [
                 "wellness",
-                "insight_view"
+                "insight_view",
+                "performance_intelligence.external_load_context"
             ],
 
             "performance_intelligence": [
@@ -340,9 +348,9 @@ RENDERER_PROFILES = {
 
             "adaptive_decisions": [
                 "actions",
+                "event_targets",
                 "phase_alignment",
                 #"decision_context",
-                #"planned_events",
                 "planned_summary_by_date",
                 "current_ISO_weekly_microcycle",
                 "planned_summary_by_iso_week",
@@ -367,6 +375,7 @@ RENDERER_PROFILES = {
         },
         "interpretation_rules": [
             "Interpretations must be descriptive/conditional, not predictive.",
+            "Render all meta.athlete.identity and always notes in REPORT CONTEXT when present",
             "Render training_volume as: Hours | TSS | Distance when present.",
             "Render wbal_summary.temporal_pattern as a 1-line block timeline (▂ ▃ ▇ → none/low/moderate/high).",
             "Render daily_load as fixed-width timeline (labels, blocks, TSS aligned). NEVER list/table.",
@@ -378,8 +387,8 @@ RENDERER_PROFILES = {
             "Render performance_intelligence as WDRM / ISDM / NDLI only (no recompute/merge).",
             "If high_dep_sessions>0 AND high_drift_sessions>0 → note neuromuscular+metabolic overlap.",
             "Cross-section interpretation allowed when describing same physiology.",
-            "If energy_system_progression exists, summarise direction using system_status + adaptation_state.",
-            "Prioritise ESPE signals over repeating metric definitions.",
+            "When energy_system_progression exists: If delta_percent is null → describe as 'baseline established' with no adaptation direction. If delta_percent exists → summarise adaptation direction using system_status and adaptation_state."
+            "Prioritise ESPE signals when delta_percent exists; otherwise treat ESPE as baseline reference only."
             "Render power anchors as [<power> W](link) when activity_link exists, else plain.",
             "Title current_ISO_weekly_microcycle as 'Current ISO Week ## (Mon-Sun)'.",
             "If a section is marked full, render every entity and field exactly as present in the semantic data",
@@ -390,7 +399,7 @@ RENDERER_PROFILES = {
             "Precedence: required_phase > ADE.directive > performance_intelligence.training_state > metrics.",
             # ADAPTIVE DECISIONS
             "Render adaptive_decisions as compact dashboard tables (no narrative).",
-            "adaptive_decisions MUST be rendered as STATE, OPERATIONS, TRAINING_GUIDANCE, PHASE ALIGNMENT, DECISION CONTEXT, FUTURE ACTIONS, PHASES SUMMARY tables.",
+            "adaptive_decisions MUST be rendered as STATE, OPERATIONS, TRAINING_GUIDANCE, PHASE ALIGNMENT, DECISION CONTEXT, FUTURE ACTIONS, PHASES SUMMARY and EVENT TARGETS (where it exists) tables.",
             "STATE MUST NOT exceed 4 columns per table.",
             "STATE MUST be split into multiple tables when more than 4 fields are present.",
             "STATE tables MUST follow this fixed grouping:",
@@ -418,7 +427,9 @@ RENDERER_PROFILES = {
             "operational_state MUST be rendered as the primary state indicator (first column).",
             "All original semantic values MUST still be represented (no omission).",
             "Do NOT summarise or drop metrics — only change layout.",
-            "If a table has more than 4 columns, split it into multiple tables (max 4 columns each)."
+            "If a table has more than 4 columns, split it into multiple tables (max 4 columns each).",
+            "When a group contains a resolved 'state' field, it MUST be used as the sole authoritative interpretation. Do NOT infer or recompute interpretation from underlying metrics.",
+            "Metrics may be displayed for context, but MUST NOT define or override narrative conclusions when a state is present."
         ],
         "allowed_enrichment": [
             "Restate semantic interpretation fields.",
@@ -429,6 +440,7 @@ RENDERER_PROFILES = {
             "meta": "full",
             "training_volume": "full",
             "events": "full",
+            "planned_events_7d": "full",
             "current_ISO_weekly_microcycle": "forbid",
             "daily_load": "full",
             "metrics_groups": "table_summary",
@@ -445,6 +457,7 @@ RENDERER_PROFILES = {
             #"planned_summary_by_date": "forbid",
             "planned_summary_by_iso_week": "forbid",
             "actions": "table_summary",
+            "event_targets": "table_summary",
             "actions.0.adaptive_summary": "full",
             "actions.1.state_action": "full",
             "actions.3.system_guidance": "full",
@@ -510,11 +523,11 @@ RENDERER_PROFILES = {
         },
 
         "planned_events_rule": [
-        #    "The planned_events section MUST be rendered as a Markdown table.",
-        #    "EVERY planned event for the current ISO week in the semantic JSON MUST appear as exactly one row.",
-        #    "Planned events for future ISO weeks can be summarised",
-        #    "Narrative descriptions of planned events are FORBIDDEN.",
-        #    "Coaching sentences for planned_events, if enabled, MUST appear AFTER the table."
+            "The planned_events_7d section MUST be rendered as a Markdown table.",
+            "Each planned event MUST appear as exactly one row."
+            "Column order MUST be: Date | Day | Name | Category | Duration (min) | TSS.",
+            "Do NOT summarise, group, or narrate planned events.",
+            "Coaching sentences for planned_events, if enabled, MUST appear AFTER the table."
         ],
 
         "framing": {
@@ -574,7 +587,7 @@ RENDERER_PROFILES = {
     "season": {
         "stack_structure": {
             "meta_context": [
-                "meta"
+                "meta",
             ],
             "training_load": [
                 "training_volume",
@@ -584,8 +597,8 @@ RENDERER_PROFILES = {
 
             "physiology_response": [
                 "wellness",
-                "adaptation_metrics",
-                "insights_view"
+                "insights_view",
+                "performance_intelligence.external_load_context"
             ],
 
             "performance_intelligence": [
@@ -602,6 +615,7 @@ RENDERER_PROFILES = {
 
             "adaptive_decisions": [
                 "actions",
+                "event_targets",
                 "current_ISO_weekly_microcycle",
                 "planned_summary_by_iso_week",
                 "future_forecast",
@@ -627,12 +641,13 @@ RENDERER_PROFILES = {
             "placement": "after_data"
         },
         "interpretation_rules": [
+            "Render all meta.athlete.identity and always notes in REPORT CONTEXT when present",
             "If semantic.training_volume exists, render it under the header 'Training Volume' with three stacked metrics: Hours, Training Load (TSS), Distance.",
             "Focus on trends, phases, and accumulated load.",
             "Avoid session-level or daily commentary.",
             "If performance_intelligence exists, render chronic signals (90d) first, then acute signals (7d). Emphasise contrast between long-term capacity and current stress.",
             "Interpretation may combine signals across sections when they describe the same physiological process (e.g. fatigue, adaptation, durability).",
-            "When energy_system_progression exists, generate at least one sentence summarising the current adaptation direction using system_status and adaptation_state.",
+            "When energy_system_progression exists: If delta_percent is null → describe as 'baseline established' with no adaptation direction. If delta_percent exists → summarise adaptation direction using system_status and adaptation_state."
             "Insights SHOULD prioritise adaptation signals (ESPE) before repeating metric definitions.",
             "Ensure current_ISO_weekly_microcycle is totled as 'Current ISO Week ## (Mon-Sun)'",
             "If actions[0].resolution == 'overridden_by_phase':",
@@ -642,7 +657,7 @@ RENDERER_PROFILES = {
             "Precedence: required_phase > ADE.directive > performance_intelligence.training_state > metrics.",
             # ADAPTIVE DECISIONS
             "Render adaptive_decisions as compact dashboard tables (no narrative).",
-            "adaptive_decisions MUST be rendered as STATE, OPERATIONS, TRAINING_GUIDANCE, PHASE ALIGNMENT, DECISION CONTEXT, FUTURE ACTIONS, PHASES SUMMARY tables.",
+            "adaptive_decisions MUST be rendered as STATE, OPERATIONS, TRAINING_GUIDANCE, PHASE ALIGNMENT, DECISION CONTEXT, FUTURE ACTIONS, PHASES SUMMARY and EVENT TARGETS (where it exists) tables.",
             "STATE MUST NOT exceed 4 columns per table.",
             "STATE MUST be split into multiple tables when more than 4 fields are present.",
             "STATE tables MUST follow this fixed grouping:",
@@ -670,7 +685,9 @@ RENDERER_PROFILES = {
             "operational_state MUST be rendered as the primary state indicator (first column).",
             "All original semantic values MUST still be represented (no omission).",
             "Do NOT summarise or drop metrics — only change layout.",
-            "If a table has more than 4 columns, split it into multiple tables (max 4 columns each)."
+            "If a table has more than 4 columns, split it into multiple tables (max 4 columns each).",
+            "When a group contains a resolved 'state' field, it MUST be used as the sole authoritative interpretation. Do NOT infer or recompute interpretation from underlying metrics.",
+            "Metrics may be displayed for context, but MUST NOT define or override narrative conclusions when a state is present."
         ],
         "allowed_enrichment": [
             "Restate phase descriptors already present in semantic data."
@@ -694,11 +711,10 @@ RENDERER_PROFILES = {
             "physiology": "summary",
             "wellness": "headline",
             "actions": "full",
+            "event_targets": "table_summary",
             "future_actions": "full",
             "insights": "forbid",
             "insight_view": "summary",
-            "adaptation_metrics": "full"
-            
         },
 
         "emphasis": {
@@ -773,7 +789,7 @@ RENDERER_PROFILES = {
 
         "stack_structure": {
             "meta_context": [
-                "meta"
+                "meta",
             ],
             "physiology_response": [
                 "wellness",
@@ -814,6 +830,7 @@ RENDERER_PROFILES = {
         # ----------------------------------------------------------
 
         "interpretation_rules": [
+            "Render all meta.athlete.identity and always notes in REPORT CONTEXT when present",
             "Interpret recovery primarily using autonomic and subjective signals (HRV, resting HR, sleep, subjective recovery scores).",
             "Prioritise autonomic signals over training load metrics when determining recovery state.",
             "Explain HRV behaviour using trends, means, variability, and recent values relative to baseline.",
@@ -1683,7 +1700,7 @@ COACH_PROFILE = {
             )
         },
         # ---------------------------------------------------------
-        # 🧠 Performance Intelligence — Directional Metrics (NO thresholds)
+        # 🧠 Performance Intelligence — Context Metrics (Interpretation-driven)
         # ---------------------------------------------------------
 
         "mean_depletion_pct_7d": {
@@ -1696,6 +1713,33 @@ COACH_PROFILE = {
             },
             "interpretation": "Average depth of anaerobic reserve usage across recent sessions.",
             "coaching_implication": "Higher values reflect repeated supra-threshold stress and increased recovery demand."
+        },
+
+        "mean_decoupling_signed_7d": {
+            "framework": "Intensity Stability & Durability Model (ISDM)",
+            "formula": "Signed HR–Power decoupling (%) (7d)",
+            "criteria": {},
+            "interpretation": (
+                "Direction of efficiency change. Negative values indicate improving efficiency; "
+                "positive values indicate cardiovascular drift."
+            ),
+            "coaching_implication": (
+                "Use to determine whether durability is improving or deteriorating under load."
+            )
+        },
+        "mean_decoupling_signed_90d": {
+            "framework": "Intensity Stability & Durability Model (ISDM)",
+            "formula": "Signed HR–Power decoupling (%) (90d)",
+            "criteria": {},
+            "interpretation": (
+                "Long-term direction of efficiency change. Negative values indicate improving "
+                "efficiency across training blocks; positive values indicate persistent "
+                "cardiovascular drift."
+            ),
+            "coaching_implication": (
+                "Indicates whether durability is improving or degrading over time. "
+                "Use alongside acute (7d) values to assess recent vs long-term adaptation."
+            )
         },
 
         "mean_depletion_pct_90d": {
@@ -1719,43 +1763,51 @@ COACH_PROFILE = {
                 "high": ">0.6 — deep depletion event"
             },
             "interpretation": "Peak anaerobic depletion reached in recent sessions.",
-            "coaching_implication": "High values indicate maximal anaerobic efforts requiring adequate recovery."
+            "coaching_implication": (
+                "Higher values reflect greater reliance on anaerobic contribution "
+                "and increased recovery demand."
+            )
         },
 
         "mean_decoupling_7d": {
             "framework": "Intensity Stability & Durability Model (ISDM)",
-            "formula": "Mean HR–Power decoupling (%) (7d)",
-            "criteria": {
-                "stable": "<5 — strong durability",
-                "moderate": "5–8 — emerging fatigue",
-                "high": ">8 — durability limitation"
-            },
-            "interpretation": "Reflects cardiovascular drift under fatigue.",
-            "coaching_implication": "Higher values indicate reduced durability and aerobic efficiency under load."
+            "formula": "Mean HR–Power decoupling magnitude (%) (7d)",
+            "interpretation": (
+                "Absolute decoupling magnitude. Does not indicate direction. "
+                "Use durability state to determine whether efficiency is improving or deteriorating."
+            ),
+            "coaching_implication": (
+                "Higher values indicate greater instability in effort sustainability, "
+                "but must be interpreted alongside durability state."
+            )
         },
 
         "mean_decoupling_90d": {
             "framework": "Intensity Stability & Durability Model (ISDM)",
-            "formula": "Mean HR–Power decoupling (%) (90d)",
-            "criteria": {
-                "stable": "<4 — strong aerobic durability",
-                "moderate": "4–7 — mild drift accumulation",
-                "high": ">7 — persistent durability limitation"
-            },
-            "interpretation": "Long-term durability profile under sustained load.",
-            "coaching_implication": "Higher values indicate systemic durability limitations or insufficient aerobic base."
+            "formula": "Mean HR–Power decoupling magnitude (%) (90d)",
+
+            "interpretation": (
+                "Long-term decoupling magnitude. Reflects accumulated durability behaviour over time. "
+                "Durability state is the authoritative assessment."
+            ),
+            "coaching_implication": (
+                "Use to contextualise long-term durability trends only. "
+                "Do not interpret in isolation."
+            )
         },
 
-        "max_decoupling_7d": {
+        "max_decoupling_90d": {
             "framework": "Intensity Stability & Durability Model (ISDM)",
-            "formula": "Max HR–Power decoupling (%) (7d)",
-            "criteria": {
-                "low": "<6 — stable session",
-                "moderate": "6–10 — moderate drift",
-                "high": ">10 — significant durability stress"
-            },
-            "interpretation": "Peak durability stress observed in recent sessions.",
-            "coaching_implication": "High values suggest fatigue-driven decoupling and reduced aerobic control."
+            "formula": "Max HR–Power decoupling magnitude (%) (90d)",
+
+            "interpretation": (
+                "Peak long-term decoupling magnitude observed. "
+                "Does not indicate direction of change."
+            ),
+            "coaching_implication": (
+                "Indicates exposure to high drift events over time. "
+                "Must be interpreted alongside durability state."
+            )
         },
 
         "total_joules_above_ftp_7d": {
@@ -1791,7 +1843,10 @@ COACH_PROFILE = {
                 "high": ">2.1 — strong aerobic efficiency"
             },
             "interpretation": "Relationship between power output and heart rate.",
-            "coaching_implication": "Higher values indicate improved aerobic efficiency and conditioning."
+            "coaching_implication": (
+                "Higher values generally indicate improved aerobic efficiency, "
+                "but should be interpreted alongside intensity and terrain context."
+            )
         },
 
         "mean_variability_index_7d": {
@@ -1809,11 +1864,6 @@ COACH_PROFILE = {
         "long_sessions_7d": {
             "framework": "Durability Exposure",
             "formula": "Count of long endurance sessions (7d)",
-            "criteria": {
-                "low": "0 — no long sessions",
-                "moderate": "1–2 — adequate durability stimulus",
-                "high": "3+ — high endurance demand"
-            },
             "interpretation": "Exposure to prolonged endurance stress.",
             "coaching_implication": "Supports durability development but increases cumulative fatigue."
         },
