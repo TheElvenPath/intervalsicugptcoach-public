@@ -1,0 +1,13 @@
+# Credentials reach the container through docker-compose env_file, never baked
+# into the image — an image layer holding .env would leak on every docker push.
+.env
+
+.git
+_upstream/
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+*.egg-info/
+dist/
+build/

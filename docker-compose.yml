@@ -1,0 +1,40 @@
+# Remote MCP server + Caddy for automatic HTTPS. See DEPLOY.md for setup.
+#
+# Caddy terminates TLS and is the only container bound to a public port; the MCP
+# app is reachable only over the internal network, so the secret path is never
+# served over plain HTTP.
+
+services:
+  mcp:
+    build: .
+    restart: unless-stopped
+    env_file: .env
+    expose:
+      - "8000"
+    healthcheck:
+      test: ["CMD", "python", "-c",
+             "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/healthz')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    depends_on:
+      - mcp
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      # Caddy reads MCP_PUBLIC_HOST from .env to pick the certificate domain.
+      MCP_PUBLIC_HOST: ${MCP_PUBLIC_HOST}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+
+volumes:
+  caddy_data:
+  caddy_config:

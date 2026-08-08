@@ -1,0 +1,26 @@
+# Caddy obtains and renews a Let's Encrypt certificate for MCP_PUBLIC_HOST
+# automatically, and redirects plain HTTP to HTTPS.
+
+{$MCP_PUBLIC_HOST} {
+	# MCP_SECRET is part of the request path, so the URI must never be logged —
+	# anyone who could read the log would gain full access. Everything else
+	# (status, IP, duration) is kept so the deploy stays debuggable.
+	# The field path is request>uri: in Caddy's JSON log the URI is nested
+	# under the request object, and a wrong path fails silently.
+	log {
+		output stdout
+		format filter {
+			wrap json
+			fields {
+				request>uri delete
+			}
+		}
+	}
+
+	# MCP streams tool results over SSE; flush_interval -1 disables response
+	# buffering so events reach the client as they are produced rather than
+	# arriving in one batch at the end.
+	reverse_proxy mcp:8000 {
+		flush_interval -1
+	}
+}
