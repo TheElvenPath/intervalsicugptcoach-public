@@ -1,0 +1,40 @@
+# MCP server for deployment behind an nginx that already owns ports 80/443.
+#
+# Use this instead of docker-compose.yml when the host already serves a site.
+# No ports are published: nginx reaches the container over a shared Docker
+# network, so the app is unreachable from the internet except through the proxy,
+# which is what keeps TLS termination in one place.
+#
+# This is a separate Compose project on purpose. The site's deploy runs
+# `docker compose up -d --build` inside its own project directory, which leaves
+# other projects alone — so redeploying the site cannot restart or remove this
+# container, and rebuilding this container cannot disturb the site.
+#
+#   docker compose -f docker-compose.nginx.yml up -d --build
+
+services:
+  mcp:
+    build: .
+    container_name: intervals-mcp
+    restart: unless-stopped
+    env_file: .env
+    networks:
+      proxy:
+        aliases:
+          # The name nginx proxies to. Deliberately not the bare service name
+          # "mcp", which a future service on the shared network could also claim.
+          - mcp-intervals
+    healthcheck:
+      test: ["CMD", "python", "-c",
+             "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/healthz')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+networks:
+  proxy:
+    # The network the site's nginx already runs on; external means Compose
+    # attaches to it and never creates or deletes it.
+    external: true
+    name: ${MCP_PROXY_NETWORK:-vskiba_web}

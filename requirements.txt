@@ -1,4 +1,7 @@
-mcp[cli]>=1.26.0
+# Capped below 2.0: the 2.x SDK renamed mcp.server.fastmcp to mcp.server.mcpserver,
+# so an uncapped install builds an image that cannot import FastMCP at all.
+# Moving to 2.x means porting both this server and the stdio one — a separate job.
+mcp[cli]>=1.26.0,<2
 uvicorn[standard]>=0.30.0
 requests>=2.32.0
 python-dotenv>=1.0.0

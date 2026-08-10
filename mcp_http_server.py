@@ -75,13 +75,17 @@ if not re.fullmatch(r"[A-Za-z0-9_-]+", MCP_SECRET):
 # which is what stops a malicious page from driving this server through the
 # user's browser. Defaults cover claude.ai; MCP_ALLOWED_ORIGINS extends the list
 # for other clients (comma-separated, exact matches only — no wildcards).
+#
+# PUBLIC_HOST is deliberately NOT allowed as an origin: this server returns JSON
+# to an MCP client, never HTML, so no browser page legitimately calls it from its
+# own origin. Leaving it out means that when the server shares a domain with a
+# website, a script injected into that site still cannot reach these tools.
 _extra_origins = [
     o.strip() for o in os.environ.get("MCP_ALLOWED_ORIGINS", "").split(",") if o.strip()
 ]
 ALLOWED_ORIGINS = [
     "https://claude.ai",
     "https://www.claude.ai",
-    f"https://{PUBLIC_HOST}",
     *_extra_origins,
 ]
 
