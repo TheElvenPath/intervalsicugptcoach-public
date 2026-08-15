@@ -1,0 +1,62 @@
+# MCP server behind the shared Traefik proxy (repository `infra`).
+#
+# Routing lives here, in this project's own labels — that is what lets this
+# deploy independently: `up -d` publishes the route, `down` removes it, and no
+# other repository is touched either way.
+#
+# Contract: infra/docs/infra-migration-plan.md, section 3.
+#
+#   docker compose -f docker-compose.traefik.yml up -d --build
+
+services:
+  mcp:
+    build: .
+    container_name: intervals-mcp
+    restart: unless-stopped
+    env_file: .env
+    networks:
+      - edge
+    healthcheck:
+      test: ["CMD", "python", "-c",
+             "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/healthz')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    labels:
+      # Traefik runs with exposedByDefault=false, so routing is opt-in.
+      - traefik.enable=true
+      - traefik.docker.network=edge
+
+      # Apex only. The connector uses one canonical URL, and the app rejects any
+      # Host other than MCP_PUBLIC_HOST anyway — so matching www too would only
+      # create a second address that answers 421.
+      - traefik.http.routers.icu-mcp.rule=Host(`doc-skibavv.ru`) && PathPrefix(`/icu/`)
+      - traefik.http.routers.icu-mcp.entrypoints=websecure
+
+      # The site's router matches this host with a bare Host() rule, so both
+      # match every /icu/ request. Traefik would break the tie by rule length,
+      # but length is implicit and shifts whenever a rule is edited; an explicit
+      # priority above site-web (which is pinned to 1) keeps this deterministic.
+      - traefik.http.routers.icu-mcp.priority=100
+
+      # No certresolver on purpose: the existing certbot certificate already
+      # covers this host and is served as the default via infra's file provider.
+      # Naming a resolver here would start a needless ACME issuance for a domain
+      # that is already covered.
+      - traefik.http.routers.icu-mcp.tls=true
+
+      # The app serves its routes from the root, so /icu is removed before the
+      # request reaches it: /icu/<secret>/mcp arrives as /<secret>/mcp.
+      - traefik.http.middlewares.icu-strip.stripprefix.prefixes=/icu
+      - traefik.http.routers.icu-mcp.middlewares=icu-strip@docker
+
+      - traefik.http.routers.icu-mcp.service=icu-mcp
+      - traefik.http.services.icu-mcp.loadbalancer.server.port=8000
+
+networks:
+  edge:
+    # Created once by hand and owned by infra; external means Compose attaches
+    # to it and never creates or deletes it.
+    external: true
+    name: ${MCP_PROXY_NETWORK:-edge}
