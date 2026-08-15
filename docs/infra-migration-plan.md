@@ -9,6 +9,103 @@
 
 ---
 
+## 0. Текущее состояние сервера
+
+Собрано обследованием живого сервера. Сессия infra начинает с нуля и этих фактов
+ниоткуда больше не узнает — сверяйтесь с ними, но перепроверяйте перед
+действиями: состояние могло измениться.
+
+### 0.1. Доступ
+
+```bash
+ssh -i ~/.ssh/vskiba_vps root@155.212.185.155
+```
+
+Ubuntu 24.04.4, 4 GB RAM, ~14 GB свободно. Docker 29.3.1, Compose v5.1.1.
+
+Важно: ключ `vskiba_vps` подходит и ко **второму** серверу — `204.168.175.116`
+(Hetzner, `ubuntu-4gb-hel1-3`). Это VPN, там xray на :443 и нет Docker.
+К миграции он отношения не имеет, не перепутайте.
+
+### 0.2. Что запущено
+
+Проект `vskiba` в `/opt/vskiba` — рабочая копия
+`git@github.com:TheElvenPath/BusinessCardSite.git`, ветка `main`.
+
+| Контейнер | Образ / порт | Публикует наружу |
+|---|---|---|
+| `vskiba-nginx-1` | nginx:1.25-alpine | **80, 443** |
+| `vskiba-frontend-1` | Next.js, :3000 | нет |
+| `vskiba-backend-1` | FastAPI, :8000 | нет |
+| `vskiba-postgres-1` | postgres:14-alpine | **5432 на 0.0.0.0** — см. 6.1 |
+| `vskiba-bot-1` | — | нет |
+
+Все пять контейнеров в одной плоской сети `vskiba_web`, включая postgres.
+
+### 0.3. TLS
+
+- certbot 2.9.0, `authenticator = standalone`
+- сертификат `/etc/letsencrypt/live/doc-skibavv.ru/`, годен до **26.09.2026**
+- SAN покрывает **оба** имени: `doc-skibavv.ru` и `www.doc-skibavv.ru`
+- `/etc/letsencrypt` смонтирован в nginx read-only
+- `certbot.timer` активен; хуки в `/etc/letsencrypt/renewal-hooks/`:
+  `pre/stop-nginx.sh` и `post/start-nginx.sh` гасят и поднимают nginx сайта,
+  освобождая порт 80 на время выпуска
+
+### 0.4. Деплой сайта
+
+`.github/workflows/deploy.yml`, триггер — пуш в `main`. Сначала lint (`tsc
+--noEmit`), затем по SSH:
+
+```bash
+cd /opt/vskiba && git pull && docker compose up -d --build && docker image prune -f
+```
+
+Секреты: `SSH_HOST`, `SSH_USER`, `SSH_PRIVATE_KEY`. Есть второй workflow —
+ночной бэкап базы через `docker exec` в 03:00 UTC.
+
+Два следствия:
+
+- **`/opt/vskiba` под git.** Правка конфигов руками на сервере либо будет затёрта
+  `git pull`, либо уронит деплой конфликтом. Всё идёт через репозиторий.
+- **Чужие compose-проекты деплой не трогает.** `up -d` без `--remove-orphans`
+  работает только внутри проекта `vskiba`, а `image prune -f` удаляет лишь
+  висячие образы. Поэтому MCP и байкфит безопасно жить отдельными проектами.
+
+---
+
+## 0.5. Что делает nginx сайта — и что обязано пережить перенос
+
+Это чек-лист Фазы 1. Каждый пункт — поведение, которое сейчас работает и которое
+легко потерять при переносе в Traefik.
+
+| Поведение | Сейчас | Замена в Traefik |
+|---|---|---|
+| HTTP → HTTPS | `server :80` → 301 | редирект на entrypoint `web` |
+| `www` → апекс **по HTTP** | 301 на `https://doc-skibavv.ru` | middleware redirectregex |
+| `www` **по HTTPS** обслуживается как есть | `server_name` включает `www`, редиректа нет | роутер матчит оба имени |
+| `/api/` → backend:8000 | `location /api/` | роутер `site-api`, priority 100 |
+| `/` → frontend:3000 | `location /` | роутер `site-web`, priority 1 |
+| WebSocket для Next.js | `Upgrade` / `Connection: upgrade` | Traefik проксирует ws сам |
+| Лимит тела запроса | `client_max_body_size 1m` | `buffering.maxRequestBodyBytes` |
+| Таймаут backend | `proxy_read_timeout 30s` | `forwardingTimeouts` |
+| `X-Frame-Options: DENY` | `add_header ... always` | middleware headers |
+| `X-Content-Type-Options: nosniff` | `add_header ... always` | middleware headers |
+| `Referrer-Policy: strict-origin-when-cross-origin` | `add_header ... always` | middleware headers |
+| `X-Forwarded-For` / `-Proto` | `proxy_set_header` | Traefik ставит сам |
+
+**Про `www` отдельно — здесь асимметрия, которую легко не заметить.**
+`http://www.doc-skibavv.ru` редиректится на апекс (`https://doc-skibavv.ru`), а
+`https://www.doc-skibavv.ru` отдаёт сайт **под именем www, без редиректа**.
+Если при переносе схлопнуть это в «www всегда редиректит на апекс», поведение
+изменится — для пользователей незаметно, но это смена канонического URL, и SEO
+это заметит. Решение принимать осознанно, а не по умолчанию.
+
+HSTS сейчас **нет**. Traefik его тоже не добавляет сам — если захотите включить,
+это отдельное решение (и назад откатывается тяжело из-за кеша браузеров).
+
+---
+
 ## 1. В чём корень проблемы
 
 Сегодня nginx **принадлежит проекту сайта**: объявлен в его `docker-compose.yml`,
@@ -303,7 +400,70 @@ ssh -N -L 5432:127.0.0.1:5432 root@155.212.185.155
 
 ---
 
-## 8. Оценка риска по фазам
+## 8. Проверки — чем именно доказывается каждая фаза
+
+«Работает» означает пройденный список, а не «сайт открылся».
+
+### После Фазы 0
+
+```bash
+curl -s -o /dev/null -w "%{http_code}\n" -H "Host: doc-skibavv.ru" http://155.212.185.155:8080/
+```
+
+Traefik на временном порту отвечает, продакшн на 80/443 не затронут.
+
+### После Фазы 1 — полный чек-лист
+
+Каждая строка проверяет пункт из таблицы 0.5.
+
+```bash
+# HTTP → HTTPS
+curl -sI http://doc-skibavv.ru/ | head -2
+# www по HTTP → апекс
+curl -sI http://www.doc-skibavv.ru/ | grep -i location
+# www по HTTPS отдаёт сайт (200, НЕ редирект)
+curl -s -o /dev/null -w "%{http_code}\n" https://www.doc-skibavv.ru/
+# фронтенд и API
+curl -s -o /dev/null -w "front %{http_code}\n" https://doc-skibavv.ru/
+curl -s -o /dev/null -w "api   %{http_code}\n" https://doc-skibavv.ru/api/
+# заголовки безопасности — должны быть все три
+curl -sI https://doc-skibavv.ru/ | grep -iE "x-frame-options|x-content-type-options|referrer-policy"
+# сертификат: оба имени и срок
+echo | openssl s_client -connect doc-skibavv.ru:443 -servername doc-skibavv.ru 2>/dev/null \
+  | openssl x509 -noout -dates -ext subjectAltName
+```
+
+Отдельно — WebSocket фронтенда: открыть сайт в браузере и убедиться, что в
+консоли нет ошибок подключения ws. Через curl это не проверяется.
+
+### После Фазы 2
+
+```bash
+curl -s -o /dev/null -w "%{http_code}\n" https://doc-skibavv.ru/healthz   # 404 — так и надо
+curl -s -X POST "https://doc-skibavv.ru/icu/<MCP_SECRET>/mcp" \
+  -H "Origin: https://claude.ai" -H "Content-Type: application/json" \
+  -H "Accept: application/json, text/event-stream" \
+  -d '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}' | head -c 200
+```
+
+Плюс обязательно — что **сайт не сломался**: повторить чек-лист Фазы 1. Смысл
+Фазы 2 в том, что маршрут добавился без правок в чужих репозиториях; если сайт
+при этом пострадал, независимость не достигнута.
+
+### Проверка независимости (после Фазы 3)
+
+Главный тест всей затеи:
+
+```bash
+cd /opt/intervals-mcp && docker compose down
+```
+
+Сайт и байкфит обязаны продолжать работать, `/icu/` даёт 502 или 404. Затем
+`up -d` — маршрут вернулся сам, без reload и без участия других проектов.
+
+---
+
+## 9. Оценка риска по фазам
 
 | Фаза | Риск | Худший случай | Откат |
 |---|---|---|---|
