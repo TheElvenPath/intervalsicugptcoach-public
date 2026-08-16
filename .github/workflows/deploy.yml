@@ -1,0 +1,91 @@
+name: Deploy MCP server
+
+# Deploys from mcp-server-v1, not main: main tracks the upstream project
+# (revo2wheels) and has diverged from the work here by hundreds of commits, so
+# it is a mirror rather than this repository's trunk.
+on:
+  push:
+    branches: [mcp-server-v1]
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+  workflow_dispatch:
+
+# Two deploys rebuilding the same container at once would race over it.
+concurrency:
+  group: deploy-mcp
+  cancel-in-progress: false
+
+jobs:
+  smoke:
+    name: Build and prove the image runs
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build image
+        run: docker build -t intervals-mcp:ci .
+
+      # A green build is not evidence the server works — see the comment in
+      # scripts/smoke-test.sh for the failure this exists to catch.
+      - name: Smoke test
+        run: ./scripts/smoke-test.sh intervals-mcp:ci
+
+  deploy:
+    name: Deploy to VPS
+    needs: smoke
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy over SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script_stop: true
+          # This repository is public, so these logs are public too. Nothing
+          # below may echo MCP_SECRET or any URL containing it.
+          script: |
+            set -e
+            cd /opt/intervals-mcp
+
+            # reset --hard rather than pull: the deploy target should mirror the
+            # branch exactly, and a pull would abort on any local edit instead of
+            # deploying. Untracked files survive, so .env is untouched — which is
+            # why the connector URL stays valid across deploys.
+            git fetch --prune origin
+            git reset --hard origin/mcp-server-v1
+
+            docker compose -f docker-compose.traefik.yml up -d --build
+
+            status=""
+            for i in $(seq 1 40); do
+              status=$(docker inspect intervals-mcp --format '{{.State.Health.Status}}' 2>/dev/null || echo starting)
+              [ "$status" = healthy ] && break
+              sleep 3
+            done
+            if [ "$status" != healthy ]; then
+              echo "container is '$status', not healthy"
+              docker logs intervals-mcp --tail 60
+              exit 1
+            fi
+            echo "container healthy"
+
+            # The smoke test proved the image; this proves the deployed instance
+            # is actually reachable through Traefik with the real certificate —
+            # routing and TLS live outside this repository and can break without
+            # any change here.
+            secret=$(grep '^MCP_SECRET=' .env | cut -d= -f2 | tr -d '\r\n')
+            code=$(curl -s -o /dev/null -w '%{http_code}' -m 20 \
+              -X POST "https://doc-skibavv.ru/icu/$secret/mcp" \
+              -H 'Origin: https://claude.ai' \
+              -H 'Content-Type: application/json' \
+              -H 'Accept: application/json, text/event-stream' \
+              -d '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}')
+            if [ "$code" != "200" ]; then
+              echo "live endpoint returned $code"
+              exit 1
+            fi
+            echo "live endpoint OK"
+
+            docker image prune -f
