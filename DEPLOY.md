@@ -281,10 +281,41 @@ URL коннектора: `https://doc-skibavv.ru/icu/<MCP_SECRET>/mcp`
 
 ## Б4. Обновление MCP
 
-MCP обновляется независимо от сайта:
+Автоматически: пуш в ветку `mcp-server-v1` запускает
+[.github/workflows/deploy.yml](.github/workflows/deploy.yml). Изменения только
+в `*.md` и `docs/` деплой не вызывают.
+
+Workflow состоит из двух шагов, и первый важнее второго:
+
+1. **`smoke`** — собирает образ и **запускает** его с фиктивными ключами, проверяя
+   `/healthz`, регистрацию всех десяти инструментов и то, что чужой `Origin`
+   по-прежнему отклоняется. Успешная сборка ничего не доказывает: незакреплённый
+   `mcp>=1.26.0` однажды разрешился в 2.0.0 с переименованным
+   `mcp.server.fastmcp` — образ собрался и умер при импорте. Ловится только
+   запуском.
+2. **`deploy`** — идёт по SSH, `reset --hard` на ветку, пересобирает контейнер,
+   ждёт статус `healthy` и отдельно проверяет, что endpoint отвечает **через
+   Traefik**. Маршрутизация и TLS живут в репозитории `infra` и могут сломаться
+   без единой правки здесь.
+
+Нужны секреты репозитория: `SSH_HOST`, `SSH_USER`, `SSH_PRIVATE_KEY`.
+
+`reset --hard` не трогает файлы вне git, поэтому `.env` переживает деплой —
+секрет и URL коннектора остаются прежними, перенастраивать claude.ai не нужно.
+
+Репозиторий публичный, значит логи Actions тоже публичные: скрипт деплоя
+проверяет живой endpoint, ни разу не печатая секрет и URL с ним.
+
+Вручную, если нужно:
 
 ```bash
-cd /opt/intervals-mcp && git pull && docker compose -f docker-compose.nginx.yml up -d --build
+cd /opt/intervals-mcp && git pull && docker compose -f docker-compose.traefik.yml up -d --build
+```
+
+Локальный прогон smoke-теста перед пушем:
+
+```bash
+docker build -t intervals-mcp:local . && ./scripts/smoke-test.sh intervals-mcp:local
 ```
 
 ## Почему конфиг устроен именно так
