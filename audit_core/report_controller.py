@@ -1060,6 +1060,24 @@ def run_report(
             except Exception as e:
                 debug(context, f"[WELLNESS-EXPOSE] failed: {e}")
 
+        # The metric builder reads context["current_phase"] to pick phase-specific
+        # thresholds and to stamp phase_context on every metric, but nothing in the
+        # pipeline ever set that key — upstream included. The read was dead, so
+        # phase_context came out null on all 37 metrics and Polarisation and
+        # PolarisationIndex, the two markers that define phase thresholds, were
+        # always judged against base ones. Tier-2 has the detected phase; hand it over.
+        try:
+            _phases = context.get("phases") or []
+            _last = _phases[-1] if _phases else None
+            _name = (_last or {}).get("phase")
+            if _name and str(_name).lower() != "no data":
+                context["current_phase"] = str(_name).lower()
+                debug(context, f"[PHASE] current_phase={context['current_phase']}")
+            else:
+                debug(context, "[PHASE] no usable phase detected — thresholds stay base")
+        except Exception as e:
+            debug(context, f"[PHASE] could not resolve current_phase: {e}")
+
         semantic_output = build_semantic_json(context)
 
         final_output = {
