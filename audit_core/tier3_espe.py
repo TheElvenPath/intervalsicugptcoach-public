@@ -294,6 +294,15 @@ def _process_sport(sport: str, data: Dict[str, Any], context: Dict[str, Any]) ->
             "Anaerobic power is improving — keep short, high-intensity efforts in the mix."
         )
 
+    elif adaptation_state == "vo2_threshold_decline":
+
+        system_guidance = (
+            "VO₂ and threshold power are both lower than in the preceding "
+            "power-curve comparison window. This indicates reduced recent "
+            "high-aerobic performance, but does not by itself confirm fatigue. "
+            "Interpret alongside recent training exposure, recovery and wellness."
+        )
+
     elif adaptation_state == "plateau":
 
         system_guidance = (
@@ -611,9 +620,9 @@ def classify_adaptation_state(system_status, deltas):
     vo2 = deltas.get("5m")
     neu = deltas.get("5s")
 
-    # fatigue
+    # concurrent VO2 + threshold decline
     if thr is not None and vo2 is not None and thr < -3 and vo2 < -3:
-        return "fatigue_state"
+        return "vo2_threshold_decline"
 
     # vo2
     if vo2 is not None and vo2 > 3:
