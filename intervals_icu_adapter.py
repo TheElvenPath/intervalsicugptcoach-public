@@ -16,7 +16,7 @@ What it patches:
 URL rewrites handled:
   /athlete/0/...          → /athlete/{ICU_ATHLETE_ID}/...
   /activities_t0light     → /activities  (strips &fields=… param)
-  /power-curves-ext       → /power-curves (strips &curves=… &pmType=…)
+  /power-curves-ext       → /power-curves (strips &pmType=… only; &curves= is required)
   CLOUDFLARE/calendar/read → intervals.icu /events
 """
 
@@ -67,10 +67,19 @@ def _rewrite_url(url: str) -> str:
         url = re.sub(r"\?&", "?", url)
         url = url.rstrip("?").rstrip("&")
 
-    # 3. /power-curves-ext → /power-curves  (strip &curves= and &pmType= params)
+    # 3. /power-curves-ext → /power-curves  (strip only &pmType=)
+    #
+    # `curves` MUST survive. It names the two comparison windows
+    # (r.<from>.<to>,r.<from>.<to>) that Tier-0 needs to compute previous-vs-
+    # current deltas. Without it intervals.icu returns a single window, Tier-0
+    # logs "power_curve payload missing windows", leaves context["power_curve"]
+    # empty, and Tier-3 ESPE silently skips — the report is then built with no
+    # energy-system section at all and no error anywhere.
+    #
+    # pmType is a Cloudflare-worker parameter; intervals.icu ignores it.
     if "power-curves-ext" in url:
         url = url.replace("power-curves-ext", "power-curves")
-        url = re.sub(r"[&?](curves|pmType)=[^&]*", "", url)
+        url = re.sub(r"[&?]pmType=[^&]*", "", url)
         url = re.sub(r"\?&", "?", url)
         url = url.rstrip("?").rstrip("&")
 
