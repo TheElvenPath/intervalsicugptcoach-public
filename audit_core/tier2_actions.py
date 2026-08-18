@@ -506,10 +506,382 @@ def detect_phases(context, events):
     debug(context, "[PHASES] ---- Phase detection end ----")
     return context
 
+def classify_phase_v2(row, prev_phase_final=None):
+    cfg = CHEAT_SHEET["thresholds"]["phase_detection_v2"]
 
+    boundaries = cfg["PhaseBoundaries"]
 
+    delta = float(row.get("delta", 0) or 0)
+    acwr = float(row.get("acwr", 1) or 1)
+    tsb = float(row.get("tsb", 0) or 0)
 
+    phase_raw = "Transition"
 
+    for phase, b in boundaries.items():
+        if not (b["trend_min"] <= delta <= b["trend_max"]):
+            continue
+
+        if acwr > b.get("acwr_max", 999):
+            continue
+
+        if "tsb_min" in b and tsb < b["tsb_min"]:
+            continue
+
+        if "tsb_max" in b and tsb > b["tsb_max"]:
+            continue
+
+        phase_raw = phase
+        break
+
+    phase_final = phase_raw
+
+    # RULE 1 — peak after taper
+    if (
+        prev_phase_final == "Taper"
+        and delta > 0
+        and acwr <= 1.10
+    ):
+        phase_final = "Peak"
+
+    # RULE 2 — true recovery
+    elif (
+        acwr < 0.65
+        and delta < -0.10
+        and tsb > 5
+    ):
+        phase_final = "Recovery"
+
+    # RULE 3 — transition after recovery
+    elif (
+        prev_phase_final == "Recovery"
+        and abs(delta) < 0.15
+    ):
+        phase_final = "Transition"
+
+    # RULE 4 — prevent false peak
+    elif (
+        phase_raw == "Peak"
+        and tsb < 5
+    ):
+        phase_final = "Base"
+
+    return phase_raw, phase_final
+
+def build_future_projected_weeks(context, weekly_phases):
+    """
+    Build projected future ISO weeks from planned calendar events.
+
+    Uses calendar-provided icu_ctl / icu_atl as authoritative.
+    RETURNS: list[dict]
+    """
+
+    debug(context, "[FUTURE] ---- Building projected future ISO weeks ----")
+
+    if not weekly_phases:
+        debug(context, "[FUTURE] ⚠️ No weekly_phases found")
+        return []
+
+    calendar = context.get("calendar", [])
+    if not calendar:
+        debug(context, "[FUTURE] ⚠️ No calendar found")
+        return []
+
+    df_weeks = pd.DataFrame(weekly_phases).copy()
+    df_cal = pd.DataFrame(calendar).copy()
+
+    if df_weeks.empty or df_cal.empty:
+        debug(context, "[FUTURE] ⚠️ Empty weekly/calendar dataframe")
+        return []
+
+    if "week" not in df_weeks.columns:
+        debug(context, "[FUTURE] ❌ weekly_phases missing week")
+        return []
+
+    # ---------------------------------------------------------
+    # Normalize calendar dates
+    # ---------------------------------------------------------
+
+    today = pd.Timestamp(context["athlete_today"]).normalize()
+
+    date_col = "start_date_local" if "start_date_local" in df_cal.columns else "date"
+
+    df_cal["date"] = pd.to_datetime(df_cal[date_col], errors="coerce")
+    df_cal = df_cal.dropna(subset=["date"]).sort_values("date")
+
+    # future only
+    df_cal = df_cal[df_cal["date"] >= today]
+
+    if df_cal.empty:
+        debug(context, "[FUTURE] ⚠️ No future calendar events")
+        return []
+
+    # ---------------------------------------------------------
+    # Normalize numeric fields
+    # ---------------------------------------------------------
+
+    # load/duration fields → safe as zero
+    for col in [
+        "icu_training_load",
+        "moving_time",
+        "distance_target",
+        "distance"
+    ]:
+        if col not in df_cal.columns:
+            df_cal[col] = 0
+
+        df_cal[col] = pd.to_numeric(
+            df_cal[col],
+            errors="coerce"
+        ).fillna(0)
+
+    # physiology fields → MUST preserve NaN
+    for col in ["icu_ctl", "icu_atl"]:
+        if col not in df_cal.columns:
+            df_cal[col] = np.nan
+
+        df_cal[col] = pd.to_numeric(
+            df_cal[col],
+            errors="coerce"
+        )
+
+    # Prefer distance_target, fallback to distance
+    df_cal["distance_for_week"] = df_cal["distance_target"]
+
+    df_cal.loc[
+        df_cal["distance_for_week"] <= 0,
+        "distance_for_week"
+    ] = df_cal.loc[
+        df_cal["distance_for_week"] <= 0,
+        "distance"
+    ]
+
+    # ---------------------------------------------------------
+    # ISO week labels
+    # ---------------------------------------------------------
+
+    iso = df_cal["date"].dt.isocalendar()
+
+    df_cal["week"] = (
+        iso.year.astype(str)
+        + "-W"
+        + iso.week.astype(str)
+    )
+
+    # ---------------------------------------------------------
+    # Aggregate weekly planned load
+    # ---------------------------------------------------------
+
+    weekly = (
+        df_cal.groupby("week", as_index=False)
+        .agg({
+            "icu_training_load": "sum",
+            "moving_time": "sum",
+            "distance_for_week": "sum"
+        })
+        .rename(columns={
+            "icu_training_load": "tss",
+            "moving_time": "moving_time_total",
+            "distance_for_week": "distance_m_total"
+        })
+    )
+
+    state_rows = df_cal[
+        df_cal["icu_ctl"].notna() &
+        df_cal["icu_atl"].notna()
+    ].copy()
+
+    state_rows = state_rows.sort_values("date")
+
+    weekly_state = (
+        state_rows
+        .groupby("week", as_index=False)
+        .tail(1)[["week", "date", "icu_ctl", "icu_atl"]]
+        .rename(columns={
+            "date": "state_date",
+            "icu_ctl": "ctl",
+            "icu_atl": "atl"
+        })
+    )
+
+    future = weekly.merge(
+        weekly_state,
+        on="week",
+        how="left"
+    )
+
+    future = future.sort_values("week")
+
+    future["ctl"] = future["ctl"].ffill()
+    future["atl"] = future["atl"].ffill()
+    future["state_date"] = future["state_date"].ffill()
+
+    # ---------------------------------------------------------
+    # Week boundaries
+    # ---------------------------------------------------------
+
+    def week_to_dates(week_label):
+        y, wk = str(week_label).split("-W")
+        start = pd.Timestamp.fromisocalendar(int(y), int(wk), 1)
+        end = start + pd.Timedelta(days=6)
+        return start, end
+
+    future[["start", "end"]] = future["week"].apply(
+        lambda w: pd.Series(week_to_dates(w))
+    )
+
+    # ---------------------------------------------------------
+    # Remove already-existing weeks
+    # ---------------------------------------------------------
+
+    existing_weeks = set(
+        df_weeks["week"]
+        .dropna()
+        .astype(str)
+        .tolist()
+    )
+
+    future = future[
+        ~future["week"].isin(existing_weeks)
+    ].sort_values("start")
+
+    debug(
+        context,
+        f"[FUTURE] Existing weeks={sorted(existing_weeks)}"
+    )
+
+    debug(
+        context,
+        f"[FUTURE] Remaining projected weeks="
+        f"{sorted(future['week'].astype(str).unique().tolist())}"
+    )
+
+    if future.empty:
+        debug(context, "[FUTURE] ⚠️ No future ISO weeks after overlap removal")
+        return []
+
+    def decay_to_week_end(ctl, atl, last_date, week_end):
+        """
+        Decay CTL/ATL from last valid physiology row to ISO Sunday.
+        Assumes zero training load on missing days.
+        """
+
+        ctl = float(ctl)
+        atl = float(atl)
+
+        if pd.isna(last_date):
+            return float(ctl), float(atl)
+
+        last_day = pd.Timestamp(last_date).normalize()
+        end_day = pd.Timestamp(week_end).normalize()
+
+        days = max((end_day - last_day).days, 0)
+
+        for _ in range(days):
+            ctl = ctl + ((0 - ctl) * (1 / 42))
+            atl = atl + ((0 - atl) * (1 / 7))
+
+        return ctl, atl
+
+    projected_rows = []
+
+    for _, wk in future.iterrows():
+
+        ctl = float(wk.get("ctl", 0) or 0)
+        atl = float(wk.get("atl", 0) or 0)
+
+        ctl, atl = decay_to_week_end(
+            ctl=ctl,
+            atl=atl,
+            last_date=wk.get("state_date"),
+            week_end=wk.get("end")
+        )
+
+        tsb = ctl - atl
+
+        tss = float(wk.get("tss", 0) or 0)
+        hours = float(wk.get("moving_time_total", 0) or 0) / 3600
+        distance_km = float(wk.get("distance_m_total", 0) or 0) / 1000
+
+        acwr = atl / ctl if ctl > 0 else 1.0
+
+        prev_tss = (
+            projected_rows[-1]["tss"]
+            if projected_rows and projected_rows[-1].get("tss", 0) > 0
+            else None
+        )
+
+        delta = (
+            (tss - prev_tss) / prev_tss
+            if prev_tss
+            else 0.0
+        )
+
+        prev_phase_final = (
+            projected_rows[-1]["phase"]
+            if projected_rows
+            else None
+        )
+
+        phase_raw, phase = classify_phase_v2(
+            {
+                "delta": delta,
+                "acwr": acwr,
+                "tsb": tsb,
+            },
+            prev_phase_final=prev_phase_final
+        )
+
+        if tsb < -30:
+            classification = "High_fatigue"
+        elif tsb < -10:
+            classification = "Productive_fatigue"
+        elif tsb <= 5:
+            classification = "Neutral"
+        else:
+            classification = "Fresh"
+
+        projected_rows.append({
+            "week": wk["week"],
+            "start": wk["start"].strftime("%Y-%m-%d"),
+            "end": wk["end"].strftime("%Y-%m-%d"),
+
+            "distance_km": round(distance_km, 1),
+            "hours": round(hours, 2),
+            "tss": round(tss, 1),
+
+            "ctl": round(ctl, 2),
+            "atl": round(atl, 2),
+            "tsb": round(tsb, 2),
+
+            "is_projected": True,
+            "projection_basis": "calendar_180d",
+
+            "completed_tss": 0.0,
+            "planned_remaining_tss": round(tss, 1),
+            "projected_total_tss": round(tss, 1),
+            "projected_hours": round(hours, 2),
+            "phase_raw": phase_raw,
+            "phase": phase,
+            "classification": classification,
+            "acwr": round(acwr, 2),
+            "delta": round(delta, 3)
+        })
+
+    debug(
+        context,
+        f"[FUTURE] ✅ Added {len(projected_rows)} projected ISO weeks"
+    )
+
+    if projected_rows:
+        last = projected_rows[-1]
+        debug(
+            context,
+            f"[FUTURE] Last projected week → "
+            f"{last['week']} "
+            f"(CTL={last['ctl']}, ATL={last['atl']}, TSB={last['tsb']})"
+        )
+
+    return projected_rows
 
 """
 Tier-2 Step 4 — Evaluate Coaching Actions (v16.1.1)
@@ -666,31 +1038,6 @@ def evaluate_actions(context):
                 "metric": "FatOxidation",
                 "state": "needs_improvement"
             })
-
-
-    # ---- Load Variability Index ---- # not a coaching metric now = old 
-#    if lvi < th["LoadVariabilityIndex"]["amber"][0]:
-
-#        metric_signals.append({
-#            "metric": "LoadVariabilityIndex",
-#            "state": "poor"
-#        })
-
-#    elif lvi < th["LoadVariabilityIndex"]["green"][0]:
-
-#        metric_signals.append({
-#            "metric": "LoadVariabilityIndex",
-#            "state": "moderate"
-#        })
-
-#    else:
-
-#        metric_signals.append({
-#            "metric": "LoadVariabilityIndex",
-#            "state": "healthy"
-#        })
-
-    # ---------------- Append metric feedback ----------------
 
     final_actions = []
 

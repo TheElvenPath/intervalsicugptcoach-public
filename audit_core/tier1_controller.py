@@ -908,7 +908,13 @@ def run_tier1_controller(df_master, wellness, context):
             hrv_latest = float(dfw["hrv"].iloc[-1])
             hrv_mean = float(dfw["hrv"].mean())
 
-        if hrv_mean is not None and hrv_latest is not None:
+        if (
+            hrv_mean is not None
+            and hrv_latest is not None
+            and pd.notna(hrv_mean)
+            and pd.notna(hrv_latest)
+            and float(hrv_mean) > 0
+        ):
             hrv_mean = float(hrv_mean)
             hrv_latest = float(hrv_latest)
 
@@ -1164,11 +1170,20 @@ def run_tier1_controller(df_master, wellness, context):
         # --- 🩵 HRV summary (vendor-agnostic, uses Tier-2 derived metrics normalization) ---
         if "df_wellness" in context and not context["df_wellness"].empty:
             dfw = context["df_wellness"]
+
             if "hrv" in dfw.columns:
                 vals = pd.to_numeric(dfw["hrv"], errors="coerce").dropna()
+
                 if len(vals) > 0:
                     context["hrv_mean"] = round(vals.mean(), 1)
                     context["hrv_latest"] = round(vals.iloc[-1], 1)
+
+                    hrv_ratio = (
+                        round(float(context["hrv_latest"]) / float(context["hrv_mean"]), 2)
+                        if context["hrv_mean"] not in (None, 0)
+                        else None
+                    )
+
                     if len(vals) >= 90:
                         trend = vals.tail(30).mean() - vals.head(30).mean()
                     elif len(vals) >= 28:
@@ -1179,16 +1194,33 @@ def run_tier1_controller(df_master, wellness, context):
                         trend = None
 
                     context["hrv_trend_7d"] = round(trend, 1) if trend is not None else None
+
+                    # ✅ Preserve for PI + semantic wellness
+                    existing_ws = context.get("wellness_summary", {}) or {}
+
+                    context["wellness_summary"] = {
+                        **existing_ws,
+                        "hrv_ratio": hrv_ratio,
+                        "hrv_trend": context["hrv_trend_7d"],
+                    }
+
                     debug(
                         context,
                         f"[T1] HRV summary → mean={context['hrv_mean']}, "
-                        f"latest={context['hrv_latest']}, trend_7d={context['hrv_trend_7d']}, "
+                        f"latest={context['hrv_latest']}, ratio={hrv_ratio}, "
+                        f"trend_7d={context['hrv_trend_7d']}, "
                         f"source={context.get('hrv_source', 'unknown')}"
                     )
+
                 else:
-                    context["hrv_mean"] = context["hrv_latest"] = context["hrv_trend_7d"] = None
+                    context["hrv_mean"] = None
+                    context["hrv_latest"] = None
+                    context["hrv_trend_7d"] = None
+
             else:
-                context["hrv_mean"] = context["hrv_latest"] = context["hrv_trend_7d"] = None
+                context["hrv_mean"] = None
+                context["hrv_latest"] = None
+                context["hrv_trend_7d"] = None
 
         daily_summary = df_well.copy()
         context["df_wellness"] = df_well
@@ -1197,11 +1229,53 @@ def run_tier1_controller(df_master, wellness, context):
             "rest_hr": np.nan, "hrv_trend": np.nan,
             "rest_days": 0, "fatigue": np.nan, "stress": np.nan, "readiness": np.nan,
         }
-        context["wellness_summary"] = context["wellness_metrics"]
+        existing_ws = context.get("wellness_summary", {}) or {}
+
+        context["wellness_summary"] = {
+            **existing_ws,
+            **context.get("wellness_metrics", {})
+        }
 
     context["dailyMerged"] = daily_summary
 
     # --- Step 6a: Extract CTL / ATL / TSB from   yesterday + today's completed load ---
+    """
+    ## mode
+
+    | mode | Meaning |
+    |---|---|
+    | `sunrise_decay` | CTL/ATL derived from overnight EWMA decay from previous day |
+    | `planned_completed` | CTL/ATL sourced from completed activity linked to a planned calendar event |
+    | `unplanned_completed` | CTL/ATL sourced from completed activity not linked to a planned calendar event |
+    | `fallback_wellness` | CTL/ATL sourced from latest available wellness snapshot fallback |
+
+    ## day_context
+
+    | day_context | Meaning |
+    |---|---|
+    | `normal_day` | No remaining planned workouts after current state |
+    | `mixed_day` | Completed activity exists AND additional planned workouts still remain |
+
+    ## meaning
+
+    | meaning | Meaning |
+    |---|---|
+    | `sunrise` | Start-of-day freshness before load |
+    | `actual_sunset` | Post-completed-activity physiological state |
+    | `unknown_current_state` | Fallback state with uncertain freshness/load interpretation |
+
+    ## Example combinations
+
+    | mode | day_context | Interpretation |
+    |---|---|---|
+    | `sunrise_decay` | `normal_day` | Morning freshness before training |
+    | `planned_completed` | `normal_day` | Planned workout completed; no remaining workouts |
+    | `planned_completed` | `mixed_day` | Planned workout completed but more planned workouts remain |
+    | `unplanned_completed` | `normal_day` | Unplanned activity completed; no remaining workouts |
+    | `unplanned_completed` | `mixed_day` | Unplanned activity completed while planned workouts still remain |
+    """
+
+
     if isinstance(wellness, pd.DataFrame) and not wellness.empty:
         df_well = wellness.copy()
         df_well.columns = [c.strip().lower() for c in df_well.columns]
@@ -1221,18 +1295,47 @@ def run_tier1_controller(df_master, wellness, context):
         today = pd.to_datetime(context.get("athlete_today")).date()
 
         # ---------------------------------------------------------
-        # ALWAYS use latest wellness row strictly BEFORE today
+        # TRUE SUNRISE
+        # yesterday sunset carried into today with decay only
         # ---------------------------------------------------------
         df_past = df_well[df_well["_date"] < today]
 
         if not df_past.empty:
-            last = df_past.iloc[-1]
+            sunrise = df_past.iloc[-1]
         else:
-            last = df_well.iloc[-1]
+            sunrise = df_well.iloc[-1]
 
-        # --- yesterday baseline from wellness ---
-        ctl_y = pd.to_numeric(last.get("ctl"), errors="coerce")
-        atl_y = pd.to_numeric(last.get("atl"), errors="coerce")
+        ctl_y = pd.to_numeric(
+            sunrise.get("ctl"),
+            errors="coerce"
+        )
+
+        atl_y = pd.to_numeric(
+            sunrise.get("atl"),
+            errors="coerce"
+        )
+
+        ctl_sunrise = None
+        atl_sunrise = None
+        tsb_sunrise = None
+
+        if pd.notna(ctl_y) and pd.notna(atl_y):
+
+            tau_ctl = 42.0
+            tau_atl = 7.0
+
+            # overnight decay only
+            ctl_sunrise = float(
+                ctl_y - (ctl_y / tau_ctl)
+            )
+
+            atl_sunrise = float(
+                atl_y - (atl_y / tau_atl)
+            )
+
+            tsb_sunrise = (
+                ctl_sunrise - atl_sunrise
+            )
 
         # --- today's COMPLETED load only from activities ---
         today_tss = 0.0
@@ -1248,16 +1351,56 @@ def run_tier1_controller(df_master, wellness, context):
                 errors="coerce"
             ).fillna(0).sum()
 
-        # --- recompute observed CTL / ATL / TSB from yesterday + today's actual load ---
-        if pd.notna(ctl_y) and pd.notna(atl_y):
-            tau_ctl = 42.0
-            tau_atl = 7.0
+        # ---------------------------------------------------------
+        # Prefer authoritative CTL / ATL from latest activity today
+        # ---------------------------------------------------------
+        ctl_today = None
+        atl_today = None
+        tsb_today = None
 
-            ctl_today = ctl_y + (today_tss - ctl_y) / tau_ctl
-            atl_today = atl_y + (today_tss - atl_y) / tau_atl
-            tsb_today = ctl_today - atl_today
-        else:
-            ctl_today, atl_today, tsb_today = None, None, None
+        if isinstance(df_master, pd.DataFrame) and not df_master.empty:
+
+            df_today = df_master.loc[df_master["_date"] == today].copy()
+
+            if not df_today.empty:
+
+                df_today["icu_ctl"] = pd.to_numeric(
+                    df_today["icu_ctl"],
+                    errors="coerce"
+                )
+
+                df_today["icu_atl"] = pd.to_numeric(
+                    df_today["icu_atl"],
+                    errors="coerce"
+                )
+
+                df_today = df_today.sort_values(
+                    "start_date_local"
+                )
+
+                valid = df_today[
+                    df_today["icu_ctl"].notna() &
+                    df_today["icu_atl"].notna()
+                ]
+
+                if not valid.empty:
+                    latest = valid.iloc[-1]
+
+                    ctl_today = float(latest["icu_ctl"])
+                    atl_today = float(latest["icu_atl"])
+                    tsb_today = ctl_today - atl_today
+
+        # ---------------------------------------------------------
+        # No completed activity today:
+        # use SUNRISE state from wellness
+        # ---------------------------------------------------------
+        if ctl_today is None or atl_today is None:
+
+            if pd.notna(ctl_sunrise) and pd.notna(atl_sunrise):
+
+                ctl_today = float(ctl_sunrise)
+                atl_today = float(atl_sunrise)
+                tsb_today = float(tsb_sunrise)
 
         context["ctl"] = round(float(ctl_today), 2) if ctl_today is not None else None
         context["atl"] = round(float(atl_today), 2) if atl_today is not None else None
@@ -1269,22 +1412,139 @@ def run_tier1_controller(df_master, wellness, context):
             "tsb": context["tsb"],
         }
 
-        existing = context.get("wellness_summary", {})
+        existing_ws = context.get("wellness_summary", {}) or {}
+
         context["wellness_summary"] = {
-            **existing,
+            **existing_ws,
             **load_snapshot
         }
 
         context["load_metrics"] = {
-            "CTL": {"value": context["ctl"], "status": "recomputed_observed"},
-            "ATL": {"value": context["atl"], "status": "recomputed_observed"},
-            "TSB": {"value": context["tsb"], "status": "recomputed_observed"},
+            "CTL": {"value": context["ctl"], "status": "authoritative_activity"},
+            "ATL": {"value": context["atl"], "status": "authoritative_activity"},
+            "TSB": {"value": context["tsb"], "status": "derived"},
+        }
+
+        # ---------------------------------------------------------
+        # Semantic meaning of current CTL / ATL / TSB state
+        # ---------------------------------------------------------
+
+        # ---------------------------------------------------------
+        # Determine active CTL / ATL state meaning
+        # ---------------------------------------------------------
+        has_completed_activity = False
+        activity_type = "none"
+
+        if (
+            "df_today" in locals()
+            and "valid" in locals()
+            and not df_today.empty
+            and not valid.empty
+        ):
+
+            latest = valid.iloc[-1]
+
+            paired_event_id = latest.get("paired_event_id")
+
+            has_completed_activity = True
+
+            activity_type = (
+                "planned_completed"
+                if pd.notna(paired_event_id)
+                else "unplanned_completed"
+            )
+
+        state_mode = (
+            activity_type
+            if has_completed_activity
+            else "sunrise_decay"
+        )
+
+        # ---------------------------------------------------------
+        # Detect remaining planned workouts today
+        # ---------------------------------------------------------
+        has_remaining_planned = False
+
+        calendar_events = context.get("calendar", [])
+
+        if isinstance(calendar_events, list):
+
+            for ev in calendar_events:
+
+                ev_date = pd.to_datetime(
+                    ev.get("start_date_local"),
+                    errors="coerce"
+                )
+
+                if pd.isna(ev_date):
+                    continue
+
+                if ev_date.date() != today:
+                    continue
+
+                # planned but not completed
+                if not ev.get("paired_activity_id"):
+                    has_remaining_planned = True
+                    break
+
+        # ---------------------------------------------------------
+        # Day context
+        # ---------------------------------------------------------
+        day_context = (
+            "mixed_day"
+            if has_completed_activity and has_remaining_planned
+            else state_mode
+        )
+
+        context["load_state"] = {
+            "mode": state_mode,
+
+            "day_context": day_context,
+
+            "meaning": (
+                "actual_sunset"
+                if has_completed_activity
+                else "sunrise"
+            ),
+
+            "source": (
+                "latest_completed_activity"
+                if has_completed_activity
+                else "ewma_decay_from_previous_day"
+            ),
+
+            "method": (
+                "authoritative_activity"
+                if has_completed_activity
+                else "pure_ewma_decay"
+            ),
+
+            "tau_ctl": (
+                None
+                if has_completed_activity
+                else 42.0
+            ),
+
+            "tau_atl": (
+                None
+                if has_completed_activity
+                else 7.0
+            ),
+
+            "includes_planned_load": False,
+
+            "includes_completed_load": has_completed_activity,
         }
 
         debug(
             context,
-            f"[T1-WELLNESS-OBSERVED] baseline_date={last.get('_date')} today_tss={today_tss} "
-            f"CTL={context['ctl']} ATL={context['atl']} TSB={context['tsb']}"
+            f"[T1-WELLNESS-OBSERVED] "
+            f"mode={state_mode} "
+            f"sunrise_date={sunrise.get('_date')} "
+            f"today_tss={today_tss} "
+            f"CTL={context['ctl']} "
+            f"ATL={context['atl']} "
+            f"TSB={context['tsb']}"
         )
 
     else:
@@ -1402,41 +1662,547 @@ def run_tier1_controller(df_master, wellness, context):
         debug(context, f"  power: {context['zone_dist_power']}")
         debug(context, f"  hr:    {context['zone_dist_hr']}")
 
-
-    # --- Step 6c: Outlier Detection ---
+    # =========================================================
+    # 🔥 OUTLIER DETECTION (MULTI-FACTOR LOAD-ORDER MODEL)
+    # =========================================================
     try:
-        df = df_master.copy()
-        debug(context, f"[DEBUG-OUTLIER] Starting detection on {len(df)} rows")
-        if "icu_training_load" in df.columns:
-            mean_tss = df["icu_training_load"].mean()
-            std_tss = df["icu_training_load"].std()
-            threshold = 1.5 * std_tss  # slightly more sensitive than 2σ
+        import numpy as np
 
-            outliers = df[
-                (df["icu_training_load"] > mean_tss + threshold) |
-                (df["icu_training_load"] < mean_tss - threshold)
-            ][["id", "name", "start_date_local", "icu_training_load"]]
+        # -----------------------------------------------------
+        # 1️⃣ Correct dataset
+        # -----------------------------------------------------
+        df = context.get("df_light_full")
 
-            outliers_formatted = []
-            for _, o in outliers.iterrows():
-                outliers_formatted.append({
-                    "date": str(o.get("start_date_local", "?")).split(" ")[0],
-                    "event": o.get("name", "?"),
-                    "issue": "TSS outlier",
-                    "obs": f"TSS={o.get('icu_training_load', '?')}"
-                })
-            context["outliers"] = outliers_formatted
+        if df is None or df.empty:
+            df = context.get("_df_light_90d")
 
-            debug(context, f"[DEBUG-T1] Outlier events detected: {len(outliers)}")
-            debug(context, f"[DEBUG-OUTLIER] mean TSS={mean_tss:.1f}, std={std_tss:.1f}, threshold={threshold:.1f}")
-            debug(context, f"[DEBUG-OUTLIER] min/max TSS: {df['icu_training_load'].min()} / {df['icu_training_load'].max()}")
-        else:
+        if df is None or df.empty:
+            df = df_master
+
+        df = df.copy()
+
+        debug(context, f"[OUTLIERS] Dataset rows={len(df)}")
+
+        # -----------------------------------------------------
+        # 2️⃣ Athlete sport settings
+        # -----------------------------------------------------
+        athlete = context.get("athlete") or {}
+
+        sport_settings = athlete.get("sportSettings", [])
+
+        debug(
+            context,
+            f"[OUTLIERS] sportSettings={len(sport_settings)}"
+        )
+
+        # -----------------------------------------------------
+        # Build sport lookup
+        # -----------------------------------------------------
+        sport_lookup = {}
+
+        for s in sport_settings:
+
+            for t in s.get("types", []):
+
+                sport_lookup[t] = s
+
+        debug(
+            context,
+            f"[OUTLIERS] sport_lookup_types={list(sport_lookup.keys())[:10]}"
+        )
+
+        # -----------------------------------------------------
+        # 3️⃣ Guardrails
+        # -----------------------------------------------------
+        required = [
+            "icu_training_load",
+            "moving_time"
+        ]
+
+        if not all(c in df.columns for c in required):
+
             context["outliers"] = []
-            debug(context, "[DEBUG-OUTLIER] No icu_training_load column found.")
-    except Exception as e:
-        debug(context, f"⚠ Outlier detection failed: {e}")
-        context["outliers"] = []
+            context["outlier_summary"] = {}
 
+            debug(
+                context,
+                "[OUTLIERS] Missing required columns"
+            )
+
+        else:
+
+            # -------------------------------------------------
+            # Filter invalid sessions
+            # -------------------------------------------------
+            df = df[
+                (df["icu_training_load"] > 20) &
+                (df["moving_time"] > 1800)
+            ].copy()
+
+            if df.empty:
+
+                context["outliers"] = []
+                context["outlier_summary"] = {}
+
+                debug(
+                    context,
+                    "[OUTLIERS] No valid rows"
+                )
+
+            else:
+
+                # -------------------------------------------------
+                # 4️⃣ Derived metrics
+                # -------------------------------------------------
+                df["hours"] = df["moving_time"] / 3600
+
+                df["density"] = np.where(
+                    df["hours"] > 0,
+                    df["icu_training_load"] / df["hours"],
+                    0
+                )
+
+                # -------------------------------------------------
+                # Optional columns
+                # -------------------------------------------------
+                optional_cols = [
+                    "icu_weighted_avg_watts",
+                    "average_heartrate",
+                    "average_speed"
+                ]
+
+                for col in optional_cols:
+
+                    if col not in df.columns:
+                        df[col] = np.nan
+
+                # -------------------------------------------------
+                # 5️⃣ Baselines
+                # -------------------------------------------------
+                def safe_stats(series):
+
+                    s = pd.to_numeric(
+                        series,
+                        errors="coerce"
+                    ).dropna()
+
+                    if s.empty:
+                        return {
+                            "mean": 0,
+                            "std": 0
+                        }
+
+                    return {
+                        "mean": float(s.mean()),
+                        "std": float(s.std())
+                    }
+
+                stats = {
+
+                    "tss":
+                        safe_stats(df["icu_training_load"]),
+
+                    "density":
+                        safe_stats(df["density"]),
+
+                    "power":
+                        safe_stats(df["icu_weighted_avg_watts"]),
+
+                    "hr":
+                        safe_stats(df["average_heartrate"]),
+
+                    "pace":
+                        safe_stats(
+                            df.get("pace", df.get("average_speed"))
+                        )
+                }
+
+                debug(
+                    context,
+                    f"[OUTLIERS] stats={stats}"
+                )
+
+                # -------------------------------------------------
+                # 6️⃣ Safe zscore helper
+                # -------------------------------------------------
+                def safe_z(v, mean_v, std_v):
+
+                    if (
+                        std_v == 0 or
+                        pd.isna(std_v) or
+                        pd.isna(v)
+                    ):
+                        return 0
+
+                    return (v - mean_v) / std_v
+
+                # -------------------------------------------------
+                # 7️⃣ Resolve metric chain
+                # -------------------------------------------------
+                def resolve_metric_chain(load_order):
+
+                    if not load_order:
+                        return ["HR"]
+
+                    return (
+                        str(load_order)
+                        .upper()
+                        .split("_")
+                    )
+
+                # -------------------------------------------------
+                # 8️⃣ Per-row analysis
+                # -------------------------------------------------
+                rows = []
+
+                for _, o in df.iterrows():
+
+                    sport = str(
+                        o.get("type", "Unknown")
+                    )
+
+                    sport_cfg = sport_lookup.get(sport, {})
+
+                    load_order = sport_cfg.get(
+                        "load_order",
+                        "HR"
+                    )
+
+                    metric_chain = resolve_metric_chain(
+                        load_order
+                    )
+
+                    # ---------------------------------------------
+                    # Core zscores
+                    # ---------------------------------------------
+                    z_tss = safe_z(
+                        o["icu_training_load"],
+                        stats["tss"]["mean"],
+                        stats["tss"]["std"]
+                    )
+
+                    z_density = safe_z(
+                        o["density"],
+                        stats["density"]["mean"],
+                        stats["density"]["std"]
+                    )
+
+                    # ---------------------------------------------
+                    # Primary metric resolution
+                    # ---------------------------------------------
+                    z_primary = 0
+                    primary_label = "none"
+
+                    power_val = pd.to_numeric(
+                        o["icu_weighted_avg_watts"],
+                        errors="coerce"
+                    )
+
+                    hr_val = pd.to_numeric(
+                        o["average_heartrate"],
+                        errors="coerce"
+                    )
+
+                    pace_val = pd.to_numeric(
+                        o.get("pace", o.get("average_speed")),
+                        errors="coerce"
+                    )
+
+                    for metric in metric_chain:
+
+                        # -----------------------------------------
+                        # POWER
+                        # -----------------------------------------
+                        if (
+                            metric == "POWER" and
+                            pd.notna(power_val) and
+                            power_val > 0
+                        ):
+
+                            z_primary = safe_z(
+                                power_val,
+                                stats["power"]["mean"],
+                                stats["power"]["std"]
+                            )
+
+                            primary_label = "power"
+
+                            break
+
+                        # -----------------------------------------
+                        # PACE
+                        # -----------------------------------------
+                        elif (
+                            metric == "PACE" and
+                            pd.notna(pace_val) and
+                            pace_val > 0
+                        ):
+
+                            z_primary = safe_z(
+                                pace_val,
+                                stats["pace"]["mean"],
+                                stats["pace"]["std"]
+                            )
+
+                            primary_label = "pace"
+
+                            break
+
+                        # -----------------------------------------
+                        # HR
+                        # -----------------------------------------
+                        elif (
+                            metric == "HR" and
+                            pd.notna(hr_val) and
+                            hr_val > 0
+                        ):
+
+                            z_primary = safe_z(
+                                hr_val,
+                                stats["hr"]["mean"],
+                                stats["hr"]["std"]
+                            )
+
+                            primary_label = "hr"
+
+                            break
+
+
+                    # ---------------------------------------------
+                    # Composite score
+                    # ---------------------------------------------
+                    zscore = np.sqrt(
+                        (
+                            (z_tss ** 2) * 0.45 +
+                            (z_density ** 2) * 0.35 +
+                            (z_primary ** 2) * 0.20
+                        )
+                    )
+
+                    direction = (
+                        "high"
+                        if z_tss >= 0
+                        else "low"
+                    )
+
+                    rows.append({
+
+                        **o,
+
+                        "sport":
+                            sport,
+
+                        "primary_metric":
+                            primary_label,
+
+                        "z_tss":
+                            z_tss,
+
+                        "z_density":
+                            z_density,
+
+                        "z_primary":
+                            z_primary,
+
+                        "zscore":
+                            zscore,
+
+                        "direction":
+                            direction
+                    })
+
+                # -------------------------------------------------
+                # 9️⃣ Final dataframe
+                # -------------------------------------------------
+                scored = pd.DataFrame(rows)
+
+                outliers = scored[
+                    scored["zscore"] >= 1.75
+                ].copy()
+
+                if outliers.empty:
+
+                    context["outliers"] = []
+
+                    context["outlier_summary"] = {
+
+                        "count": 0,
+
+                        "mean_tss":
+                            round(
+                                stats["tss"]["mean"],
+                                1
+                            ),
+
+                        "std_tss":
+                            round(
+                                stats["tss"]["std"],
+                                1
+                            )
+                    }
+
+                else:
+
+                    outliers = outliers.sort_values(
+                        "zscore",
+                        ascending=False
+                    )
+
+                    TOP_N = 5
+
+                    outliers = outliers.head(TOP_N)
+
+                    formatted = []
+
+                    for _, o in outliers.iterrows():
+
+                        raw_id = (
+                            o.get("id") or
+                            o.get("activity_id")
+                        )
+
+                        activity_id = None
+                        activity_link = None
+
+                        if pd.notna(raw_id):
+
+                            activity_id = str(raw_id)
+
+                            if not activity_id.startswith("i"):
+                                activity_id = f"i{activity_id}"
+
+                            activity_link = (
+                                f"https://intervals.icu/activities/{activity_id}"
+                            )
+
+                        z = round(
+                            float(o["zscore"]),
+                            2
+                        )
+
+                        severity = "normal"
+
+                        if z >= 4:
+                            severity = "extreme"
+
+                        elif z >= 3:
+                            severity = "significant"
+
+                        elif z >= 2:
+                            severity = "notable"
+
+                        formatted.append({
+
+                            "date":
+                                str(
+                                    o.get(
+                                        "start_date_local",
+                                        "?"
+                                    )
+                                )[:10],
+
+                            "title":
+                                o.get("name", "?"),
+
+                            "activity_id":
+                                activity_id,
+
+                            "activity_link":
+                                activity_link,
+
+                            "sport":
+                                o.get("sport"),
+
+                            "primary_metric":
+                                o.get("primary_metric"),
+
+                            "tss":
+                                float(
+                                    o.get(
+                                        "icu_training_load",
+                                        0
+                                    )
+                                ),
+
+                            "load_vs_mean":
+                                round(
+                                    o["icu_training_load"] /
+                                    stats["tss"]["mean"],
+                                    2
+                                ),
+
+                            "zscore":
+                                z,
+
+                            "severity":
+                                severity,
+
+                            "type":
+                                o["direction"],
+
+                            "components": {
+
+                                "z_tss":
+                                    round(
+                                        float(o["z_tss"]),
+                                        2
+                                    ),
+
+                                "z_density":
+                                    round(
+                                        float(o["z_density"]),
+                                        2
+                                    ),
+
+                                "z_primary":
+                                    round(
+                                        float(o["z_primary"]),
+                                        2
+                                    )
+                            }
+                        })
+
+                    # -------------------------------------------------
+                    # 🔟 Store
+                    # -------------------------------------------------
+                    context["outliers"] = formatted
+
+                    context["outlier_summary"] = {
+
+                        "count":
+                            int(len(outliers)),
+
+                        "mean_tss":
+                            round(
+                                stats["tss"]["mean"],
+                                1
+                            ),
+
+                        "std_tss":
+                            round(
+                                stats["tss"]["std"],
+                                1
+                            ),
+
+                        "model":
+                            "multifactor_load_order_v2"
+                    }
+
+                    debug(
+                        context,
+                        f"[OUTLIERS] "
+                        f"Found {len(formatted)} outliers"
+                    )
+
+    except Exception as e:
+
+        debug(
+            context,
+            f"⚠ Outlier detection failed: {e}"
+        )
+
+        context["outliers"] = []
+        context["outlier_summary"] = {}
     # ------------------------------------------------------------
     # 🔎 Defensive sanity check before qualitative mapping
     # ------------------------------------------------------------

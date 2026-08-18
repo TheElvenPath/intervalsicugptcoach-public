@@ -44,7 +44,7 @@ REPORT_CONTRACT = {
         "planned_summary_by_iso_week",
         "future_forecast",
         "future_actions",
-        #"phases",
+        "phases_future"
     ],
 
     "weekly_lite": [
@@ -73,12 +73,81 @@ REPORT_CONTRACT = {
         "decision_context",
     ],
 
+    "weekly_overview": [
+        "meta",
+
+        # 🧭 TRAINING LOAD / LOAD STATE
+        "training_volume",
+        "metrics_groups",
+        "daily_load",
+
+        # 🫀 PHYSIOLOGY
+        "wellness",
+        "insight_view",
+
+        # ⚙️ PERFORMANCE INTELLIGENCE
+        "performance_intelligence",
+
+        # 📈 ADAPTATION / ESPE
+        "energy_system_progression",
+
+        # 🎯 ADE / GOVERNANCE
+        "actions",
+        "training_guidance",
+        "decision_context",
+        "event_targets",
+        "phase_alignment",
+
+        # 🔮 CURRENT PLAN CONTEXT
+        "current_ISO_weekly_microcycle",
+        "planned_summary_by_iso_week",
+        "future_forecast",
+        "future_actions",
+        "phases_future",
+    ],
+
+    "weekly_workflow": [
+        "meta",
+
+        # 1. Training execution vs prescription
+        "training_volume",
+        "events",
+        "planned_events_7d",
+        "current_ISO_weekly_microcycle",
+        "planned_summary_by_iso_week",
+
+        # 2. Fatigue and recovery trends
+        "metrics_groups",
+        "daily_load",
+        "future_forecast",
+        "phases_future",
+
+        # 3. Athlete readiness
+        "actions",
+        "training_guidance",
+        "decision_context",
+        "phase_alignment",
+        "event_targets",
+
+        # 4. HRV / wellness
+        "wellness",
+        "insight_view",
+
+        # 5. Weekly performance progression
+        "performance_intelligence",
+        "energy_system_progression",
+        "physiology",
+        "zones",
+        "phases_summary",
+    ],
+
     "season": [
         "meta",
 
         # 🧭 TRAINING LOAD
         "training_volume",
         "metrics_groups",
+        #"events",
         "trend_metrics",
 
         # 🫀 PHYSIOLOGY RESPONSE
@@ -95,6 +164,8 @@ REPORT_CONTRACT = {
         "physiology",
         "phases_summary",
         #"phases",
+        #"weekly_phases",
+        "phases_future",
         
         # 🎯 ADAPTIVE DECISIONS
         "actions",
@@ -141,6 +212,7 @@ REPORT_CONTRACT = {
 
         # 🧭 TRAINING LOAD
         "training_volume",
+        "outliers",
 
         # 🫀 PHYSIOLOGY RESPONSE
         "wellness",
@@ -162,6 +234,7 @@ REPORT_CONTRACT = {
 
         # 🫀 PHYSIOLOGY RESPONSE
         "wellness",
+        "wellness_summary",
         "insights",
         "insight_view",
 
@@ -209,6 +282,58 @@ PRUNE_RULES = {
             "equipment_summary",
             "activity_scope",
             "training_environment",
+        ],
+    },
+
+    "weekly_overview": {
+        "meta": [
+            "methodology",
+            "planned_events",
+            "phases_summary",
+            "events",
+        ],
+        "meta.athlete": [
+            "profiles",
+        ],
+        "meta.athlete.context": [
+            "platforms",
+            "wellness_features",
+            "equipment_summary",
+            "activity_scope",
+            "training_environment",
+        ],
+        "wellness": [
+            "hrv_series",
+            "daily",
+        ],
+        #"performance_intelligence": [
+        #    "acute",
+        #   "chronic",
+        #],
+    },
+
+    "weekly_workflow": {
+        "meta": [
+            "methodology",
+            "planned_events",
+        ],
+        "wellness": [
+            "hrv_series",
+            "daily",
+        ],
+        "meta.athlete": [
+            "profiles",
+        ],
+        "meta.athlete.context": [
+            "platforms",
+            "wellness_features",
+            "equipment_summary",
+            "activity_scope",
+            "training_environment",
+        ],
+        "performance_intelligence": [
+            "acute",
+            "chronic",
         ],
     },
 
@@ -308,6 +433,364 @@ RENDERER_PROFILES = {
     },
 
     # ==============================================================
+    # Weekly workflow CONTRACT
+    # ==============================================================
+
+    "weekly_workflow": {
+        "framing": {
+            "intent": "weekly_workflow_review",
+            "purpose": (
+                "Render the weekly report around the athlete workflow: "
+                "execution vs prescription, fatigue/recovery trends, readiness, "
+                "HRV/wellness, and weekly performance progression."
+            ),
+            "required_opening": (
+                "One-line verdict covering execution, recovery, readiness, and progression."
+            ),
+        },
+
+        "layout": {
+            "style": "workflow_review",
+            "required_sections": [
+                "Training Execution vs Prescription",
+                "Fatigue and Recovery Trends",
+                "Athlete Readiness",
+                "HRV / Wellness",
+                "Weekly Performance Progression",
+                "Coach Verdict",
+            ],
+        },
+
+        "stack_structure": {
+            "execution_vs_prescription": [
+                "training_volume",
+                "events",
+                "planned_events_7d",
+                "current_ISO_weekly_microcycle",
+                "planned_summary_by_iso_week",
+            ],
+            "fatigue_recovery_trends": [
+                "metrics_groups.load",
+                "metrics_groups.capacity",
+                "metrics_groups.variability",
+                "daily_load",
+                "future_forecast",
+                "phases_future",
+            ],
+            "athlete_readiness": [
+                "actions",
+                "training_guidance",
+                "decision_context",
+                "phase_alignment",
+                "event_targets",
+            ],
+            "hrv_wellness": [
+                "wellness",
+                "insight_view",
+            ],
+            "weekly_performance_progression": [
+                "performance_intelligence",
+                "energy_system_progression",
+                "physiology",
+                "zones",
+                "phases_summary",
+            ],
+        },
+
+        "stack_labels": {
+            "execution_vs_prescription": "📋 TRAINING EXECUTION VS PRESCRIPTION",
+            "fatigue_recovery_trends": "🧭 FATIGUE AND RECOVERY TRENDS",
+            "athlete_readiness": "🎯 ATHLETE READINESS",
+            "hrv_wellness": "🫀 HRV / WELLNESS",
+            "weekly_performance_progression": "📈 WEEKLY PERFORMANCE PROGRESSION",
+        },
+
+        "interpretation_rules": [
+            "Render exactly one workflow report.",
+            "Use the five workflow headings exactly as defined in stack_labels.",
+            "Do not render generic Montis stack headings in this profile.",
+            "Start with a one-line verdict covering execution, fatigue, readiness, wellness, and progression.",
+            "Training Execution vs Prescription MUST compare completed events against planned_events_7d when both exist.",
+            "If planned_events_7d is missing, state that prescription comparison is unavailable; do not infer it.",
+            "Fatigue and Recovery Trends MUST use metrics_groups.load, metrics_groups.capacity, daily_load, and future_forecast where present.",
+            "Athlete Readiness MUST use adaptive_summary from actions, training_guidance, decision_context, phase_alignment, and event_targets.",
+            "Do not use actions[0] blindly; find the action where type == adaptive_summary.",
+            "HRV / Wellness MUST use wellness.physiology_state, HRV ratio/trend, resting HR delta, sleep, and insight_view where present.",
+            "Weekly Performance Progression MUST use performance_intelligence and energy_system_progression as the primary sources.",
+            "Do not recompute ADE score, CTL, ATL, TSB, ACWR, HRV ratio, or ESPE deltas.",
+            "When phase governance conflicts with apparent readiness, state both truths clearly.",
+            "Final Coach Verdict MUST classify the week as Productive, High Strain, Under-Recovered, or Misaligned.",
+        ],
+
+        "section_handling": {
+            "meta": "summary",
+            "training_volume": "summary",
+            "events": "summary",
+            "planned_events_7d": "summary",
+            "current_ISO_weekly_microcycle": "summary",
+            "planned_summary_by_iso_week": "summary",
+
+            "metrics_groups": "summary",
+            "daily_load": "compact_timeline",
+            "future_forecast": "summary",
+
+            "actions": "summary",
+            "training_guidance": "headline",
+            "decision_context": "headline",
+            "phase_alignment": "headline",
+            "event_targets": "summary",
+
+            "wellness": "summary",
+            "insight_view": "summary",
+
+            "performance_intelligence": "summary",
+            "energy_system_progression": "summary",
+            "physiology": "summary",
+            "zones": "summary",
+            "phases_summary": "summary",
+
+            "phases": "forbid",
+            "insights": "forbid",
+            "wbal_summary": "forbid",
+        },
+
+        "preferred_markdown_shape": [
+            "Opening one-line verdict.",
+            "## 📋 Training Execution vs Prescription",
+            "Compact comparison: completed load, planned load, missed/extra sessions, prescription alignment.",
+            "## 🧭 Fatigue and Recovery Trends",
+            "Compact load/fatigue table plus daily_load timeline.",
+            "## 🎯 Athlete Readiness",
+            "ADE score, operational state, phase alignment, event readiness, final guidance.",
+            "## 🫀 HRV / Wellness",
+            "HRV, resting HR, sleep, physiology state, wellness signal interpretation.",
+            "## 📈 Weekly Performance Progression",
+            "Performance intelligence, durability, neural density, W′/anaerobic signal, ESPE progression.",
+            "## ✅ Coach Verdict",
+            "One short verdict with next action.",
+        ],
+
+        "closing_note": {
+            "required": True,
+            "verdict_rule": (
+                "State whether the week matched the intended prescription and whether the athlete is ready to progress."
+            ),
+            "classification_required": [
+                "Productive",
+                "High Strain",
+                "Under-Recovered",
+                "Misaligned",
+            ],
+            "focus": "workflow_alignment",
+            "anchor_metrics": [
+                "events",
+                "planned_events_7d",
+                "ACWR",
+                "FatigueTrend",
+                "wellness.physiology_state",
+                "performance_intelligence.training_state",
+                "energy_system_progression",
+                "actions",
+                "phase_alignment",
+            ],
+            "intent_rule": (
+                "Assess whether execution, fatigue, wellness, and progression support the next training decision."
+            ),
+            "max_sentences": 4,
+        },
+    },
+
+    "weekly_overview": {
+        "framing": {
+            "intent": "bento_weekly_overview",
+            "purpose": "Compact ChatGPT weekly dashboard. Summarise, do not expand into full report.",
+            "required_opening": "One-line state summary combining physiology + governance."
+        },
+
+        "layout": {
+            "style": "compact_dashboard",
+            "columns": 2,
+            "max_cards": 6,
+            "card_order": [
+                "athlete_context",
+                "adaptive_decision_engine",
+                "training_load",
+                "physiology_reserve",
+                "performance_intelligence",
+                "adaptation_progression"
+            ],
+            "required_sections": [
+                "Athlete Context",
+                "Adaptive Decision Engine",
+                "Weekly Load",
+                "Physiology",
+                "Adaptation",
+                "Decision / Event Focus"
+            ]
+        },
+
+        "card_rules": {
+            "athlete_context": [
+                "This card MUST be rendered first.",
+                "Use meta.athlete.identity and meta.athlete.profile.",
+                "Show athlete name, primary_sport, dominant_sport.",
+                "Show FTP, eFTP, FTP/kg, LTHR, max HR, VO2max Garmin when present.",
+                "Show lactate_mmol_l and lactate_power when present.",
+                "Preferred format: compact table.",
+                "Do not render full athlete profile, full context, platforms, equipment, or activity_scope."
+            ],
+            "adaptive_decision_engine": [
+                "This card MUST be rendered immediately after Athlete Context.",
+                "Use actions item where type == adaptive_summary; do not assume actions[0] unless it matches adaptive_summary.",
+                "Use training_guidance as the final coaching directive when present.",
+                "Do not replace the card title with taper/override text.",
+                "Card title must remain: ADAPTIVE DECISION ENGINE.",
+                "MUST render ADE score from adaptive_summary.ade_base_score.value and adaptive_summary.ade_base_score.label.",
+                "Preferred score format: '62 / 100 — CAUTION'.",
+                "Do not recompute ADE score.",
+                "MUST render operational_state.",
+                "MUST render resolution.",
+                "MUST render phase_constraint or decision_context.required_phase.",
+                "MUST render phase_alignment or decision_context.alignment.",
+                "MUST render forecast_context and load_trend when present.",
+                "If resolution == overridden_by_phase, show phase override state clearly inside the card.",
+                "If taper_governance.state == taper_load_conflict, show conflict reason and recommended adjustment.",
+                "Show both truths: physiology state and plan governance, e.g. LOAD ACCEPTING + TAPER MISALIGNED.",
+                "Do not present adaptive_summary.directive as fully honoured when resolution == overridden_by_phase."
+            ],
+
+            "training_load": [
+                "Use training_volume and metrics_groups.load.",
+                "Show weekly hours, total TSS, distance.",
+                "Show CTL / ATL / TSB if present from training_volume.",
+                "Show ACWR, StressTolerance, Strain, Monotony and FatigueTrend when present.",
+                "Show load_pattern label/status if present.",
+                "Show compact 7d daily_load trajectory if present.",
+                "Do not list all events in overview mode."
+            ],
+
+            "physiology_reserve": [
+                "Use wellness.physiology_state and wellness summary fields.",
+                "Show HRV ratio, sleep score, resting HR delta if present.",
+                "Use performance_intelligence.training_state.signals if needed for HRV/ATL/CTL context.",
+                "Use insight_view only for critical/watch/positive summary counts or short labels.",
+                "Do not render HRV series.",
+                "Mention heat/external load only if performance_intelligence.external_load_context is present."
+            ],
+
+            "performance_intelligence": [
+                "Use performance_intelligence.training_state as the headline.",
+                "Show readiness_signal, operational_state, load_recovery_state.",
+                "Show external_load_context if present: heat/load/cardiac drift.",
+                "Do not render full WDRM/ISDM/NDLI tables in overview mode.",
+                "If durability drift is present, mention it as a limiter."
+            ],
+
+            "adaptation_progression": [
+                "Use energy_system_progression.",
+                "Show dominant sport, adaptation_state/system_state, and system_guidance.",
+                "Show key direction only: threshold, VO2, sprint, durability, repeatability if present.",
+                "Keep message short; truncate only visually, not in data."
+            ],
+
+            "decision_event_focus": [
+                "Use event_targets.next_event when present.",
+                "Show next A/B/C event name, date, days_to_event, event_demand or race_type.",
+                "Use training_guidance as the final action line.",
+                "If taper_governance.recommended_adjustment exists, show it as the action.",
+                "End with reflection question only if actions contains type == reflection."
+            ]
+        },
+
+        "required_fields": {
+            "athlete_context": [
+                "meta.athlete.identity.name",
+                "meta.athlete.profile.primary_sport",
+                "meta.athlete.profile.dominant_sport",
+                "meta.athlete.profile.ftp",
+                "meta.athlete.profile.eftp",
+                "meta.athlete.profile.ftp_kg",
+                "meta.athlete.profile.lthr",
+                "meta.athlete.profile.max_hr",
+                "meta.athlete.profile.vo2max_garmin",
+                "meta.athlete.profile.lactate_mmol_l",
+                "meta.athlete.profile.lactate_power"
+            ],
+            "adaptive_decision_engine": [
+                "adaptive_summary.ade_base_score.value",
+                "adaptive_summary.ade_base_score.label",
+                "adaptive_summary.operational_state",
+                "adaptive_summary.resolution",
+                "adaptive_summary.phase_constraint",
+                "adaptive_summary.phase_alignment",
+                "adaptive_summary.forecast_context",
+                "adaptive_summary.load_trend",
+                "training_guidance"
+            ],
+            "taper_conflict_if_present": [
+                "adaptive_summary.taper_governance.state",
+                "adaptive_summary.taper_governance.reason",
+                "adaptive_summary.taper_governance.recommended_adjustment"
+            ]
+        },
+
+        "preferred_markdown_shape": [
+            "Opening one-line summary.",
+            "## 👤 Athlete Context",
+            "Compact athlete table showing name, sport, FTP, eFTP, FTP/kg, LTHR, max HR, VO2max Garmin, lactate power if present.",
+            "## 🎯 Adaptive Decision Engine",
+            "ADE score table including score, state, resolution, required phase, alignment, forecast trend.",
+            "Final guidance line using training_guidance.",
+            "Conflict line if taper_governance exists.",
+            "## 🧭 Weekly Load",
+            "Compact load table.",
+            "## 🫀 Physiology",
+            "Compact physiology table.",
+            "## 📈 Adaptation",
+            "Compact adaptation table.",
+            "## 🎯 Decision / Event Focus",
+            "Action and next event."
+        ],
+
+        "override_rules": [
+            "If decision_context.phase_override is true, training_guidance is the final directive.",
+            "If adaptive_summary.resolution == overridden_by_phase, do not present ADE directive as fully honoured.",
+            "Precedence for final directive: training_guidance > adaptive_summary.taper_governance.recommended_adjustment > adaptive_summary.directive.",
+            "Positive readiness must be qualified when plan governance is misaligned.",
+            "If physiology is load_accepting but phase_alignment is misaligned, state both clearly.",
+            "If taper_governance.state == taper_load_conflict, the overview must say the plan is misaligned with taper freshness."
+        ],
+
+        "section_handling": {
+            "events": "forbid",
+            "planned_events_7d": "forbid",
+            "phases": "forbid",
+            "phases_summary": "forbid",
+            "zones": "forbid",
+            "daily_load": "compact_timeline",
+            "metrics_groups": "summary",
+            "wellness": "summary",
+            "performance_intelligence": "summary",
+            "energy_system_progression": "summary",
+            "actions": "summary",
+            "training_guidance": "headline",
+            "decision_context": "headline",
+            "future_forecast": "summary",
+            "event_targets": "summary"
+        },
+
+        "forbidden_behaviour": [
+            "Do not omit ADE score.",
+            "Do not render a full event list.",
+            "Do not render full zones.",
+            "Do not render full phase tables.",
+            "Do not render full PI metric tables.",
+            "Do not say the plan is simply fine when resolution == overridden_by_phase.",
+            "Do not use actions[0] blindly if adaptive_summary is elsewhere in actions."
+        ]
+    },
+
+    # ==============================================================
     # Weekly report (FULL DETAIL, SESSION-LEVEL)
     # ==============================================================
     "weekly": {
@@ -357,7 +840,7 @@ RENDERER_PROFILES = {
                 "future_forecast",
                 "future_actions",
                 "training_guidance",
-                #"phases"
+                "future_phases"
             ]
         },
         "stack_labels": {
@@ -408,6 +891,7 @@ RENDERER_PROFILES = {
             "OPERATIONS table MUST contain week_delta, planned_load (current → next), and 14 day forecast summary (CTL / TSB / fatigue_class).",
             "training_guidance MUST be rendered as a single-row table with column: Directive.",
             "phase_alignment MUST be rendered as a single-row table with columns: Required Phase, Recent Load Alignment, Past Pattern, Phase Streak.",
+            "When actions[0].ade_base_score exists, render it in Adaptive Decisions before STATE SNAPSHOT as: ADE SCORE | Score | Label | Scope | Penalties. Use backend values only; do not recompute; do not merge with phase_alignment/resolution.",
             #"decision_context MUST be rendered as a single-row table with columns: ADE Directive, Phase Requirement, Alignment",
             "future_actions MUST be rendered as a table with columns: Priority, Action, Reason.",
             "Do NOT render state_action, system_guidance, or reflection as separate sections.",
@@ -458,6 +942,8 @@ RENDERER_PROFILES = {
             "planned_summary_by_iso_week": "forbid",
             "actions": "table_summary",
             "event_targets": "table_summary",
+            "actions.0": "full",
+            "actions.0.ade_base_score": "full",
             "actions.0.adaptive_summary": "full",
             "actions.1.state_action": "full",
             "actions.3.system_guidance": "full",
@@ -525,7 +1011,7 @@ RENDERER_PROFILES = {
         "planned_events_rule": [
             "The planned_events_7d section MUST be rendered as a Markdown table.",
             "Each planned event MUST appear as exactly one row."
-            "Column order MUST be: Date | Day | Name | Category | Duration (min) | TSS.",
+            "Column order MUST be: Date | Day | Name | Category | Duration (min) | TSS | CTL | ATL",
             "Do NOT summarise, group, or narrate planned events.",
             "Coaching sentences for planned_events, if enabled, MUST appear AFTER the table."
         ],
@@ -592,8 +1078,8 @@ RENDERER_PROFILES = {
             "training_load": [
                 "training_volume",
                 "metrics",
-                "trend_metrics"
-            ],
+                "trend_metrics",
+                "phases_future"            ],
 
             "physiology_response": [
                 "wellness",
@@ -993,7 +1479,8 @@ RENDERER_PROFILES = {
             ],
 
             "training_load": [
-                "training_volume"
+                "training_volume",
+                "outliers"
             ],
 
             "physiology_response": [
@@ -1109,7 +1596,7 @@ REPORT_RESOLUTION = {
         "TSB": "authoritative",
         "zones": "authoritative",
         "derived_metrics": "full",
-        "performance_intelligence": "acute_full_7d",
+        "performance_intelligence": "acute_full_7d or 90d_light_fallback",
         "energy_system_progression": "full",
         "insights": "tactical",
     },
@@ -1131,7 +1618,7 @@ REPORT_RESOLUTION = {
         "TSB": "icu_only",
         "zones": "not_applicable",
         "derived_metrics": "wellness_only",
-        "performance_intelligence": "acute_full_7d",
+        "performance_intelligence": "acute_full_7d or 90d_light_fallback",
         "insights": "recovery",
     },
 
@@ -1300,8 +1787,8 @@ COACH_PROFILE = {
         },
 
         "FatigueTrend": {
-            "framework": "Banister EWMA Delta",
-            "formula": "(Mean_7d - Mean_28d) / Mean_28d × 100",
+            "framework": "7d vs prior 21d Load Delta",
+            "formula": "(Mean_recent_7d - Mean_prior_21d) / Mean_prior_21d × 100",
             "criteria": {
                 "balanced": "-10–10",
                 "moderate_low": "-20–-10",
@@ -1895,7 +2382,7 @@ COACH_PROFILE = {
             "interpretation": "Carbohydrate availability (≈3–10 g/kg depending on training load; IOC/ACSM guidelines) determines glycogen replenishment and endurance capacity.",
             "coaching_implication": "Align carbohydrate intake with training demand (IOC/ACSM) to maintain glycogen availability, recovery, and performance capacity.",
             "related_metrics": ["HRV", "SleepQuality", "TrainingLoad"]
-},
+        },
 
         "FatIntake": {
             "framework": "Energy Balance (Endocrine support)",

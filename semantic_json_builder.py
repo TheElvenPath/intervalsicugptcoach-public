@@ -6,8 +6,6 @@ Builds a FULL semantic DICT coaching graph based on the Unified Reporting
 Framework v5.1, Coaching Profile, Coaching Cheat Sheet, and all Tier-2/3 modules.
 
 """
-
-
 import json, math, copy
 from datetime import datetime, date, timezone, timedelta
 import pandas as pd
@@ -29,6 +27,8 @@ from audit_core.tier3_trail_execution import (
 )
 from coach_trail_rules import TRAIL_DEFAULTS
 from audit_core.tier3_future_forecast import run_future_forecast
+from audit_core.tier2_actions import build_future_projected_weeks
+from audit_core.event_readiness import estimate_event_ctl_atl_from_calendar_ewma
 
 # ---------------------------------------------------------
 # Helpers
@@ -385,27 +385,395 @@ def rename_z8_to_ss(dist: dict):
 def resolve_planned_duration_minutes(e: dict):
     """
     Resolve planned duration from canonical schema fields.
-    Priority:
-    1) moving_time (seconds)
-    2) time_target (seconds)
-    3) end_date_local - start_date_local
-    """
-    if e.get("moving_time"):
-        return round(int(e["moving_time"]) / 60, 1)
 
-    if e.get("time_target"):
-        return round(int(e["time_target"]) / 60, 1)
+    Priority:
+    1) moving_time seconds
+    2) time_target seconds
+    3) duration_minutes explicit value
+    4) end_date_local - start_date_local ONLY for WORKOUT
+
+    Races may use explicit duration fields.
+    Races must NOT infer duration from calendar span.
+    Notes / holidays / availability markers must not create duration.
+    """
+
+    category = str(e.get("category") or "").upper()
+
+    if e.get("moving_time") not in (None, "", 0):
+        try:
+            return round(float(e["moving_time"]) / 60, 1)
+        except Exception:
+            pass
+
+    if e.get("time_target") not in (None, "", 0):
+        try:
+            return round(float(e["time_target"]) / 60, 1)
+        except Exception:
+            pass
+
+    if e.get("duration_minutes") not in (None, "", 0):
+        try:
+            return round(float(e["duration_minutes"]), 1)
+        except Exception:
+            pass
+
+    # Only workouts can infer duration from start/end.
+    # Race_A/B/C can have explicit duration, but not inferred all-day/multi-day span.
+    if category != "WORKOUT":
+        return None
 
     try:
         if e.get("start_date_local") and e.get("end_date_local"):
             start = pd.to_datetime(e["start_date_local"])
             end = pd.to_datetime(e["end_date_local"])
-            return round((end - start).total_seconds() / 60, 1)
+            mins = round((end - start).total_seconds() / 60, 1)
+
+            # Prevent accidental all-day / multi-day calendar spans.
+            if 0 < mins <= 480:
+                return mins
     except Exception:
         pass
 
     return None
 
+def resolve_training_load_pattern(metrics_groups, cheat_sheet):
+    """
+    Resolve a UI-safe Training Load pattern.
+    This is NOT Training State and does NOT override PI/ADE.
+    It only summarises the load diagnostics block.
+    """
+
+    def val(group, key):
+        try:
+            return metrics_groups.get(group, {}).get(key, {}).get("value")
+        except Exception:
+            return None
+
+    acwr = val("load", "ACWR")
+    strain = val("load", "Strain")
+    fatigue = val("load", "FatigueTrend")
+    stress = val("capacity", "StressTolerance")
+
+    values = {
+        "ACWR": acwr,
+        "StressTolerance": stress,
+        "Strain": strain,
+        "FatigueTrend": fatigue,
+    }
+
+    if any(v is None for v in values.values()):
+        state_key = "load_unknown"
+    elif acwr > 1.5 or stress > 1.4 or strain > 4000 or fatigue > 40:
+        state_key = "overload_risk"
+    elif acwr > 1.3 or stress > 1.2 or strain > 3000 or fatigue > 20:
+        state_key = "high_strain"
+    elif acwr < 0.8 and fatigue < -20:
+        state_key = "under_stimulus"
+    elif 0.8 <= acwr <= 1.3 and 0.8 <= stress <= 1.2 and fatigue <= -10:
+        state_key = "controlled_unload"
+    elif 0.8 <= acwr <= 1.3 and 10 <= fatigue <= 20:
+        state_key = "building_load"
+    elif 0.8 <= acwr <= 1.3 and 0.8 <= stress <= 1.2 and strain < 2500 and -10 <= fatigue <= 10:
+        state_key = "balanced_load"
+    else:
+        state_key = "balanced_load"
+
+    cfg = cheat_sheet.get("training_load_pattern", {})
+    meta = cfg.get("meta", {})
+    states = cfg.get("states", {})
+
+    state = states.get(state_key, states.get("load_unknown", {}))
+
+    return {
+        "key": state_key,
+        "label": state.get("label", "LOAD UNKNOWN"),
+        "status": state.get("status", "unknown"),
+        "meaning": state.get("meaning"),
+        "basis": "metrics_groups.load + metrics_groups.capacity",
+
+        # from cheat sheet meta
+        "scope": meta.get("scope", "training_load_only"),
+        "context_window": meta.get("context_window", "7d_with_21_28d_baseline"),
+        "description": meta.get("description"),
+
+        # explicit non-conflict contract
+        "does_not_override": [
+            "performance_intelligence.training_state",
+            "actions.adaptive_summary",
+            "training_guidance"
+        ],
+
+        "inputs": values
+    }
+
+def resolve_physiology_state(wellness, cheat_sheet):
+    """
+    Resolve wellness-only physiology state.
+    Does NOT override Training Load, PI training_state, or ADE.
+    """
+
+    cfg = cheat_sheet.get("physiology_state", {})
+    meta = cfg.get("meta", {})
+    states = cfg.get("states", {})
+
+    def num(v):
+        try:
+            return float(v) if v is not None else None
+        except Exception:
+            return None
+
+    hrv_ratio = num(wellness.get("hrv_ratio"))
+
+    # Fallback: derive from nested wellness.hrv block if flat hrv_ratio is missing
+    if hrv_ratio is None:
+        hrv_block = wellness.get("hrv", {}) or {}
+        hrv_mean = num(hrv_block.get("mean"))
+        hrv_latest = num(hrv_block.get("latest"))
+
+        if hrv_mean not in (None, 0) and hrv_latest is not None:
+            hrv_ratio = round(hrv_latest / hrv_mean, 2)
+
+    hrv_trend = num(
+        wellness.get("hrv_trend")
+        or wellness.get("hrv_trend_7d")
+        or wellness.get("hrv", {}).get("trend_7d")
+    )
+    def first_present(*vals):
+        for v in vals:
+            if v is not None:
+                return v
+        return None
+
+    rest_delta = num(first_present(
+        wellness.get("resting_hr_delta"),
+        wellness.get("cardiac", {}).get("resting_hr_delta")
+    ))
+
+    sleep_score = num(first_present(
+        wellness.get("sleep_score"),
+        wellness.get("sleep", {}).get("average_score")
+    ))
+    tsb = num(wellness.get("tsb"))
+
+    subjective = wellness.get("subjective", {}) or {}
+    fatigue_label = (
+        subjective.get("fatigue", {}).get("label")
+        if isinstance(subjective.get("fatigue"), dict)
+        else None
+    )
+    stress_label = (
+        subjective.get("stress", {}).get("label")
+        if isinstance(subjective.get("stress"), dict)
+        else None
+    )
+    soreness_label = (
+        subjective.get("soreness", {}).get("label")
+        if isinstance(subjective.get("soreness"), dict)
+        else None
+    )
+
+    inputs = {
+        "hrv_ratio": hrv_ratio,
+        "hrv_trend": hrv_trend,
+        "resting_hr_delta": rest_delta,
+        "sleep_score": sleep_score,
+        "tsb": tsb,
+        "subjective_fatigue": fatigue_label,
+        "subjective_stress": stress_label,
+        "subjective_soreness": soreness_label,
+    }
+
+    required = [hrv_ratio, rest_delta, sleep_score, tsb]
+    if all(v is None for v in required):
+        state_key = "unknown"
+
+    elif (
+        hrv_ratio is not None and hrv_ratio >= 1.05
+        and (rest_delta is None or rest_delta <= 2)
+        and (sleep_score is None or sleep_score >= 75)
+        and (tsb is None or tsb >= 0)
+        and fatigue_label in (None, "low")
+        and stress_label in (None, "low")
+    ):
+        state_key = "fresh_stable"
+
+    elif (
+        hrv_ratio is not None and hrv_ratio < 0.92
+        and (rest_delta is not None and rest_delta >= 5)
+    ):
+        state_key = "suppressed"
+
+    elif (
+        (hrv_ratio is not None and hrv_ratio < 0.97)
+        or (rest_delta is not None and rest_delta >= 3)
+        or (sleep_score is not None and sleep_score < 70)
+        or fatigue_label in ("high", "very_high")
+        or stress_label in ("high", "very_high")
+        or soreness_label in ("high", "very_high")
+    ):
+        state_key = "watch"
+
+    elif (
+        tsb is not None and tsb < -10
+        and (
+            (hrv_ratio is not None and hrv_ratio < 1.0)
+            or (sleep_score is not None and sleep_score < 75)
+            or (rest_delta is not None and rest_delta > 2)
+        )
+    ):
+        state_key = "strained"
+
+    else:
+        state_key = "stable"
+
+    state = states.get(state_key, states.get("unknown", {}))
+
+    return {
+        "key": state_key,
+        "label": state.get("label", "UNKNOWN"),
+        "status": state.get("status", "unknown"),
+        "meaning": state.get("meaning"),
+        "basis": "HRV ratio + resting HR delta + sleep + TSB + subjective signals",
+        "scope": meta.get("scope", "wellness_physiology_only"),
+        "context_window": meta.get("context_window", "42d wellness with current load state"),
+        "description": meta.get("description"),
+        "does_not_override": [
+            "training_volume.load_pattern",
+            "performance_intelligence.training_state",
+            "actions.adaptive_summary",
+            "training_guidance"
+        ],
+        "inputs": inputs,
+        "confidence": "high" if state_key != "unknown" else "low"
+    }
+
+def apply_report_recency_governance(semantic: dict) -> dict:
+    """
+    Prevent stale historical weekly blocks from being interpreted
+    as current tactical coaching guidance.
+    """
+
+    meta = semantic.setdefault("meta", {})
+
+    report_type = meta.get("report_type")
+    period = meta.get("period") or meta.get("date_range")
+    generated_at = meta.get("generated_at", {})
+
+    if report_type != "weekly":
+        return semantic
+
+    # Parse report end date from "YYYY-MM-DD → YYYY-MM-DD"
+    report_end = None
+    if isinstance(period, str) and "→" in period:
+        try:
+            report_end_str = period.split("→")[-1].strip()
+            report_end = datetime.fromisoformat(report_end_str).date()
+        except Exception:
+            report_end = None
+
+    # Parse generated local date
+    generated_date = None
+    local_ts = generated_at.get("local") if isinstance(generated_at, dict) else None
+    if local_ts:
+        try:
+            generated_date = datetime.fromisoformat(local_ts).date()
+        except Exception:
+            generated_date = None
+
+    if report_end is None or generated_date is None:
+        meta["recency"] = {
+            "mode": "unknown",
+            "is_current": False,
+            "staleness_days": None,
+            "guidance_validity": "unknown"
+        }
+        return semantic
+
+    staleness_days = (generated_date - report_end).days
+
+    is_current = staleness_days <= 8
+
+    meta["recency"] = {
+        "mode": "current" if is_current else "historical",
+        "is_current": is_current,
+        "staleness_days": staleness_days,
+        "report_end": report_end.isoformat(),
+        "generated_date": generated_date.isoformat(),
+        "guidance_validity": "current_tactical" if is_current else "historical_block_review"
+    }
+
+    if is_current:
+        return semantic
+
+    # Mark future/current planning fields as unavailable for historical blocks
+    semantic["future_forecast"] = {}
+    semantic["future_actions"] = []
+    semantic["planned_events_7d"] = []
+    semantic["planned_summary_by_iso_week"] = {}
+    semantic["current_ISO_weekly_microcycle"] = None
+
+    # STRICT: historical reports must not expose live race readiness
+    semantic["event_targets"] = {
+        "exists": False,
+        "historical_context": True,
+        "guidance_validity": "historical_block_review",
+        "note": (
+            "Event readiness suppressed for historical weekly block. "
+            "Use a current weekly report for live race-readiness guidance."
+        )
+    }
+
+    # Downgrade ADE current directive semantics
+    actions = semantic.get("actions", [])
+    if isinstance(actions, list):
+        for action in actions:
+            if isinstance(action, dict) and action.get("type") == "adaptive_summary":
+                action["historical_context"] = True
+                action["guidance_validity"] = "historical_block_review"
+                action["directive_at_time"] = action.get("directive")
+                action["directive"] = "Historical block review — not current coaching guidance"
+                action["resolution"] = "historical_only"
+                action["phase_constraint"] = None
+                action["phase_alignment"] = "historical_only"
+
+                # STRICT: suppress live target-event/taper guidance inside ADE too
+                action["target_event_at_time"] = action.get("target_event")
+                action["taper_governance_at_time"] = action.get("taper_governance")
+
+                action["target_event"] = {
+                    "exists": False,
+                    "historical_context": True,
+                    "guidance_validity": "historical_block_review",
+                    "note": (
+                        "Target-event guidance suppressed for historical weekly block. "
+                        "Use a current weekly report for live event guidance."
+                    )
+                }
+
+                action["taper_governance"] = {
+                    "state": "historical_only",
+                    "historical_context": True,
+                    "guidance_validity": "historical_block_review",
+                    "required_phase": None,
+                    "form_status": None,
+                    "event_tsb": None,
+                    "target_tsb_range": None,
+                    "reason": None,
+                    "recommended_adjustment": None
+                }
+
+                action["recency_note"] = (
+                    f"This weekly block ended {staleness_days} days before report generation. "
+                    "ADE describes the historical block state only and must not be used as today's training directive."
+                )
+
+
+    # Replace training_guidance
+    semantic["training_guidance"] = (
+        "Historical weekly block only. Use current weekly report for today's coaching guidance."
+    )
+
+    return semantic
 
 # ---------------------------------------------------------
 # Insights Builder
@@ -479,29 +847,53 @@ def build_insights(semantic):
 
         # --- Efficiency Factor ---
         if "Efficiency Factor" in adaptation:
-            ef_val = adaptation.get("Efficiency Factor")
-            ef_block = semantic_block_for_metric("EfficiencyFactor", ef_val, semantic)
-            insights["efficiency_factor"] = {
-                "value": ef_val,
-                "window": window,
-                "basis": "Power / HeartRate",
-                "classification": ef_block.get("classification"),
-                "interpretation": ef_block.get("interpretation"),
-                "coaching_implication": ef_block.get("coaching_implication"),
-            }
+            ef_obj = adaptation.get("Efficiency Factor")
+
+            if isinstance(ef_obj, dict):
+                ef_val = ef_obj.get("value")
+                ef_window = ef_obj.get("window")
+                ef_basis = ef_obj.get("basis")
+            else:
+                ef_val = ef_obj
+                ef_window = window
+                ef_basis = "Power / HeartRate"
+
+            if isinstance(ef_val, (int, float)):
+                ef_block = semantic_block_for_metric("EfficiencyFactor", ef_val, semantic)
+
+                insights["efficiency_factor"] = {
+                    "value": ef_val,
+                    "window": ef_window,
+                    "basis": ef_basis,
+                    "classification": ef_block.get("classification"),
+                    "interpretation": ef_block.get("interpretation"),
+                    "coaching_implication": ef_block.get("coaching_implication"),
+                }
 
         # --- Endurance Decay (cardiac drift / decoupling) ---
         if "Endurance Decay" in adaptation:
-            dec_val = adaptation.get("Endurance Decay")
-            dec_block = semantic_block_for_metric("EnduranceDecay", dec_val, semantic)
-            insights["endurance_decay"] = {
-                "value": dec_val,
-                "window": window,
-                "basis": "Cardiac drift / power–HR decoupling",
-                "classification": dec_block.get("classification"),
-                "interpretation": dec_block.get("interpretation"),
-                "coaching_implication": dec_block.get("coaching_implication"),
-            }
+            dec_obj = adaptation.get("Endurance Decay")
+
+            if isinstance(dec_obj, dict):
+                dec_val = dec_obj.get("value")
+                dec_window = dec_obj.get("window")
+                dec_basis = dec_obj.get("basis")
+            else:
+                dec_val = dec_obj
+                dec_window = window
+                dec_basis = "Cardiac drift / power–HR decoupling"
+
+            if isinstance(dec_val, (int, float)):
+                dec_block = semantic_block_for_metric("EnduranceDecay", dec_val, semantic)
+
+                insights["endurance_decay"] = {
+                    "value": dec_val,
+                    "window": dec_window,
+                    "basis": dec_basis,
+                    "classification": dec_block.get("classification"),
+                    "interpretation": dec_block.get("interpretation"),
+                    "coaching_implication": dec_block.get("coaching_implication"),
+                }
 
         trend = semantic.get("trend_metrics", {})
 
@@ -871,20 +1263,6 @@ def build_semantic_json(context):
     )
     method = "physiological" if zones_source == "lactate_test" else "ftp_based"
 
-    # ------------------------------------------------------------------
-    # 🧭 Phase Detection (Base → Build → Peak → Taper → Recovery)
-    # ------------------------------------------------------------------
-    try:
-        from audit_core.tier2_actions import detect_phases
-        if not context.get("phases"):
-            events = context.get("activities_full") or context.get("df_events") or []
-            if isinstance(events, pd.DataFrame):
-                events = events.to_dict(orient="records")
-            context = detect_phases(context, events)
-            debug(context, f"[SEMANTIC] Injected detected phases → {len(context.get('phases', []))}")
-    except Exception as e:
-        debug(context, f"[SEMANTIC] ⚠️ Phase detection failed: {e}")
-
     # ---------------------------------------------------------
     # BASE SEMANTIC STRUCTURE
     # ---------------------------------------------------------
@@ -1201,11 +1579,30 @@ def build_semantic_json(context):
             df_ref = pd.DataFrame(context["wellness"])
 
     else:
-        df_master = context.get("df_master")
-        if isinstance(df_master, pd.DataFrame) and not df_master.empty:
-            df_ref = df_master
-        elif isinstance(context.get("activities_full"), list) and len(context["activities_full"]) > 0:
-            df_ref = pd.DataFrame(context["activities_full"])
+        # Weekly report:
+        # - FULL 7d is for execution/events
+        # - LIGHT 90d is for athlete sport identity / dominant sport
+        df_light_90d = context.get("_df_light_90d")
+        df_light = context.get("df_light")
+
+        if isinstance(df_light_90d, pd.DataFrame) and not df_light_90d.empty:
+            df_ref = df_light_90d
+            debug(context, f"[SEMANTIC] Weekly profile sport source → _df_light_90d rows={len(df_ref)}")
+
+        elif isinstance(df_light, pd.DataFrame) and not df_light.empty:
+            df_ref = df_light
+            debug(context, f"[SEMANTIC] Weekly profile sport source → df_light rows={len(df_ref)}")
+
+        elif isinstance(context.get("activities_light"), list) and len(context["activities_light"]) > 0:
+            df_ref = pd.DataFrame(context["activities_light"])
+            debug(context, f"[SEMANTIC] Weekly profile sport source → activities_light rows={len(df_ref)}")
+
+        else:
+            df_master = context.get("df_master")
+            if isinstance(df_master, pd.DataFrame) and not df_master.empty:
+                df_ref = df_master
+            elif isinstance(context.get("activities_full"), list) and len(context["activities_full"]) > 0:
+                df_ref = pd.DataFrame(context["activities_full"])
 
 
     # --- Fallback: preserved df_scope_full (Railway safe)
@@ -1213,7 +1610,42 @@ def build_semantic_json(context):
         df_ref = context["_df_scope_full"]
     
     # --- Compute report period from reference dataset ---
-    if report_type in ("season", "summary") and context.get("window_start") and context.get("window_end"):
+    if report_type == "weekly":
+        # 🔒 Weekly report period must always be the 7-day report window.
+        # Do NOT derive it from df_ref, because df_ref may be 105d light history
+        # used for sport identity / phase context.
+        if context.get("start") and context.get("end"):
+            context["period"] = {
+                "start": pd.to_datetime(context["start"]).strftime("%Y-%m-%d"),
+                "end": pd.to_datetime(context["end"]).strftime("%Y-%m-%d"),
+            }
+            debug(
+                context,
+                f"[SEMANTIC] Weekly period locked from context start/end → "
+                f"{context['period']['start']} → {context['period']['end']}"
+            )
+
+        elif context.get("range", {}).get("full_start") and context.get("range", {}).get("full_end"):
+            context["period"] = {
+                "start": pd.to_datetime(context["range"]["full_start"]).strftime("%Y-%m-%d"),
+                "end": pd.to_datetime(context["range"]["full_end"]).strftime("%Y-%m-%d"),
+            }
+            debug(
+                context,
+                f"[SEMANTIC] Weekly period locked from full range → "
+                f"{context['period']['start']} → {context['period']['end']}"
+            )
+
+        else:
+            start_date = today - pd.Timedelta(days=6)
+            end_date = today
+            context["period"] = {
+                "start": start_date.strftime("%Y-%m-%d"),
+                "end": end_date.strftime("%Y-%m-%d"),
+            }
+            debug(context, "[SEMANTIC] Weekly period defaulted to last 7 days")
+
+    elif report_type in ("season", "summary") and context.get("window_start") and context.get("window_end"):
         # 🔒 Controller-defined window is authoritative
         context["period"] = {
             "start": pd.to_datetime(context["window_start"]).strftime("%Y-%m-%d"),
@@ -1245,7 +1677,7 @@ def build_semantic_json(context):
             "start": start_date.strftime("%Y-%m-%d"),
             "end": end_date.strftime("%Y-%m-%d"),
         }
-        debug(context, "[SEMANTIC] Defaulted weekly period to last 7 days")
+        debug(context, "[SEMANTIC] Defaulted report period to fallback window")
 
 
 
@@ -1402,7 +1834,6 @@ def build_semantic_json(context):
         f"[SEMANTIC] Wellness subjective markers → keys={list(semantic['wellness']['subjective'].keys())}"
     )
 
-
     # ---------------------------------------------------------
     # AUTHORITATIVE TOTALS (Tier-2 ONLY)
     # ---------------------------------------------------------
@@ -1538,9 +1969,12 @@ def build_semantic_json(context):
             g = match_group([activity_type])
             if not g:
                 continue
-            load = row.get("icu_training_load", 0) or 0
-            load_by_group[g] = load_by_group.get(g, 0) + load
+            load = row.get("icu_training_load", 0)
 
+            if pd.isna(load):
+                load = 0
+            load_by_group[g] = load_by_group.get(g, 0) + load
+    debug(context, f"[SPORT-LOAD] load_by_group={load_by_group}")
     dominant_sport_label = (
         max(load_by_group, key=load_by_group.get).lower()
         if load_by_group else None
@@ -1621,10 +2055,17 @@ def build_semantic_json(context):
     # -----------------------------------------------------
     # 🧭 Resolve active (dominant) profile
     # -----------------------------------------------------
+    if dominant_sport_label == "excluded":
+        dominant_sport_label = None
+
     if dominant_sport_label and dominant_sport_label in sport_profiles:
         active_profile_key = dominant_sport_label
+    elif "ride" in sport_profiles:
+        active_profile_key = "ride"
+    elif "run" in sport_profiles:
+        active_profile_key = "run"
     elif sport_profiles:
-        active_profile_key = list(sport_profiles.keys())[0]
+        active_profile_key = next((k for k in sport_profiles.keys() if k != "excluded"), None)
     else:
         active_profile_key = None
 
@@ -1669,6 +2110,7 @@ def build_semantic_json(context):
             "city": athlete.get("city"),
             "timezone": athlete.get("timezone"),
             "profile_image": athlete.get("profile_medium"),
+            "email": athlete.get("email"),
             "notes": athlete.get("icu_notes"),
         },
 
@@ -1769,7 +2211,11 @@ def build_semantic_json(context):
     # ---------------------------------------------------------
     # EVENTS (canonical → render-optimised)
     # ---------------------------------------------------------
-    df_events = context["_df_scope_full"]
+    df_events = (
+        context.get("_df_light_90d")
+        if context.get("report_type") == "season"
+        else context.get("_df_scope_full")
+    )
 
     if isinstance(df_events, pd.DataFrame) and not df_events.empty:
 
@@ -1798,16 +2244,25 @@ def build_semantic_json(context):
                 ev["start_date_local"] = convert_to_str(row["start_date_local"])
 
             # ---------------------------------------------------------
-            # 2️⃣ Activity link
+            # 2️⃣ Activity link + ID
             # ---------------------------------------------------------
             activity_id = row.get("id") or row.get("activity_id")
 
             if pd.notna(activity_id):
-                activity_id = str(activity_id)
-                if not activity_id.startswith("i"):
-                    activity_id = f"i{activity_id}"
+                try:
+                    clean_id = str(int(float(activity_id)))  # removes .0 safely
+                except:
+                    clean_id = str(activity_id).strip()
 
-                ev["activity_link"] = f"https://intervals.icu/activities/{activity_id}"
+                # raw ID (no prefix)
+                ev["activity_id"] = clean_id
+
+                # link ID (with 'i' prefix)
+                link_id = clean_id if clean_id.startswith("i") else f"i{clean_id}"
+                if report_type != "season":
+                    ev["activity_link"] = f"https://intervals.icu/activities/{link_id}"
+            else:
+                ev["activity_id"] = None
 
             # ---------------------------------------------------------
             # 3️⃣ Core render fields (SAFE)
@@ -1826,6 +2281,12 @@ def build_semantic_json(context):
 
             val = row.get("icu_ctl")
             ev["icu_ctl"] = float(val) if pd.notna(val) else 0.0
+
+            val = row.get("paired_event_id")
+            ev["paired_event_id"] = str(int(val)) if pd.notna(val) else None
+
+            val = row.get("compliance")
+            ev["compliance"] = round(float(val), 2) if pd.notna(val) else None
 
             # ---------------------------------------------------------
             # 4️⃣ IF (icu_intensity ONLY — canonical)
@@ -1876,21 +2337,27 @@ def build_semantic_json(context):
             # ---------------------------------------------------------
             # 7️⃣ Flags (for icons only)
             # ---------------------------------------------------------
-            flags = []
 
-            wbal = classify_wbal_pattern(row)
-            if wbal.get("wbal_pattern") == "repeated":
-                flags.append("repeated")
+            report_type = str(context.get("report_type", "")).lower()
 
-            eff = classify_event_efficiency(row)
-            if eff.get("event_efficiency") == "efficient":
-                flags.append("efficient")
+            # season → suppress flags entirely
+            if report_type != "season":
 
-            if pd.notna(hrr):
-                flags.append("hrr")
+                flags = []
 
-            if flags:
-                ev["flags"] = flags
+                wbal = classify_wbal_pattern(row)
+                if wbal.get("wbal_pattern") == "repeated":
+                    flags.append("repeated")
+
+                eff = classify_event_efficiency(row)
+                if eff.get("event_efficiency") == "efficient":
+                    flags.append("efficient")
+
+                if pd.notna(hrr):
+                    flags.append("hrr")
+
+                if flags:
+                    ev["flags"] = flags
 
             # ---------------------------------------------------------
             # Append
@@ -1919,19 +2386,32 @@ def build_semantic_json(context):
         if (
             "df_light" in context
             and isinstance(context["df_light"], pd.DataFrame)
-            and len(context["df_light"]) > 100
+            and not context["df_light"].empty
         ):
             df_ref = context["df_light"]
-            debug(context, f"[SEMANTIC-OVERRIDE] Using df_light ({len(df_ref)} rows) for summary/season instead of short _df_scope_full")
+            debug(
+                context,
+                f"[SEMANTIC-OVERRIDE] Using df_light ({len(df_ref)} rows) "
+                f"for summary/season instead of short _df_scope_full"
+            )
+
         elif (
             "_df_scope_full" in context
             and isinstance(context["_df_scope_full"], pd.DataFrame)
-            and len(context["_df_scope_full"]) > 100
+            and not context["_df_scope_full"].empty
         ):
             df_ref = context["_df_scope_full"]
-            debug(context, f"[SEMANTIC-OVERRIDE] Using _df_scope_full ({len(df_ref)} rows) for summary/season")
+            debug(
+                context,
+                f"[SEMANTIC-OVERRIDE] Using _df_scope_full ({len(df_ref)} rows) "
+                f"for summary/season"
+            )
+
         else:
-            debug(context, "[SEMANTIC-OVERRIDE] No valid long-frame dataset found — fallback to df_master")
+            debug(
+                context,
+                "[SEMANTIC-OVERRIDE] No usable season/summary dataset found — keeping existing df_ref"
+            )
 
 
 
@@ -1971,20 +2451,35 @@ def build_semantic_json(context):
         else:
             debug(context, "⚠️ [DATASET-DIAG] df_ref not resolved or empty.")
 
-
-
     # ---------------------------------------------------------
     # 🪜 Weekly Phases Summary (URF v5.2 canonical)
     # ---------------------------------------------------------
     if semantic["meta"]["report_type"] in ("season", "summary", "weekly"):
-        # --- Force authoritative dataset for season/summary totals ---
-        if "df_light" in context and isinstance(context["df_light"], pd.DataFrame) and len(context["df_light"]) > 100:
-            df_ref = context["df_light"]
-            debug(context, f"[FORCE] Overriding df_ref with df_light ({len(df_ref)} rows) for totals aggregation")
-        elif isinstance(context.get("activities_light"), list) and len(context["activities_light"]) > 0:
-            df_ref = pd.DataFrame(context["activities_light"])
-            debug(context, f"[FORCE] Overriding df_ref with activities_light ({len(df_ref)} rows) for totals aggregation)")
 
+        # --- Force authoritative dataset for season/summary totals + phase aggregation ---
+        if semantic["meta"]["report_type"] in ("season", "summary"):
+            if (
+                "df_light" in context
+                and isinstance(context["df_light"], pd.DataFrame)
+                and not context["df_light"].empty
+            ):
+                df_ref = context["df_light"]
+                debug(
+                    context,
+                    f"[FORCE] Overriding df_ref with df_light ({len(df_ref)} rows) "
+                    f"for totals/phase aggregation"
+                )
+
+            elif (
+                isinstance(context.get("activities_light"), list)
+                and len(context["activities_light"]) > 0
+            ):
+                df_ref = pd.DataFrame(context["activities_light"])
+                debug(
+                    context,
+                    f"[FORCE] Overriding df_ref with activities_light ({len(df_ref)} rows) "
+                    f"for totals/phase aggregation"
+                )
         df_src = None
         if "df_ref" in locals() and isinstance(df_ref, pd.DataFrame) and not df_ref.empty:
             df_src = df_ref.copy()
@@ -2077,7 +2572,11 @@ def build_semantic_json(context):
                 total_tss += week_data["tss"]
                 total_distance += week_data["distance_km"]
 
-            semantic["weekly_phases"] = weekly_phases
+            debug(
+                context,
+                f"[WEEKLY] weekly_phases sample="
+                f"{weekly_phases[:2] if weekly_phases else 'EMPTY'}"
+            )
 
             # --- Build unified weekly phase summary ---
             semantic["weekly_phases"] = weekly_phases
@@ -2393,18 +2892,23 @@ def build_semantic_json(context):
                 "uid": e.get("uid"),
                 "date": start,
                 "category": e.get("category", "OTHER"),
+                "type": e.get("type"),
                 "name": e.get("name") or e.get("title") or "Untitled",
                 "description": e.get("description") or e.get("notes") or "",
                 "start_date_local": e.get("start_date_local"),
                 "end_date_local": e.get("end_date_local"),
                 "duration_minutes": resolve_planned_duration_minutes(e),
                 "icu_training_load": e.get("icu_training_load") or e.get("tss"),
+                "icu_atl":  e.get("icu_atl"),
+                "icu_ctl": e.get("icu_ctl"),
                 "load_target": e.get("load_target"),
                 "time_target": e.get("time_target"),
                 "distance_target": e.get("distance_target"),
+                "icu_intensity": e.get("icu_intensity"),
                 "strain_score": e.get("strain_score"),
                 "plan_name": e.get("plan_name"),
                 "plan_workout_id": e.get("plan_workout_id"),
+                "paired_activity_id": e.get("paired_activity_id"),
                 "color": e.get("color"),
                 "tags": e.get("tags"),
                 "day_of_week": (
@@ -2415,10 +2919,15 @@ def build_semantic_json(context):
             }
 
             # 🧹 Remove all null/NaN/empty values
+            KEEP_NULL_KEYS = {"paired_activity_id"}
+
             event = {
                 k: v
                 for k, v in event.items()
-                if v not in (None, "", [], {}) and not (isinstance(v, float) and isnan(v))
+                if (
+                    k in KEEP_NULL_KEYS
+                    or (v not in (None, "", [], {}) and not (isinstance(v, float) and isnan(v)))
+                )
             }
 
             planned_events.append(event)
@@ -2496,19 +3005,144 @@ def build_semantic_json(context):
                 )
             }
         }
+
         # ---------------------------------------------------------
-        # 🎯 EVENT TARGETS (COMPRESSED FOR LLM)
+        # 🎯 EVENT TARGETS (COMPRESSED FOR LLM) + RACE CLASSIFICATION
         # ---------------------------------------------------------
+
+        def classify_race_type(e, name):
+
+            sport = str(e.get("type") or "").lower()
+
+            moving_time = e.get("moving_time")
+            distance = e.get("distance")
+
+            duration_h = (
+                float(moving_time) / 3600
+                if moving_time is not None
+                else None
+            )
+
+            distance_km = (
+                float(distance) / 1000
+                if distance is not None
+                else None
+            )
+
+            # -----------------------------
+            # 🚴 RIDING
+            # -----------------------------
+            if "ride" in sport:
+
+                # Explicit intent — strongest signal
+                if any(k in name for k in ["tt", "time trial"]):
+                    return "tt"
+
+                if any(k in name for k in ["crit", "circuit", "loop"]):
+                    return "crit"
+
+                if any(k in name for k in [
+                    "fondo",
+                    "gran fondo",
+                    "sportive",
+                    "etape",
+                    "étape"
+                ]):
+                    return "fondo"
+
+                # Structured duration fallback — only when duration exists
+                if duration_h is not None:
+                    if duration_h >= 3.5:
+                        return "fondo"
+
+                    if duration_h <= 1.5:
+                        return "short_ride"
+
+                    return "tt"
+
+                # No race-shape evidence
+                return "ride_general"
+
+            # -----------------------------
+            # 🏃 RUNNING
+            # -----------------------------
+            if "run" in sport:
+
+                # Distance classification only when distance exists
+                if distance_km is not None:
+                    if distance_km >= 30:
+                        return "run_marathon"
+                    if distance_km >= 18:
+                        return "run_half"
+                    if distance_km <= 6:
+                        return "run_5k"
+                    if distance_km <= 12:
+                        return "run_10k"
+
+                return "run_general"
+
+            return "unknown"
+
+
+        RACE_PROFILES = {
+            "fondo": {
+                "priority_systems": ["durability", "aerobic"],
+                "targets": {"tsb": [5, 15], "ndli": "low", "wdrm": "low-moderate"},
+                "durability_bounds": {"excellent": 3, "good": 5, "moderate": 8}
+            },
+            "tt": {
+                "priority_systems": ["threshold"],
+                "targets": {"tsb": [8, 18], "ndli": "low", "wdrm": "low"},
+                "durability_bounds": {"excellent": 2, "good": 4, "moderate": 6}
+            },
+            "crit": {
+                "priority_systems": ["anaerobic", "neural"],
+                "targets": {"tsb": [10, 20], "ndli": "controlled", "wdrm": "moderate"},
+                "durability_bounds": {"excellent": 4, "good": 7, "moderate": 10}
+            },
+            "run_marathon": {
+                "priority_systems": ["durability"],
+                "targets": {"tsb": [5, 15], "ndli": "low", "wdrm": "low"},
+                "durability_bounds": {"excellent": 3, "good": 5, "moderate": 8}
+            },
+            "run_half": {
+                "priority_systems": ["durability"],
+                "targets": {"tsb": [5, 15], "ndli": "low", "wdrm": "low"},
+                "durability_bounds": {"excellent": 3, "good": 5, "moderate": 8}
+            },
+            "run_10k": {
+                "priority_systems": ["vo2"],
+                "targets": {"tsb": [8, 18], "ndli": "controlled", "wdrm": "moderate"},
+                "durability_bounds": {"excellent": 4, "good": 7, "moderate": 10}
+            },
+            "run_5k": {
+                "priority_systems": ["anaerobic", "vo2"],
+                "targets": {"tsb": [10, 20], "ndli": "controlled", "wdrm": "moderate"},
+                "durability_bounds": {"excellent": 5, "good": 8, "moderate": 12}
+            }
+        }
 
         event_targets = {
             "exists": False,
             "next_event": {
+                "id": None,
+                "shared_event_id": None,
                 "name": None,
+                "category": None,
                 "priority": None,
+                "icu_atl": None,
+                "icu_ctl": None,
+                "type": None,
+                "load": None,
+                "intensity": None,
+                "distance": None,
+                "moving_time": None,
                 "date": None,
                 "days_to_event": None,
                 "training_bias": None,
-                "taper_state": "none"
+                "taper_state": "none",
+                "race_type": None,
+                "race_profile": None
             },
             "upcoming": []
         }
@@ -2524,7 +3158,6 @@ def build_semantic_json(context):
                 continue
 
             category = str(e.get("category") or "").upper()
-
             if category not in ("RACE_A", "RACE_B", "RACE_C"):
                 continue
 
@@ -2541,9 +3174,11 @@ def build_semantic_json(context):
                 continue
 
             name_raw = e.get("name") or "Untitled"
-            name = name_raw.lower()   # for parsing only
+            name = name_raw.lower()
 
-            # --- training bias (aligned with ADE)
+            # -----------------------------
+            # training bias (existing)
+            # -----------------------------
             if "climb" in name:
                 training_bias = "durability"
             elif "tt" in name or "threshold" in name:
@@ -2555,36 +3190,62 @@ def build_semantic_json(context):
             else:
                 training_bias = "mixed"
 
+            # -----------------------------
+            # race classification (NEW)
+            # -----------------------------
+            race_type = classify_race_type(e, name)
+            race_profile = RACE_PROFILES.get(race_type, {})
+
             priority = category.split("_")[-1]
             days_to_event = (dt - today).days
 
-            # --- taper logic (priority-aware, safe)
-
-            taper_state = "none"  # always initialise
+            # -----------------------------
+            # taper logic (existing)
+            # -----------------------------
+            taper_state = "none"
 
             if days_to_event is not None:
-
                 if priority == "A":
                     if days_to_event <= 10:
                         taper_state = "taper"
                     elif days_to_event <= 21:
                         taper_state = "pre_taper"
-
                 elif priority == "B":
                     if days_to_event <= 5:
                         taper_state = "taper"
                     elif days_to_event <= 10:
                         taper_state = "pre_taper"
 
-                # C → stays "none"
+
+            estimated = estimate_event_ctl_atl_from_calendar_ewma(
+                context=context,
+                event_date=dt
+            )
+
+            event_ctl = estimated["ctl"]
+            event_atl = estimated["atl"]
 
             candidates.append({
-                "name": name_raw, 
+                "id": e.get("id"),
+                "shared_event_id": e.get("shared_event_id"),
+                "name": name_raw,
+                "category": e.get("category"),
                 "priority": priority,
+                "icu_atl": event_atl,
+                "icu_ctl": event_ctl,
+                "type": e.get("type"),
+                "load": e.get("icu_training_load"),
+                "intensity": e.get("icu_intensity"),
+                "distance": e.get("distance"),
+                "moving_time": e.get("moving_time"),
                 "date": dt.isoformat(),
                 "days_to_event": days_to_event,
-                "training_bias": training_bias,   # ✅ FIXED
-                "taper_state": taper_state
+                "training_bias": training_bias,
+                "taper_state": taper_state,
+
+                # ✅ NEW
+                "race_type": race_type,
+                "race_profile": race_profile
             })
 
         candidates = sorted(candidates, key=lambda x: x["date"])
@@ -2594,25 +3255,21 @@ def build_semantic_json(context):
 
             event_targets["exists"] = True
 
-            # ✅ explicit assignment (keeps schema stable)
-            event_targets["next_event"]["name"] = next_event["name"]
-            event_targets["next_event"]["priority"] = next_event["priority"]
-            event_targets["next_event"]["date"] = next_event["date"]
-            event_targets["next_event"]["days_to_event"] = next_event["days_to_event"]
-            event_targets["next_event"]["training_bias"] = next_event["training_bias"]
-            event_targets["next_event"]["taper_state"] = next_event["taper_state"]
+            for k in event_targets["next_event"].keys():
+                event_targets["next_event"][k] = next_event.get(k)
 
-            # upcoming = stripped (no taper duplication)
-            event_targets["upcoming"] = [
-                {
-                    "name": c["name"],
-                    "priority": c["priority"],
-                    "date": c["date"],
-                    "days_to_event": c["days_to_event"],
-                    "training_bias": c["training_bias"]
-                }
-                for c in candidates[1:4]
-            ]
+        event_targets["upcoming"] = [
+            {
+                k: c.get(k)
+                for k in [
+                    "id","shared_event_id","name","category","priority","icu_atl","icu_ctl",
+                    "type","load","intensity","distance","moving_time",
+                    "date","days_to_event","training_bias",
+                    "race_type","race_profile"
+                ]
+            }
+            for c in candidates[1:10]
+        ]
 
         context["event_targets"] = event_targets
         semantic["event_targets"] = event_targets
@@ -2892,10 +3549,26 @@ def build_semantic_json(context):
     # 🧮 CTL / ATL / TSB RESOLUTION (AUTHORITATIVE + FALLBACK)
     # ---------------------------------------------------------
     semantic.setdefault("wellness", {})
-    ws = context.get("wellness_summary", {})
-    semantic["training_volume"]["CTL"] = round(ws.get("ctl"),2)
-    semantic["training_volume"]["ATL"] = round(ws.get("atl"),2)
-    semantic["training_volume"]["TSB"] = round(ws.get("tsb"),2)
+    semantic.setdefault("training_volume", {})
+
+    ws = context.get("wellness_summary", {}) or {}
+
+    def _round_or_none(v, ndigits=2):
+        try:
+            return round(float(v), ndigits) if v is not None else None
+        except Exception:
+            return None
+
+    semantic["training_volume"]["CTL"] = _round_or_none(ws.get("ctl"), 2)
+    semantic["training_volume"]["ATL"] = _round_or_none(ws.get("atl"), 2)
+    semantic["training_volume"]["TSB"] = _round_or_none(ws.get("tsb"), 2)
+    semantic["training_volume"]["load_state"] = context.get("load_state", {})
+
+    semantic["training_volume"]["load_pattern"] = resolve_training_load_pattern(
+        semantic.get("metrics_groups", {}),
+        CHEAT_SHEET
+    )
+
     debug(context, "[SEM] CTL/ATL/TSB sourced from wellness_summary fallback")
 
     # ---------------------------------------------------------
@@ -2919,8 +3592,22 @@ def build_semantic_json(context):
     acute_pi = {}
     chronic_pi = {}
 
+    # Weekly + chronic fallback
+    if "chronic_context" in pi:
+
+        acute_pi = copy.deepcopy({
+            k: v for k, v in pi.items()
+            if k not in (
+                "chronic_context",
+                "acute_context_window",
+                "chronic_context_window",
+            )
+        })
+
+        chronic_pi = copy.deepcopy(pi.get("chronic_context", {}))
+
     # Weekly structure
-    if "anaerobic_repeatability" in pi:
+    elif "anaerobic_repeatability" in pi:
         acute_pi = copy.deepcopy(pi)
 
     # Season structure
@@ -3055,7 +3742,11 @@ def build_semantic_json(context):
             return wrapped
 
 
-
+        # -----------------------------------------------------
+        # Window labelling
+        # -----------------------------------------------------
+        # Acute always means 7d FULL.
+        # Chronic is 90d LIGHT, only populated when acute has no useful signal.
         semantic["performance_intelligence"]["acute"] = wrap_pi_block(acute_pi, "7d")
         semantic["performance_intelligence"]["chronic"] = wrap_pi_block(chronic_pi, "90d")
        
@@ -3083,7 +3774,6 @@ def build_semantic_json(context):
                 context,
                 f"[SEMANTIC] Injected load_distribution → rest_days={load_dist.get('rest_days')}"
             )
-
         # -----------------------------------------------------
         # External Load Context (SCIENCE-ALIGNED)
         # -----------------------------------------------------
@@ -3201,7 +3891,10 @@ def build_semantic_json(context):
                 # Operational context (NEW)
                 # -------------------------------------------------
 
-                "operational_context": training_state.get("operational_state_context"),
+                "operational_context": (
+                    training_state.get("operational_state_context")
+                    or context.get("operational_state_context")
+                ),
 
                 # -------------------------------------------------
                 # Recommended action
@@ -3223,7 +3916,7 @@ def build_semantic_json(context):
             )
             
             # -----------------------------------------------------
-            # 3️⃣ Inject Nutrition (carb-driven only)
+            # 3️⃣ Inject Nutrition (carbohydrate classification)
             # -----------------------------------------------------
 
             nutrition = context.get("nutrition_balance")
@@ -3233,35 +3926,53 @@ def build_semantic_json(context):
             if nutrition and nutrition_demand:
 
                 classification = nutrition.get("status")
+                protein_status = nutrition.get("protein_status")
 
                 # -------------------------------------------------
-                # FIXED MARKER (NO SWITCHING)
+                # FIXED MARKER — carbohydrate availability
                 # -------------------------------------------------
-                marker = COACH_PROFILE.get("markers", {}).get("CarbohydrateAvailability", {})
+
+                marker = (
+                    COACH_PROFILE
+                    .get("markers", {})
+                    .get("CarbohydrateAvailability", {})
+                )
 
                 interpretation = marker.get("interpretation")
                 coaching = marker.get("coaching_implication")
                 formula = marker.get("formula")
                 framework = marker.get("framework")
 
+                def _to_grams(value_gkg):
+                    if value_gkg is None or weight is None or weight <= 0:
+                        return None
+                    return round(value_gkg * weight, 0)
+
                 semantic["performance_intelligence"]["nutrition"] = {
 
                     # -------------------------------------------------
-                    # Marker-driven (ALWAYS CARBS)
+                    # Carbohydrate marker
                     # -------------------------------------------------
 
                     "framework": framework,
                     "interpretation": interpretation,
                     "coaching_implication": coaching,
                     "formula": formula,
-                    "context_window": "rolling_3d",
+
+                    "context_window": "rolling_3d_completed_days",
+                    "signals_basis": "average_daily_intake",
 
                     # -------------------------------------------------
-                    # Classification (label only)
+                    # Classification
                     # -------------------------------------------------
 
                     "classification": classification,
+                    "classification_scope": "carbohydrate_availability",
                     "classification_source": "nutrition_balance",
+
+                    # Protein is reported separately and does not
+                    # control the carbohydrate classification.
+                    "protein_status": protein_status,
 
                     # -------------------------------------------------
                     # Confidence
@@ -3270,37 +3981,48 @@ def build_semantic_json(context):
                     "confidence": nutrition.get("confidence"),
 
                     # -------------------------------------------------
-                    # Signals (ALL MACROS — NO NARRATIVE SWITCH)
+                    # Signals
                     # -------------------------------------------------
 
                     "signals": {
+                        "carbs_actual_g": _to_grams(
+                            nutrition.get("carbs_gkg_actual")
+                        ),
+                        "protein_actual_g": _to_grams(
+                            nutrition.get("protein_gkg_actual")
+                        ),
+                        "fat_actual_g": _to_grams(
+                            nutrition.get("fat_gkg_actual")
+                        ),
 
-                        "carbs_actual_g": round(nutrition.get("carbs_gkg_actual", 0) * weight, 0) if weight else None,
-                        "protein_actual_g": round(nutrition.get("protein_gkg_actual", 0) * weight, 0) if weight else None,
-                        "fat_actual_g": round(nutrition.get("fat_gkg_actual", 0) * weight, 0) if weight else None,
+                        "carbs_required_g": _to_grams(
+                            nutrition_demand.get("carbs_gkg_required")
+                        ),
+                        "protein_required_g": _to_grams(
+                            nutrition_demand.get("protein_gkg_required")
+                        ),
+                        "fat_required_g": _to_grams(
+                            nutrition_demand.get("fat_gkg_target")
+                        ),
 
-                        "carbs_required_g": round(nutrition_demand.get("carbs_gkg_required", 0) * weight, 0) if weight else None,
-                        "protein_required_g": round(nutrition_demand.get("protein_gkg_required", 0) * weight, 0) if weight else None,
-                        "fat_required_g": round(nutrition_demand.get("fat_gkg_target", 0) * weight, 0) if weight else None,
-
-                        "carbs_delta_g": round(
-                            (nutrition.get("carbs_gkg_actual", 0) - nutrition_demand.get("carbs_gkg_required", 0)) * weight, 0
-                        ) if weight else None,
-
-                        "protein_delta_g": round(
-                            (nutrition.get("protein_gkg_actual", 0) - nutrition_demand.get("protein_gkg_required", 0)) * weight, 0
-                        ) if weight else None,
-
-                        "fat_delta_g": round(
-                            (nutrition.get("fat_gkg_actual", 0) - nutrition_demand.get("fat_gkg_target", 0)) * weight, 0
-                        ) if weight else None,
+                        "carbs_delta_g": _to_grams(
+                            nutrition.get("carbs_delta")
+                        ),
+                        "protein_delta_g": _to_grams(
+                            nutrition.get("protein_delta")
+                        ),
+                        "fat_delta_g": _to_grams(
+                            nutrition.get("fat_delta")
+                        ),
                     }
                 }
 
                 debug(
                     context,
-                    f"[SEMANTIC] Injected nutrition → "
-                    f"{classification} ({nutrition.get('confidence')})"
+                    "[SEMANTIC] Injected nutrition →",
+                    f"carbs={classification}",
+                    f"protein={protein_status}",
+                    f"confidence={nutrition.get('confidence')}"
                 )
  
     # ---------------------------------------------------------
@@ -3326,7 +4048,13 @@ def build_semantic_json(context):
                 "readiness_signal": readiness,
                 "state_label": training_state.get("state_label"),
                 "operational_state": training_state.get("operational_state"),
-                "operational_context": training_state.get("operational_state_context")
+                "operational_context": (
+                    training_state.get("operational_state_context")
+                    or context.get("operational_state_context")
+                    or semantic.get("performance_intelligence", {})
+                        .get("training_state", {})
+                        .get("operational_context")
+                )
             })
 
     # ---------------------------------------------------------
@@ -3405,31 +4133,99 @@ def build_semantic_json(context):
     # ---------------------------------------------------------
     adaptation = {}
 
-    pi = semantic.get("performance_intelligence", {})
-    chronic = pi.get("chronic", {})
+    pi = semantic.get("performance_intelligence", {}) or {}
+    report_type = semantic.get("meta", {}).get("report_type")
 
-    # ---- Efficiency Factor ----
-    neural = chronic.get("neural_density", {})
-    ef_metric = neural.get("mean_efficiency_factor_90d")
+    acute = pi.get("acute", {}) or {}
+    chronic = pi.get("chronic", {}) or {}
 
-    if isinstance(ef_metric, dict):
-        ef = ef_metric.get("value")
-        if ef is not None:
-            adaptation["Efficiency Factor"] = round(float(ef), 2)
+    def extract_metric_value(metric):
+        if isinstance(metric, dict):
+            return metric.get("value")
+        return metric
 
-    # ---- Endurance / Aerobic Decay ----
-    durability = chronic.get("durability", {})
-    dec_raw = durability.get("mean_decoupling_90d")
+    def add_adaptation_metric(key, value, window, basis, ndigits=2):
+        if value is None:
+            return
 
-    dec = None
+        try:
+            adaptation[key] = {
+                "value": round(float(value), ndigits),
+                "window": window,
+                "basis": basis
+            }
+        except Exception:
+            pass
 
-    if isinstance(dec_raw, dict):
-        dec = dec_raw.get("value")
+
+    # ---------------------------------------------------------
+    # Weekly reports should use acute 7d signals.
+    # Season / summary should use chronic 90d signals.
+    # ---------------------------------------------------------
+
+    if report_type == "weekly":
+
+        # ---- Efficiency Factor: 7d ----
+        ef_metric = (
+            acute
+            .get("neural_density", {})
+            .get("mean_efficiency_factor_7d")
+        )
+
+        add_adaptation_metric(
+            "Efficiency Factor",
+            extract_metric_value(ef_metric),
+            "7d",
+            "acute.neural_density.mean_efficiency_factor_7d",
+            ndigits=2
+        )
+
+        # ---- Endurance Decay: 7d ----
+        dec_metric = (
+            acute
+            .get("durability", {})
+            .get("mean_decoupling_7d")
+        )
+
+        add_adaptation_metric(
+            "Endurance Decay",
+            extract_metric_value(dec_metric),
+            "7d",
+            "acute.durability.mean_decoupling_7d",
+            ndigits=1
+        )
+
     else:
-        dec = dec_raw
 
-    if dec is not None:
-        adaptation["Endurance Decay"] = round(float(dec), 1)
+        # ---- Efficiency Factor: 90d ----
+        ef_metric = (
+            chronic
+            .get("neural_density", {})
+            .get("mean_efficiency_factor_90d")
+        )
+
+        add_adaptation_metric(
+            "Efficiency Factor",
+            extract_metric_value(ef_metric),
+            "90d",
+            "chronic.neural_density.mean_efficiency_factor_90d",
+            ndigits=2
+        )
+
+        # ---- Endurance Decay: 90d ----
+        dec_metric = (
+            chronic
+            .get("durability", {})
+            .get("mean_decoupling_90d")
+        )
+
+        add_adaptation_metric(
+            "Endurance Decay",
+            extract_metric_value(dec_metric),
+            "90d",
+            "chronic.durability.mean_decoupling_90d",
+            ndigits=1
+        )
 
     semantic["adaptation_metrics"] = adaptation
 
@@ -3491,6 +4287,7 @@ def build_semantic_json(context):
 
         if recovery_block:
             wellness["recovery_markers"] = recovery_block
+
 
         # -----------------------------------------------------
         # 5️⃣ Clean up flat fields (optional but cleaner)
@@ -3710,24 +4507,46 @@ def build_semantic_json(context):
                             if pd.isna(paired_id):
                                 continue
 
-                            actual = float(row.get("icu_training_load", 0) or 0)
+                            # -------------------------------------------------
+                            # safe actual load
+                            # -------------------------------------------------
+                            actual = pd.to_numeric(
+                                row.get("icu_training_load"),
+                                errors="coerce"
+                            )
 
+                            if pd.isna(actual):
+                                actual = 0.0
+                            else:
+                                actual = float(actual)
+
+                            # -------------------------------------------------
+                            # safe compliance
+                            # -------------------------------------------------
                             compliance = row.get("compliance")
 
-                            try:
-                                compliance_val = float(compliance)
-                            except Exception:
-                                compliance_val = None
+                            compliance_val = pd.to_numeric(
+                                compliance,
+                                errors="coerce"
+                            )
 
-                            if compliance_val and compliance_val > 0:
+                            if pd.notna(compliance_val) and compliance_val > 0:
 
-                                planned_equivalent = actual / (compliance_val / 100.0)
+                                planned_equivalent = (
+                                    actual / (float(compliance_val) / 100.0)
+                                )
 
                             else:
                                 planned_equivalent = actual
 
+                            # -------------------------------------------------
+                            # final NaN guard
+                            # -------------------------------------------------
+                            if pd.isna(planned_equivalent):
+                                planned_equivalent = 0.0
+
                             weekly_target += planned_equivalent
-                            weekly_target = round(weekly_target,1)
+                            weekly_target = round(float(weekly_target), 1)
 
                     # -------------------------------------------------
                     # 4️⃣ Projection + Delta
@@ -3827,47 +4646,86 @@ def build_semantic_json(context):
     # 📊 Projected end-of-week state (from calendar truth)
     # ---------------------------------------------------------
 
+    projected_state = None
+
     try:
         cal = context.get("calendar") or context.get("prefetched", {}).get("calendar")
+
+        def _finite_float(v):
+            try:
+                f = float(v)
+                if pd.isna(f) or not np.isfinite(f):
+                    return None
+                return f
+            except Exception:
+                return None
 
         if isinstance(cal, list) and len(cal) > 0:
 
             df = pd.DataFrame(cal)
-            df["date"] = pd.to_datetime(df["start_date_local"], errors="coerce")
-            df = df.dropna(subset=["date"]).sort_values("date")
 
-            # current ISO week
-            today = pd.Timestamp.today().normalize()
-            week_start = today.to_period("W").start_time
-            week_end = week_start + pd.Timedelta(days=6)
+            if "start_date_local" in df.columns:
 
-            df_week = df[
-                (df["date"] >= week_start) &
-                (df["date"] <= week_end)
-            ]
+                df["date"] = pd.to_datetime(df["start_date_local"], errors="coerce")
+                df = df.dropna(subset=["date"]).sort_values("date")
 
-            if not df_week.empty and "icu_ctl" in df_week.columns:
+                # Use athlete-local today, not machine-local today
+                today = pd.Timestamp(context["athlete_today"]).normalize()
+                week_start = today.to_period("W").start_time
+                week_end = week_start + pd.Timedelta(days=6)
 
-                last = df_week.iloc[-1]
+                df_week = df[
+                    (df["date"] >= week_start) &
+                    (df["date"] <= week_end)
+                ].copy()
 
-                ctl = float(last.get("icu_ctl") or 0)
-                atl = float(last.get("icu_atl") or 0)
+                if (
+                    not df_week.empty
+                    and "icu_ctl" in df_week.columns
+                    and "icu_atl" in df_week.columns
+                ):
+                    # Keep only calendar rows with valid projected CTL/ATL.
+                    # This skips swim/hike/run placeholders or notes with no load/state.
+                    df_week["_ctl_valid"] = df_week["icu_ctl"].apply(_finite_float)
+                    df_week["_atl_valid"] = df_week["icu_atl"].apply(_finite_float)
 
-                semantic["current_ISO_weekly_microcycle"]["projected_state"] = {
-                    "ctl": round(ctl, 2),
-                    "atl": round(atl, 2),
-                    "tsb": round(ctl - atl, 2),
-                    "source": "calendar"
-                }
+                    df_valid = df_week.dropna(subset=["_ctl_valid", "_atl_valid"])
 
-            else:
-                semantic["current_ISO_weekly_microcycle"]["projected_state"] = None
+                    if not df_valid.empty:
+                        last = df_valid.iloc[-1]
 
-        else:
-            semantic["current_ISO_weekly_microcycle"]["projected_state"] = None
+                        ctl = _finite_float(last.get("_ctl_valid"))
+                        atl = _finite_float(last.get("_atl_valid"))
+
+                        if ctl is not None and atl is not None:
+                            projected_state = {
+                                "ctl": round(ctl, 2),
+                                "atl": round(atl, 2),
+                                "tsb": round(ctl - atl, 2),
+                                "source": "calendar"
+                            }
+
+                            debug(
+                                context,
+                                f"[WEEK_PROJECTION] calendar projected_state "
+                                f"CTL={ctl:.2f} ATL={atl:.2f} TSB={ctl - atl:.2f}"
+                            )
+                    else:
+                        debug(
+                            context,
+                            "[WEEK_PROJECTION] no valid calendar CTL/ATL rows in current week"
+                        )
 
     except Exception as e:
         debug(context, f"[WEEK_PROJECTION] ⚠️ {e}")
+
+    # Store for debug / downstream fallback
+    context["_week_projected_state"] = projected_state
+
+    # Attach to microcycle only if it already exists.
+    # This avoids KeyError and avoids creating a fake empty microcycle.
+    if isinstance(semantic.get("current_ISO_weekly_microcycle"), dict):
+        semantic["current_ISO_weekly_microcycle"]["projected_state"] = projected_state
 
     # ---------------------------------------------------------
     # 🧭 Phase Structure Normalisation (URF v5.1 — Science-Aligned)
@@ -3891,6 +4749,8 @@ def build_semantic_json(context):
     # 🌍 Season / Summary / Weekly → full weekly + roll-up
     # ---------------------------------------------------------
     if report_type in ("season", "summary", "weekly"):
+        debug(context, f"[PHASES] raw weekly_phases rows BEFORE normalisation = {len(semantic.get('weekly_phases', []))}")
+        debug(context, f"[PHASES] context phases blocks = {len(context.get('phases', []))}")
         raw_weeks = semantic.get("weekly_phases", [])
         if not raw_weeks:
             debug(context, "[PHASES] ⚠️ No weekly data; skipping normalisation")
@@ -3938,9 +4798,19 @@ def build_semantic_json(context):
                             break
 
                     if date_col:
-                        ctl_src = df_tmp[[date_col, "CTL", "ATL", "TSB"]].copy()
+                        required = [date_col, "CTL", "ATL", "TSB"]
+                        missing = [c for c in required if c not in df_tmp.columns]
+
+                        if missing:
+                            debug(
+                                context,
+                                f"[PHASES] ⚠️ Skipping {key}: missing={missing}"
+                            )
+                            continue
+
+                        ctl_src = df_tmp[required].copy()
                         ctl_src.rename(columns={date_col: "date"}, inplace=True)
-                    break
+                        break
 
             # -----------------------------------------------------
             # Aggregate by ISO week
@@ -3961,7 +4831,6 @@ def build_semantic_json(context):
                 )
 
                 df_ctl.columns = ["week", "ctl", "atl", "tsb"]
-                df_ctl.columns = ["week", "ctl", "atl", "tsb"]
                 df_weeks = df_weeks.merge(df_ctl, on="week", how="left")
                 for col in ("ctl", "atl", "tsb"):
                     df_weeks[col] = pd.to_numeric(df_weeks[col], errors="coerce")
@@ -3980,7 +4849,12 @@ def build_semantic_json(context):
                 # 🧠 Fill missing CTL/ATL/TSB (no-activity weeks)
                 # -----------------------------------------------------
 
+                # 🧭 Sort by start date for deterministic order
                 df_weeks = df_weeks.sort_values("start").reset_index(drop=True)
+
+                # ✅ FIX: normalise projection flag (prevents 7-day fragmentation)
+                df_weeks["is_projected"] = df_weeks.get("is_projected", False)
+                df_weeks["is_projected"] = df_weeks["is_projected"].fillna(False).astype(bool)
 
                 # track which rows were real measurements
                 measured_mask = df_weeks["ctl"].notna()
@@ -3994,6 +4868,60 @@ def build_semantic_json(context):
                     "measured_activity",
                     "carry_forward_gap"
                 )
+
+                # -----------------------------------------------------
+                # 🔮 Append future projected ISO weeks
+                # -----------------------------------------------------
+
+                future_weeks = build_future_projected_weeks(
+                    context=context,
+                    weekly_phases=df_weeks.to_dict(orient="records")
+                )
+
+                # -----------------------------------------------------
+                # 🔮 Store future projected ISO weeks separately
+                # -----------------------------------------------------
+
+                semantic["phases_future"] = []
+
+                if future_weeks:
+
+                    df_future = pd.DataFrame(future_weeks)
+
+                    if not df_future.empty:
+
+                        df_future["start"] = pd.to_datetime(
+                            df_future["start"],
+                            errors="coerce"
+                        )
+
+                        df_future["end"] = pd.to_datetime(
+                            df_future["end"],
+                            errors="coerce"
+                        )
+
+                        df_future = (
+                            df_future
+                            .sort_values("start")
+                            .head(12)
+                            .reset_index(drop=True)
+                        )
+
+                        semantic["phases_future"] = (
+                            df_future.assign(
+                                start=lambda x: pd.to_datetime(x["start"]).dt.strftime("%Y-%m-%d"),
+                                end=lambda x: pd.to_datetime(x["end"]).dt.strftime("%Y-%m-%d"),
+                                ctl=lambda x: pd.to_numeric(x["ctl"], errors="coerce").round(2),
+                                atl=lambda x: pd.to_numeric(x["atl"], errors="coerce").round(2),
+                                tsb=lambda x: pd.to_numeric(x["tsb"], errors="coerce").round(2),
+                            ).to_dict(orient="records")
+                        )
+
+                        debug(
+                            context,
+                            f"[FUTURE] ✅ Stored "
+                            f"{len(semantic['phases_future'])} future ISO weeks"
+                        )
 
                 # -----------------------------------------------------
                 # 🧠 Adjust CURRENT ISO week load using projected plan
@@ -4111,6 +5039,12 @@ def build_semantic_json(context):
             # -----------------------------------------------------
             # 🔒 CLIP TO ISO WINDOW (REPORT-SPECIFIC)
             # -----------------------------------------------------
+
+            debug(
+                context,
+                "[DEBUG] df_weeks pre-clip:",
+                df_weeks[["week","start","end","phase"]].to_dict(orient="records")
+            )
             report_type = semantic.get("meta", {}).get("report_type")
 
             if report_type in ("weekly", "season"):
@@ -4195,6 +5129,7 @@ def build_semantic_json(context):
 
             for wk in df_weeks.sort_values("start").to_dict(orient="records"):
                 phase = wk.get("phase")
+                is_proj = wk.get("is_projected", False)
 
                 # fill Unclassified with previous phase if possible (prevents fragmentation)
                 if phase == "Unclassified" and current_phase is not None:
@@ -4204,11 +5139,15 @@ def build_semantic_json(context):
 
                 if current_phase is None:
                     current_phase = phase
+                    current_is_proj = None
                     segment_rows = [wk]
                     continue
 
                 # 🚧 Phase change — flush previous block
-                if phase != current_phase:
+                if (
+                    phase != current_phase
+                    or is_proj != current_is_proj
+                ):
                     seg = pd.DataFrame(segment_rows)
                     if not seg.empty:
                         summaries.append({
@@ -4235,6 +5174,7 @@ def build_semantic_json(context):
                         })
 
                     current_phase = phase
+                    current_is_proj = is_proj
                     segment_rows = [wk]
                 else:
                     segment_rows.append(wk)
@@ -4278,10 +5218,17 @@ def build_semantic_json(context):
                 for block in summaries:
 
                     # derive ISO week from block start date
-                    start = pd.Timestamp(block["start"])
-                    iso = start.isocalendar()
-                    block_week = f"{iso.year}-W{iso.week}"
-                    if block_week == iso_week:
+                    block_start = pd.Timestamp(block["start"])
+                    block_end   = pd.Timestamp(block["end"])
+
+                    micro_start = pd.Timestamp.fromisocalendar(
+                        int(iso_week.split("-W")[0]),
+                        int(iso_week.split("-W")[1]),
+                        1
+                    )
+                    micro_end = micro_start + pd.Timedelta(days=6)
+
+                    if block_start <= micro_end and block_end >= micro_start:
 
                         block["is_projected"] = True
                         block["projection_basis"] = "planned_remaining"
@@ -4478,14 +5425,28 @@ def build_semantic_json(context):
 
 
             # -----------------------------------------------------
-            # Enforce output ordering (summary before phases)
+            # Enforce output ordering
+            # phases_summary → phases → phases_future
             # -----------------------------------------------------
+
             ordered = {}
+
             for k, v in semantic.items():
-                if k not in ("phases_summary", "phases"):
+                if k not in (
+                    "phases_summary",
+                    "phases",
+                    "phases_future"
+                ):
                     ordered[k] = v
-            ordered["phases_summary"] = semantic["phases_summary"]
-            ordered["phases"] = semantic["phases"]
+
+            if "phases_summary" in semantic:
+                ordered["phases_summary"] = semantic["phases_summary"]
+
+            if "phases" in semantic:
+                ordered["phases"] = semantic["phases"]
+
+            if "phases_future" in semantic:
+                ordered["phases_future"] = semantic["phases_future"]
 
             semantic.clear()
             semantic.update(ordered)
@@ -4505,6 +5466,26 @@ def build_semantic_json(context):
         **semantic,
         "phases_detail": full_phases_for_view
     })
+
+    # ---------------------------------------------------------
+    # 🫀 FINAL Physiology State resolution
+    # Must run AFTER build_insights(), because build_insights()
+    # injects resting_hr_delta and sleep_score into wellness.
+    # ---------------------------------------------------------
+    if "wellness" in semantic:
+        semantic["wellness"]["physiology_state"] = resolve_physiology_state(
+            semantic["wellness"],
+            CHEAT_SHEET
+        )
+
+        debug(
+            context,
+            f"[SEMANTIC] FINAL wellness physiology_state → "
+            f"{semantic['wellness']['physiology_state'].get('key')} / "
+            f"{semantic['wellness']['physiology_state'].get('label')} | "
+            f"rest_delta={semantic['wellness']['physiology_state']['inputs'].get('resting_hr_delta')} "
+            f"sleep={semantic['wellness']['physiology_state']['inputs'].get('sleep_score')}"
+        )
 
     
     # ---------------------------------------------------------
@@ -4630,6 +5611,21 @@ def build_semantic_json(context):
 
         forecast_load_trend = forecast_block.get("load_trend")
         forecast_fatigue_class = forecast_block.get("fatigue_class")
+        ade_action = next(
+            (
+                a for a in semantic.get("actions", [])
+                if isinstance(a, dict) and a.get("type") == "adaptive_summary"
+            ),
+            {}
+        )
+
+        taper_governance = ade_action.get("taper_governance") or {}
+        taper_governance_state = taper_governance.get("state")
+
+        allows_taper_sharpening = taper_governance_state in {
+            "taper_sharpening_required",
+            "freshness_above_target",
+        }
 
         projected_block = next((b for b in summaries if b.get("is_projected")), None)
         projected_phase = (
@@ -4677,9 +5673,29 @@ def build_semantic_json(context):
         # -------------------------
         # Recovery gating (PHASE ONLY)
         # -------------------------
+        # Required phase priority
+        # 1. A-race taper window
+        # 2. Recovery / deload projected phase
+        # 3. Projected current phase
+        # -------------------------
 
-        if projected_phase in {"recovery", "deload", "taper"}:
+        target_event = ade.get("target_event", {}) if isinstance(ade, dict) else {}
+        taper_state = target_event.get("taper_state")
+        days_to_event = target_event.get("days_to_event")
+
+        if (
+            taper_state == "taper"
+            and days_to_event is not None
+            and days_to_event <= 10
+        ):
+            required_phase = "taper"
+
+        elif projected_phase in {"recovery", "deload"}:
             required_phase = "recovery"
+
+        elif projected_phase == "taper":
+            required_phase = "taper"
+
         else:
             required_phase = current_phase or "build"
 
@@ -4691,11 +5707,30 @@ def build_semantic_json(context):
         if planned_pattern == "unknown":
             alignment = "unknown"
 
-        elif required_phase == "recovery":
-            alignment = "misaligned" if planned_pattern == "increasing" else "aligned"
+        elif required_phase in {"recovery", "taper"}:
+
+            # Taper exception:
+            # if athlete is too fresh and ADE says sharpening is required,
+            # increasing load is not automatically misaligned.
+            if planned_pattern == "increasing" and allows_taper_sharpening:
+                alignment = "aligned_with_sharpening"
+
+            elif planned_pattern == "increasing":
+                alignment = "misaligned"
+
+            else:
+                alignment = "aligned"
 
         else:  # build / base / peak
-            alignment = "misaligned" if planned_pattern == "reduced" else "aligned"
+
+            # Base exception:
+            # reduced load during Base is not a hard plan-governance conflict.
+            # It is a soft underload / reduced-base warning.
+            if required_phase == "base" and planned_pattern == "reduced":
+                alignment = "underload_watch"
+
+            else:
+                alignment = "misaligned" if planned_pattern == "reduced" else "aligned"
 
         # -----------------------------
         # Output FIRST (important)
@@ -4733,7 +5768,19 @@ def build_semantic_json(context):
         # -------------------------
         # HARD RULE (PHASE = SHOULD, ALWAYS APPLIED)
         # -------------------------
-        if phase == "recovery":
+        if phase == "taper":
+
+            if allows_taper_sharpening:
+                decision = (
+                    f"{base_guidance} — keep controlled race-specific sharpening "
+                    "and avoid excess endurance volume"
+                )
+            else:
+                decision = f"{base_guidance} — prioritise taper freshness and maintain low load"
+
+            phase_override = True
+
+        elif phase == "recovery":
             decision = f"{base_guidance} — prioritise recovery"
 
             if "neutral" in future_title:
@@ -4781,21 +5828,197 @@ def build_semantic_json(context):
     # ---------------------------------------------------------
 
     if semantic.get("actions"):
-        ade_action = semantic["actions"][0]  # first is always ADE
+        ade_action = next(
+            (
+                a for a in semantic["actions"]
+                if isinstance(a, dict) and a.get("type") == "adaptive_summary"
+            ),
+            None
+        )
 
-        ade_action["phase_constraint"] = phase
-        ade_action["phase_alignment"] = alignment
+        if ade_action:
+            ade_action["phase_constraint"] = phase
+            ade_action["phase_alignment"] = alignment
 
-        if phase_override:
-            ade_action["resolution"] = "overridden_by_phase"
+            if alignment == "aligned_with_sharpening":
+                ade_action["resolution"] = "honoured_with_sharpening"
+                semantic.pop("conflict", None)
 
-            semantic["conflict"] = {
-                "metrics_state": ade.get("operational_state"),
-                "phase_requirement": phase,
-                "resolution": "override"
+            elif phase_override:
+                ade_action["resolution"] = "overridden_by_phase"
+
+                semantic["conflict"] = {
+                    "metrics_state": ade.get("operational_state"),
+                    "phase_requirement": phase,
+                    "resolution": "override"
+                }
+
+            else:
+                ade_action["resolution"] = "honoured"
+                semantic.pop("conflict", None)
+
+    # ---------------------------------------------------------
+    # 🎯 EVENT READINESS GOVERNANCE SYNC
+    # ---------------------------------------------------------
+    # Adds display-safe event readiness governance.
+    # Does not recompute race score.
+    # Prevents UI showing plain READY when ADE has taper conflict.
+    # ---------------------------------------------------------
+
+    try:
+        event_targets = semantic.get("event_targets") or {}
+        next_event = event_targets.get("next_event") or {}
+
+        actions = semantic.get("actions") or []
+        adaptive_summary = next(
+            (
+                a for a in actions
+                if isinstance(a, dict) and a.get("type") == "adaptive_summary"
+            ),
+            {}
+        )
+
+        taper_governance = adaptive_summary.get("taper_governance") or {}
+        decision_context = semantic.get("decision_context") or {}
+
+        has_event = bool(event_targets.get("exists")) and bool(next_event.get("name"))
+
+        taper_state = taper_governance.get("state")
+
+        has_taper_conflict = taper_state in {
+            "taper_load_conflict",
+            "taper_load_risk",
+        }
+
+        has_taper_sharpening = taper_state in {
+            "taper_sharpening_required",
+            "freshness_above_target",
+        }
+
+        if has_event:
+
+            governance_status = "aligned"
+            readiness_label = "READY"
+            readiness_modifier = None
+            limiting_factors = []
+
+            tsb_target = (
+                next_event.get("race_profile", {})
+                .get("targets", {})
+                .get("tsb")
+            )
+
+            event_ctl = next_event.get("icu_ctl")
+            event_atl = next_event.get("icu_atl")
+
+            event_tsb = None
+            try:
+                if event_ctl is not None and event_atl is not None:
+                    event_tsb = round(float(event_ctl) - float(event_atl), 2)
+            except Exception:
+                event_tsb = None
+
+            form_status = None
+
+            if (
+                isinstance(tsb_target, list)
+                and len(tsb_target) == 2
+                and event_tsb is not None
+            ):
+                low, high = tsb_target
+
+                if event_tsb < low:
+                    form_status = "too_fatigued"
+                    limiting_factors.append("TSB below event target")
+                elif event_tsb > high:
+                    form_status = "too_fresh"
+                    limiting_factors.append("TSB above event target")
+                else:
+                    form_status = "target_range"
+
+                if has_taper_conflict:
+                    governance_status = "taper_misaligned"
+                    readiness_label = "CONDITIONALLY_READY"
+                    readiness_modifier = "plan_risk"
+
+                    reason = taper_governance.get("reason")
+                    limiting_factors.insert(0, reason or "Taper load conflict")
+
+                elif has_taper_sharpening:
+                    governance_status = "sharpening_required"
+                    readiness_label = "READY_WITH_SHARPENING"
+                    readiness_modifier = "freshness_above_target"
+
+                    reason = taper_governance.get("reason")
+                    if reason:
+                        limiting_factors.insert(0, reason)
+
+            durability_state = (
+                semantic.get("performance_intelligence", {})
+                .get("acute", {})
+                .get("durability", {})
+                .get("state", {})
+            )
+
+            if isinstance(durability_state, dict):
+                dur_value = durability_state.get("value")
+                if dur_value in ("drifting", "declining"):
+                    limiting_factors.append("Durability drift")
+
+            next_event["readiness_governance"] = {
+                "status": governance_status,
+                "readiness_label": readiness_label,
+                "readiness_modifier": readiness_modifier,
+                "form_status": form_status,
+                "event_tsb": event_tsb,
+                "target_tsb_range": tsb_target,
+                "phase_required": (
+                    adaptive_summary.get("phase_constraint")
+                    or decision_context.get("required_phase")
+                    or next_event.get("taper_state")
+                ),
+                "phase_alignment": (
+                    adaptive_summary.get("phase_alignment")
+                    or decision_context.get("alignment")
+                ),
+                "resolution": adaptive_summary.get("resolution"),
+                "taper_governance": taper_governance or None,
+                "limiting_factors": list(dict.fromkeys([
+                    x for x in limiting_factors if x
+                ])),
+                "display_rule": (
+                    "If readiness_label is READY_WITH_SHARPENING, UI must not display plain READY. "
+                    "Show race score unchanged, but qualify readiness as ready with controlled sharpening."
+                )
             }
-        else:
-            ade_action["resolution"] = "honoured"
+
+            event_targets["next_event"] = next_event
+            semantic["event_targets"] = event_targets
+
+            debug(
+                context,
+                "[EVENT_READINESS_GOVERNANCE] "
+                f"{next_event.get('name')} → "
+                f"{next_event['readiness_governance']['readiness_label']} / "
+                f"{next_event['readiness_governance']['status']}"
+            )
+
+    except Exception as e:
+        debug(context, f"[EVENT_READINESS_GOVERNANCE] ⚠️ failed: {e}")
+
+
+    # --------------------------------------------------
+    # 🔥 Outliers (365d)
+    # --------------------------------------------------
+    outliers = context.get("outliers")
+
+    if outliers:
+        semantic.setdefault("outliers", {
+            "block_type": "outliers",
+            "version": "v1",
+            "items": outliers,
+            "summary": context.get("outlier_summary", {}),
+        })
 
     # ---------------------------------------------------------
     # 🧠 LLM CONTROL SIGNALS (FINAL PROMOTION)
@@ -4874,6 +6097,10 @@ def build_insight_view(semantic):
             "coaching_implication": ins.get("coaching_implication"),
         }
 
+        for extra_key in ("value", "window", "basis"):
+            if ins.get(extra_key) is not None:
+                entry[extra_key] = ins.get(extra_key)
+
         if color == "red":
             critical.append(entry)
         elif color == "amber":
@@ -4908,16 +6135,24 @@ def apply_report_type_contract(semantic: dict) -> dict:
     report_type = semantic.get("meta", {}).get("report_type", "weekly")
     render_mode = semantic.get("meta", {}).get("render_mode", "full+metrics")
 
-    contract_key = (
-        f"{report_type}_lite"
-        if render_mode == "lite"
-        else report_type
-    )
+    if render_mode == "overview":
+        contract_key = f"{report_type}_overview"
+    elif render_mode == "lite":
+        contract_key = f"{report_type}_lite"
+    elif render_mode == "workflow":
+        contract_key = f"{report_type}_workflow"
+    else:
+        contract_key = report_type
 
     # ── Enrich meta
     semantic["meta"]["report_header"] = REPORT_HEADERS.get(report_type, {})
     semantic["meta"]["resolution"] = REPORT_RESOLUTION.get(report_type, {})
     semantic["header"] = semantic["meta"]["report_header"]
+
+    # ── Recency governance
+    # Must run BEFORE contract filtering so stale weekly reports
+    # cannot expose current/live ADE guidance.
+    semantic = apply_report_recency_governance(semantic)
 
     # ── Top-level filtering (contract)
     allowed_keys = REPORT_CONTRACT.get(contract_key, semantic.keys())
@@ -4944,7 +6179,7 @@ def apply_report_type_contract(semantic: dict) -> dict:
 
     # ── Renderer instructions (DATA ONLY)
     filtered["renderer_instructions"] = build_system_prompt_from_header(
-        report_type,
+        contract_key,
         REPORT_HEADERS.get(report_type, {})
     )
 

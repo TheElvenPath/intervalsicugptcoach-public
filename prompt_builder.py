@@ -346,6 +346,71 @@ def build_system_prompt_from_header(report_type: str, header: dict) -> str:
           {framing.get("intent")}
         - This intent guides prioritisation and narrative focus only.        
         """).strip()
+
+    #-----------------------------------------------------------------
+    overview_contract_block = ""
+
+    overview_contract_block = ""
+
+    if report_type in ("weekly_overview", "weekly_workflow"):
+        layout = report_profile.get("layout", {})
+        card_rules = report_profile.get("card_rules", {})
+        required_fields = report_profile.get("required_fields", {})
+        preferred_shape = report_profile.get("preferred_markdown_shape", [])
+        override_rules = report_profile.get("override_rules", [])
+        forbidden_behaviour = report_profile.get("forbidden_behaviour", [])
+
+        lines = []
+
+        lines.append("WEEKLY OVERVIEW CONTRACT:")
+        lines.append("- This is a compact Bento-style ChatGPT overview, not a full weekly report.")
+        lines.append("- The Adaptive Decision Engine card MUST be rendered first.")
+        lines.append("- Do not omit ADE score.")
+        lines.append("")
+
+        if layout:
+            lines.append("LAYOUT:")
+            lines.append(f"- Style: {layout.get('style')}")
+            lines.append(f"- Max cards: {layout.get('max_cards')}")
+            lines.append("- Card order:")
+            for item in layout.get("card_order", []):
+                lines.append(f"  - {item}")
+            lines.append("")
+
+        if card_rules:
+            lines.append("CARD RULES:")
+            for card, rules in card_rules.items():
+                lines.append(f"- {card}:")
+                for rule in rules:
+                    lines.append(f"  - {rule}")
+            lines.append("")
+
+        if required_fields:
+            lines.append("REQUIRED FIELDS:")
+            for group, fields in required_fields.items():
+                lines.append(f"- {group}:")
+                for field in fields:
+                    lines.append(f"  - {field}")
+            lines.append("")
+
+        if preferred_shape:
+            lines.append("PREFERRED MARKDOWN SHAPE:")
+            for item in preferred_shape:
+                lines.append(f"- {item}")
+            lines.append("")
+
+        if override_rules:
+            lines.append("OVERRIDE RULES:")
+            for rule in override_rules:
+                lines.append(f"- {rule}")
+            lines.append("")
+
+        if forbidden_behaviour:
+            lines.append("FORBIDDEN BEHAVIOUR:")
+            for rule in forbidden_behaviour:
+                lines.append(f"- {rule}")
+
+        overview_contract_block = "\n".join(lines)
     # --------------------------------------------------
     # Welness blocks
     # --------------------------------------------------
@@ -401,6 +466,8 @@ def build_system_prompt_from_header(report_type: str, header: dict) -> str:
     {emphasis_block}
 
     {framing_block}
+
+    {overview_contract_block}
 
     {section_handling_block}
 

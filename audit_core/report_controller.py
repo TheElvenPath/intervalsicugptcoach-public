@@ -531,7 +531,7 @@ def run_report(
     else:
         debug(context, "[PRESERVE] No valid df_master available to preserve as _df_scope_full")
 
-    if full_days == 7:
+    if context.get("report_type") == "weekly":
         # WEEKLY analysis → strict 7-day scope
         try:
             df_scope = pd.read_json(StringIO(context["snapshot_7d_json"]))

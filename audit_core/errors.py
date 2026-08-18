@@ -15,6 +15,9 @@ class AuditHalt(Exception):
         self.severity = severity
 
     def to_dict(self):
+        if self.severity == "info":
+            return self.to_ok_dict()
+
         return {
             "status": "halted",
             "error_type": self.code,

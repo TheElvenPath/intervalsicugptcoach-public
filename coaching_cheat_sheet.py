@@ -25,9 +25,9 @@ CHEAT_SHEET["thresholds"] = {
         "red": (4000, 8000)
     },
     "FatigueTrend": {
-        "green": (-10, 10),      # balanced / stable
-        "amber": (-99, -10),     # recovering / unloading
-        "red": (10, 99),         # accumulating fatigue
+        "green": (-10, 10),      # stable / balanced
+        "amber": (-20, 20),      # moderate unload or accumulation
+        "red": (20, 99),         # strong accumulation
     },
     "StressTolerance": {
         "green": (0.8, 1.2),
@@ -289,6 +289,166 @@ CHEAT_SHEET["thresholds"] = {
             "lvi_min": 0.65
         }
     },
+
+    # ================================================================
+    # 🧠 PHASE DETECTION ENGINE v2.1
+    # ================================================================
+    # V2 separates:
+    #   1) PhaseBoundaries  → raw weekly load-pattern classification
+    #   2) PhaseRulesV2     → sequence-aware refinement layer
+    #
+    # PhaseBoundaries remain deterministic and threshold-based.
+    # PhaseRulesV2 is applied AFTER raw phase detection.
+    #
+    # Core metrics:
+    #   tss        → weekly training load
+    #   delta      → smoothed week-to-week % change in TSS
+    #   ctl        → chronic training load / fitness
+    #   atl        → acute training load / fatigue
+    #   tsb        → ctl - atl
+    #   acwr       → atl / ctl
+    #
+    # V1 classified load pattern only.
+    # V2 classifies load pattern + periodisation context.
+    # ================================================================
+
+    "phase_detection_v2": {
+
+        "version": "2.1",
+
+        # ============================================================
+        # RAW LOAD-PATTERN CLASSIFIER
+        # ============================================================
+
+        "PhaseBoundaries": {
+
+            "Recovery": {
+                "trend_min": -1.00,
+                "trend_max": -0.30,
+                "acwr_max": 0.85,
+                "tsb_min": 5
+            },
+
+            "Taper": {
+                "trend_min": -0.40,
+                "trend_max": -0.12,
+                "acwr_max": 1.00,
+                "tsb_min": 0
+            },
+
+            "Deload": {
+                "trend_min": -0.12,
+                "trend_max": -0.01,
+                "acwr_max": 1.10
+            },
+
+            "Base": {
+                "trend_min": -0.01,
+                "trend_max": 0.05,
+                "acwr_max": 1.15
+            },
+
+            "Peak": {
+                "trend_min": -0.15,
+                "trend_max": 0.02,
+                "acwr_max": 1.00,
+                "tsb_min": 8
+            },
+
+            "Build": {
+                "trend_min": 0.03,
+                "trend_max": 0.30,
+                "acwr_max": 1.30
+            }
+        },
+
+        # ============================================================
+        # SEQUENCE-AWARE REFINEMENT RULES
+        # ============================================================
+
+        "PhaseRulesV2": {
+
+            "version": "phase_rules_v2.1",
+
+            "execution_order": [
+                "peak_after_taper",
+                "true_recovery_strict",
+                "transition_after_recovery",
+                "prevent_false_peak",
+                "default_raw_phase"
+            ],
+
+            # --------------------------------------------------------
+            # RULE 1 — PEAK AFTER TAPER
+            # --------------------------------------------------------
+
+            "peak_after_taper": {
+                "if": {
+                    "prev_phase_final": "Taper",
+                    "delta_gt": 0.00,
+                    "acwr_lte": 1.10
+                },
+                "then": {
+                    "phase_final": "Peak"
+                }
+            },
+
+            # --------------------------------------------------------
+            # RULE 2 — TRUE RECOVERY
+            # --------------------------------------------------------
+
+            "true_recovery_strict": {
+                "if": {
+                    "acwr_lt": 0.65,
+                    "delta_lt": -0.10,
+                    "tsb_gt": 5
+                },
+                "then": {
+                    "phase_final": "Recovery"
+                }
+            },
+
+            # --------------------------------------------------------
+            # RULE 3 — TRANSITION AFTER RECOVERY
+            # --------------------------------------------------------
+
+            "transition_after_recovery": {
+                "if": {
+                    "prev_phase_final": "Recovery",
+                    "abs_delta_lt": 0.15
+                },
+                "then": {
+                    "phase_final": "Transition"
+                }
+            },
+
+            # --------------------------------------------------------
+            # RULE 4 — PREVENT FALSE PEAK
+            # --------------------------------------------------------
+
+            "prevent_false_peak": {
+                "if": {
+                    "phase_raw": "Peak",
+                    "tsb_lt": 5
+                },
+                "then": {
+                    "phase_final": "Base"
+                }
+            },
+
+            # --------------------------------------------------------
+            # RULE 5 — DEFAULT
+            # --------------------------------------------------------
+
+            "default_raw_phase": {
+                "then": {
+                    "phase_final": "phase_raw"
+                }
+            }
+        }
+    },
+
+
     "ESPE": {
         "Ride": {
             "anaerobic": {"strong": 3.0, "moderate": 1.5, "mild": 0.8, "decline": -1.5},
@@ -336,6 +496,197 @@ CHEAT_SHEET["thresholds"] = {
             "default_days": 84,
             "comparison_model": "rolling_equal_window"
         },
+    }
+}
+
+CHEAT_SHEET["training_load_pattern"] = {
+    "meta": {
+        "name": "Training Load Pattern",
+        "scope": "training_load_only",
+        "context_window": "7d_with_21_28d_baseline",
+        "description": (
+            "Current 7-day training-load pattern resolved against recent "
+            "baseline and CTL-based capacity metrics."
+        ),
+        "inputs": {
+            "ACWR": "EWMA acute/chronic load ratio, usually 7d vs 28d",
+            "StressTolerance": "7d weekly load relative to CTL capacity",
+            "Strain": "7d load multiplied by 7d monotony",
+            "FatigueTrend": "recent 7d daily load average vs prior 21d daily baseline"
+        }
+    },
+
+    "states": {
+        "balanced_load": {
+            "label": "BALANCED LOAD",
+            "status": "balanced",
+            "meaning": (
+                "Current 7-day load is stable against recent baseline "
+                "and current capacity."
+            )
+        },
+
+        "controlled_unload": {
+            "label": "CONTROLLED UNLOAD",
+            "status": "unloading",
+            "meaning": (
+                "Current 7-day load is below the prior 21-day baseline "
+                "while acute/chronic and capacity ratios remain safe."
+            )
+        },
+
+        "building_load": {
+            "label": "BUILDING LOAD",
+            "status": "building",
+            "meaning": (
+                "Current 7-day load is rising above the prior 21-day baseline "
+                "while acute/chronic balance remains controlled."
+            )
+        },
+
+        "high_strain": {
+            "label": "HIGH STRAIN",
+            "status": "strain",
+            "meaning": (
+                "Current 7-day load pattern is elevated through acute load, "
+                "capacity pressure, strain, or recent load trend."
+            )
+        },
+
+        "overload_risk": {
+            "label": "OVERLOAD RISK",
+            "status": "risk",
+            "meaning": (
+                "Current load exceeds safe acute, capacity, strain, "
+                "or recent trend limits."
+            )
+        },
+
+        "under_stimulus": {
+            "label": "UNDER-STIMULUS",
+            "status": "low",
+            "meaning": (
+                "Current 7-day load is low relative to chronic baseline "
+                "and prior 21-day trend."
+            )
+        },
+
+        "load_unknown": {
+            "label": "LOAD UNKNOWN",
+            "status": "unknown",
+            "meaning": "Insufficient load diagnostics to resolve pattern."
+        }
+    },
+
+    "rules": {
+        "overload_risk": {
+            "priority": 1,
+            "any": {
+                "ACWR_gt": 1.5,
+                "StressTolerance_gt": 1.4,
+                "Strain_gt": 4000,
+                "FatigueTrend_gt": 40
+            }
+        },
+
+        "high_strain": {
+            "priority": 2,
+            "any": {
+                "ACWR_gt": 1.3,
+                "StressTolerance_gt": 1.2,
+                "Strain_gt": 3000,
+                "FatigueTrend_gt": 20
+            }
+        },
+
+        "under_stimulus": {
+            "priority": 3,
+            "all": {
+                "ACWR_lt": 0.8,
+                "FatigueTrend_lt": -20
+            }
+        },
+
+        "controlled_unload": {
+            "priority": 4,
+            "all": {
+                "ACWR_between": [0.8, 1.3],
+                "StressTolerance_between": [0.8, 1.2],
+                "FatigueTrend_lte": -10
+            }
+        },
+
+        "building_load": {
+            "priority": 5,
+            "all": {
+                "ACWR_between": [0.8, 1.3],
+                "StressTolerance_between": [0.8, 1.2],
+                "FatigueTrend_between": [10, 20]
+            }
+        },
+
+        "balanced_load": {
+            "priority": 6,
+            "all": {
+                "ACWR_between": [0.8, 1.3],
+                "StressTolerance_between": [0.8, 1.2],
+                "Strain_lt": 2500,
+                "FatigueTrend_between": [-10, 10]
+            }
+        }
+    }
+}
+
+CHEAT_SHEET["physiology_state"] = {
+    "meta": {
+        "name": "Physiology State",
+        "scope": "wellness_physiology_only",
+        "context_window": "42d wellness with current load state",
+        "description": (
+            "Current physiology response resolved from autonomic, recovery, sleep, "
+            "resting HR, subjective, and load-pressure signals."
+        ),
+        "inputs": {
+            "hrv_ratio": "latest HRV divided by 42-day HRV mean",
+            "hrv_trend": "recent HRV direction",
+            "resting_hr_delta": "recent resting HR versus baseline",
+            "sleep_score": "recent sleep quality score",
+            "tsb": "current training stress balance",
+            "subjective": "fatigue, stress, soreness, mood, motivation when available"
+        }
+    },
+
+    "states": {
+        "fresh_stable": {
+            "label": "FRESH / STABLE",
+            "status": "positive",
+            "meaning": "Autonomic markers are favourable and load pressure is low."
+        },
+        "stable": {
+            "label": "STABLE",
+            "status": "neutral",
+            "meaning": "Physiology markers are broadly normal with no clear suppression signal."
+        },
+        "watch": {
+            "label": "WATCH",
+            "status": "watch",
+            "meaning": "One or more physiology markers show mild strain or recovery inconsistency."
+        },
+        "suppressed": {
+            "label": "SUPPRESSED",
+            "status": "risk",
+            "meaning": "Autonomic or recovery markers suggest suppressed physiology under load."
+        },
+        "strained": {
+            "label": "STRAINED",
+            "status": "strain",
+            "meaning": "Recovery markers and load pressure indicate elevated physiological strain."
+        },
+        "unknown": {
+            "label": "UNKNOWN",
+            "status": "unknown",
+            "meaning": "Insufficient wellness data to resolve physiology state."
+        }
     }
 }
 
@@ -618,7 +969,12 @@ CHEAT_SHEET["context"] = {
         "Values >3500 indicate elevated combined load and variability risk; "
         "interpret relative to athlete baseline."
     ),
-    "FatigueTrend": "FatigueTrend is calculated as the percentage change between the 7-day and 28-day moving averages. A 0% change indicates balance, while a positive percentage change indicates accumulating fatigue, and a negative percentage change indicates recovery.",
+    "FatigueTrend": (
+        "FatigueTrend is calculated as the percentage change between the most recent "
+        "7-day daily load average and the preceding 21-day daily load average. "
+        "A value near 0% indicates stable load, a positive value indicates recent "
+        "load accumulation, and a negative value indicates unloading."
+    ),
     "ZQI": "Zone Quality Index (%) 5-15 high-intensity time is normal <3% too easy, >20% too intense or erratic pacing.",
     "FatOxEfficiency": "0.4–0.8 means balanced fat oxidation; lower = carb dependence.",
     "FOxI": "FatOx index %; higher values mean more efficient aerobic base.",
@@ -777,11 +1133,10 @@ CHEAT_SHEET["coaching_links"] = {
     "Monotony": "If Monotony > 2.5, introduce more variation in training or implement a deload week to reduce repetitive stress.",
     "Strain": "If Strain > 3000, monitor for signs of overreach and consider more rest or deloading. If Strain > 3500, consider reducing volume or intensity temporarily.",
     "FatigueTrend": (
-        "If FatigueTrend drops below -10%, recovery is dominating and training load "
-        "is decreasing relative to the 28-day baseline. Maintain controlled progression "
-        "and avoid aggressive load increases. "
-        "If FatigueTrend rises above +10%, fatigue is accumulating — consider adjusting "
-        "intensity density or inserting additional recovery to prevent overload."
+        "If FatigueTrend drops below -10%, recent 7-day load is below the prior "
+        "21-day baseline, indicating unloading or reduced training stimulus. "
+        "If FatigueTrend rises above +10%, recent load is accumulating relative "
+        "to the prior baseline — monitor recovery, intensity density, and planned load."
     ),
     "FatOxEfficiency": "If FatOxEfficiency is low (<0.6), focus on improving aerobic base with longer, low-intensity efforts.",
     "ZQI": "If ZQI > 20%, review pacing strategy; excessive high-intensity time could indicate erratic pacing or overtraining. Aim for 5-15% ZQI for balanced training.",
